@@ -1,13 +1,17 @@
 import React from "react";
-import ReactDOM from "react-dom/client";  // Use 'react-dom/client' instead of 'react-dom'
+import ReactDOM from "react-dom/client"; 
 import App from "./App";
-import { AuthProvider } from "./context/authContext.jsx"; // Adjust path as necessary
+import { AuthProvider } from "./context/authContext.jsx"; 
+import { Provider } from "react-redux";
+import store from "./redux/store";
 
-const root = ReactDOM.createRoot(document.getElementById("root")); // Create root element
+const root = ReactDOM.createRoot(document.getElementById("root")); 
 root.render(
   <React.StrictMode>
+    <Provider store={store}>
     <AuthProvider>
       <App />
     </AuthProvider>
+    </Provider>
   </React.StrictMode>
 );

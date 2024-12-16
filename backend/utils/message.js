@@ -14,5 +14,8 @@ export const message = {
     serverError: "An internal server error occurred.",
     noTokenProvided: "No token provided in the request headers.",
     invalidOrExpiredToken: "Invalid or expired token.",
+    otpRequired: "OTP is required for verification.",
+    invalidOtp: "Invalid OTP.",
+    otpExpired: "OTP has expired.",
   };
   

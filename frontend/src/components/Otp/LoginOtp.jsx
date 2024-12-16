@@ -1,7 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { createGlobalStyle } from "styled-components";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-toastify";
+import toastOptions from "../../constants/toast";
+import { resendAdminOtp, verifyAdminOtp } from "../../redux/Actions/adminActions.js";
 import { LoginPageContainer, LoginBox, Heading, InputField, SubmitButton, Message } from "../../styles/LoginOtpStyles.js";
 
+// Global styles to reset some default styles
 export const GlobalStyle = createGlobalStyle`
   html, body {
     margin: 0;
@@ -11,36 +17,64 @@ export const GlobalStyle = createGlobalStyle`
   }
 `;
 
-
 const LoginOtpPage = () => {
   const [otp, setOtp] = useState("");
   const [message, setMessage] = useState("");
+  const dispatch = useDispatch();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleSubmit = () => {
-    if (otp === "") {
-      setMessage("Please enter the OTP.");
-    } else {
-      setMessage("OTP submitted successfully!");
+  const { role } = location.state || {}; 
+  // Corrected destructuring of state.userAuth
+  const { loading: otpLoading, message: otpMessage, error } = useSelector(state => state.userAuth || {});
+
+  useEffect(() => {
+    if (otpMessage) {
+      toast.success(otpMessage, toastOptions);
     }
+    if (error) {
+      toast.error(error, toastOptions);
+    }
+  }, [otpMessage, error]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (otp.length !== 6) {
+      toast.error("OTP must contain 6 digits", toastOptions);
+      return;
+    }
+    setMessage("");
+    dispatch(verifyAdminOtp(id, otp));
+  };
+
+  const handleResendOtp = () => {
+    dispatch(resendAdminOtp(id));
   };
 
   return (
-    <>
+    <LoginPageContainer>
       <GlobalStyle />
-      <LoginPageContainer>
-        <LoginBox>
-          <Heading>Enter OTP</Heading>
+      <LoginBox>
+        <Heading>Verify OTP</Heading>
+        <form onSubmit={handleSubmit}>
           <InputField
-            type="number"
+            type="text"
             placeholder="Enter OTP"
             value={otp}
             onChange={(e) => setOtp(e.target.value)}
           />
-          <SubmitButton onClick={handleSubmit}>Submit</SubmitButton>
           {message && <Message>{message}</Message>}
-        </LoginBox>
-      </LoginPageContainer>
-    </>
+          <SubmitButton type="submit" disabled={otpLoading}>
+            {otpLoading ? "Verifying..." : "Submit OTP"}
+          </SubmitButton>
+        </form>
+        <div onClick={handleResendOtp} style={{ cursor: "pointer",color: "blue",marginTop:"20px" }} disabled={otpLoading}>
+          {otpLoading ? "Resending..." : "Resend OTP"}
+        </div>
+      </LoginBox>
+    </LoginPageContainer>
   );
 };
 

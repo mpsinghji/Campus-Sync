@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/authContext";
+import Loading from "../components/Loading/loading";
 
 const ProtectedRoute = ({ children, roles }) => {
   const { isAuthenticated, userRole } = useAuth();
@@ -9,7 +10,7 @@ const ProtectedRoute = ({ children, roles }) => {
   console.log("allowed roles:", roles);
 
   if (isAuthenticated === null) {
-    return <div>Loading...</div>;
+    return <Loading />;
   }
 
   if (!isAuthenticated || (roles && !roles.includes(userRole))) {

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import {
   ChooseUserContainer,
   RoleSelector,
@@ -13,10 +14,13 @@ import {
   Circle,
 } from "../styles/ChooseUserStyles";
 import { createGlobalStyle } from "styled-components";
-import { useAuth } from "../context/authContext.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Cookies from "js-cookie"; 
+import { useAuth } from "../context/authContext.jsx";
+import { adminLogin } from "../redux/Actions/adminActions";
+import { studentLogin } from "../redux/Actions/studentActions";
+import { teacherLogin } from "../redux/Actions/teacherActions";
+import Cookies from "js-cookie";
 
 export const GlobalStyle = createGlobalStyle`
   * {
@@ -45,6 +49,9 @@ const ChooseUser = () => {
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState("admin");
   const { setIsAuthenticated, setUserRole } = useAuth();
+  const [_id, setUserId] = useState(null);
+
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -58,28 +65,34 @@ const ChooseUser = () => {
     };
 
     try {
-      const response = await axios.post(roleUrls[role], {
-        email,
-        password,
-      });
+      const response = await axios.post(roleUrls[role], { email, password });
+      console.log("Response: ", response.data);
 
+      const userId = response.data.data.adminId;
+      console.log(userId);
+
+      setUserId(userId);
+      setUserRole(role);
       console.log(response);
+
       const tokenKey = `${role}token`;
       const token =
-        response.data?.[tokenKey] || response.data?.data?.[tokenKey];
+        response.data?.data?.[tokenKey] ||
+        response.data?.data?.data?.[tokenKey];
 
       if (!token) {
         throw new Error("Token not found in response");
       }
 
       Cookies.set(tokenKey, token, { expires: 1, secure: true });
-      // localStorage.setItem(tokenKey, token);
       setIsAuthenticated(true);
-      setUserRole(role);
-      navigate(`/${role}/dashboard`);
-      // if (role === "admin") navigate("/admin/dashboard");
-      // else if (role === "student") navigate("/student/dashboard");
-      // else if (role === "teacher") navigate("/teacher/dashboard");
+      if (role === "admin") dispatch(adminLogin(email, password));
+      else if (role === "student") dispatch(studentLogin(email, password));
+      else if (role === "teacher") dispatch(teacherLogin(email, password));
+
+      // Redirect to OTP verification page
+      navigate(`/otp/${userId}`, { state: { role } });
+      
     } catch (error) {
       console.log(error);
       toast.error(
@@ -90,20 +103,10 @@ const ChooseUser = () => {
     }
   };
 
-  const tokenKey = `${role}token`;
-  // const token = localStorage.getItem(tokenKey);
-  const token = Cookies.get(tokenKey);
-  const config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
   const handleRoleSelection = (selectedRole) => {
     setRole(selectedRole);
     console.log("Selected Role:", selectedRole);
-};
-
+  };
 
   return (
     <>
@@ -154,7 +157,11 @@ const ChooseUser = () => {
                 required
               />
             </div>
-            <Button as="button" type="submit" disabled={loading}>
+            <Button
+              as="button"
+              type="submit"
+              disabled={loading || !email || !password}
+            >
               {loading ? (
                 <Spinner>
                   <Circle />
