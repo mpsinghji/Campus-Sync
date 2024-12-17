@@ -12,7 +12,7 @@ adminRoute.get("/dashboard",getDashboardData);
 
 adminRoute.get("/profile",getAdminProfile);
 
-adminRoute.post("/login/verify/:email/:id", verifyAdminLoginOtp);
+adminRoute.post("/login/verify/:id", verifyAdminLoginOtp);
 
 adminRoute.get("/login/resend/:id", resendAdminLoginOtp);
 
