@@ -27,16 +27,21 @@ const LoginOtpPage = () => {
 
   const { role } = location.state || {}; 
   // Corrected destructuring of state.userAuth
-  const { loading: otpLoading, message: otpMessage, error } = useSelector(state => state.userAuth || {});
+  const { loading: otpLoading, message: otpMessage, error, isAuthenticated } = useSelector(state => state.admin);
 
   useEffect(() => {
     if (otpMessage) {
       toast.success(otpMessage, toastOptions);
+      dispatch({ type: "CLEAR_MESSAGE" });
     }
     if (error) {
       toast.error(error, toastOptions);
+      dispatch({ type: "CLEAR_ERROR" });
     }
-  }, [otpMessage, error]);
+    if(isAuthenticated){
+      navigate(`/${role}/dashboard`);
+    }
+  }, [otpMessage, error, navigate, dispatch, toastOptions, role, isAuthenticated]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

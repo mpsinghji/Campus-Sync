@@ -40,12 +40,10 @@ export const adminReducer = createReducer(initialState, (builder) => {
             state.loading = false;
             state.message = action.payload.message;
             state.id = action.payload.id;
-            state.isAuthenticated = false;  // Initially, authentication is not confirmed until OTP is verified
         })
         .addCase(adminLoginFailure, (state, action) => {
             state.loading = false;
             state.error = action.payload;
-            state.isAuthenticated = false;
         })
         
         // Admin OTP verification actions

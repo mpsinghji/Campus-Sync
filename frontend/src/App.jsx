@@ -64,7 +64,8 @@ function App() {
 
 
         <Route path="/login/:id" element={<ProtectedRoute allowedRoles={['admin', 'student', 'teacher']}><LoginOtpPage /></ProtectedRoute>} />
-        <Route path="/otp/:id" element={<ProtectedRoute allowedRoles={['admin', 'student', 'teacher']}><LoginOtpPage /></ProtectedRoute>} />
+        {/* <Route path="/otp/:id" element={<ProtectedRoute allowedRoles={['admin', 'student', 'teacher']}><LoginOtpPage /></ProtectedRoute>} /> */}
+        <Route path="/otp/:id" element={<LoginOtpPage />} />
 
         {/* Add the Admin Register route here */}
         <Route exact path="/admin-register" element={<AdminRegister />} />
@@ -73,6 +74,7 @@ function App() {
 
         {/* All dashboard routes */}
         <Route exact path="/admin/dashboard" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+        {/* <Route exact path="/admin/dashboard" element={<AdminDashboard />}/> */}
         <Route exact path="/student/dashboard" element={<ProtectedRoute roles={['student']}><StudentDashboard /></ProtectedRoute>} />
         <Route exact path="/teacher/dashboard" element={<ProtectedRoute roles={['teacher']}><TeacherDashboard /></ProtectedRoute>} />
 

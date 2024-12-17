@@ -11,17 +11,17 @@ import { Response } from "../utils/response.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const generateOtp = () => Math.floor(100000 + Math.random() * 900000);
-const validateOtp = (storedOtp, enteredOtp, expiryTime) => {
-  return storedOtp === enteredOtp && expiryTime > Date.now();
-};
-const saveOtpToAdmin = async (admin, otp) => {
-  const otpExpire = new Date(Date.now() + 15 * 60 * 1000); 
-  admin.otp = otp;
-  admin.otpExpire = otpExpire;
-  await admin.save();
-  return otp;
-};
+// const generateOtp = () => Math.floor(100000 + Math.random() * 900000);
+// const validateOtp = (storedOtp, enteredOtp, expiryTime) => {
+//   return storedOtp === enteredOtp && expiryTime > Date.now();
+// };
+// const saveOtpToAdmin = async (admin, otp) => {
+//   const otpExpire = new Date(Date.now() + 15 * 60 * 1000); 
+//   admin.otp = otp;
+//   admin.otpExpire = otpExpire;
+//   await admin.save();
+//   return otp;
+// };
 
 export const adminRegister = async (req, res) => {
   const { email, password } = req.body;
@@ -46,164 +46,71 @@ export const adminRegister = async (req, res) => {
 };
 
 export const adminLogin = async (req, res) => {
-  const { email, password, otp } = req.body;
+  const { email, password } = req.body;
+  console.log("A1");
 
   try {
+    if(!email || !password) return Response(res, 400, false, "Please provide email and password");
+
     const admin = await Admin.findOne({ email });
     if (!admin) return Response(res, 404, false, "Admin not found");
+    console.log("A2");
 
     const isPasswordValid = await admin.comparePassword(password);
     if (!isPasswordValid) return Response(res, 401, false, "Invalid credentials");
+    console.log("A3");
 
-    const admintoken = jwt.sign({ id: admin._id, role: "admin" }, process.env.JWT_SECRET, {
+    const adminToken = jwt.sign({ id: admin._id, role: "admin" }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
 
-    const cookieOptions = {
-      expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    };
+    // const cookieOptions = {
+    //   expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === "production",
+    //   sameSite: "none",
+    // };
 
-    res.cookie("admintoken", admintoken, cookieOptions);
+    // res.cookie("adminToken", adminToken, cookieOptions);
 
-    if (!otp) {
-      const otp = generateOtp(); // Simplify generation
-      const otpExpire = new Date(Date.now() + 15 * 60 * 1000);
-    
-      // Save OTP and expiry in admin document
-      admin.loginOtp = otp;
-      admin.loginOtpExpire = otpExpire;
-      await admin.save();
-    
-      try {
-        let emailTemplate = fs.readFileSync(
-          path.join(__dirname, "../templates/mail.html"),
-          "utf-8"
-        );
-        emailTemplate = emailTemplate
-          .replace("{{OTP_CODE}}", otp)
-          .replaceAll("{{MAIL}}", process.env.SMTP_USER)
-          .replace("{{PORT}}", process.env.PORT)
-          .replace("{{USER_ID}}", admin._id.toString());
-    
-        await sendEMail({
-          email,
-          subject: "Verify your account",
-          html: emailTemplate,
-        });
-      } catch (error) {
-        console.error(`Error sending OTP email to ${email}:`, error);
-        return Response(res, 500, false, "Failed to send OTP email");
-      }
-    
-      return Response(res, 200, true, "OTP sent successfully", { adminId: admin._id, admintoken });
-    }
-    
+    // Generate OTP
+    const loginOtp = Math.floor(100000 + Math.random() * 900000);
+    const loginOtpExpire = new Date(Date.now() + process.env.LOGIN_OTP_EXPIRE * 60 * 1000);
 
-    if (!validateOtp(admin.loginOtp, otp, admin.loginOtpExpire)) {
-      return Response(res, 401, false, "Invalid or expired OTP");
-    }
-
-    admin.loginOtp = undefined;
-    admin.loginOtpExpire = undefined;
+    console.log("A6");
+    admin.otp = loginOtp;
+    admin.otpExpire = loginOtpExpire;
     await admin.save();
+    console.log("A7");
+  
+    let emailTemplate = fs.readFileSync(
+      path.join(__dirname, "../templates/mail.html"),
+      "utf-8"
+    );
+    console.log("A8");
+    emailTemplate = emailTemplate
+      .replace("{{OTP_CODE}}", loginOtp)
+      .replaceAll("{{MAIL}}", process.env.SMTP_USER)
+      .replace("{{PORT}}", process.env.PORT)
+      .replace("{{USER_ID}}", admin._id.toString());
 
+    await sendEMail({
+      email,
+      subject: "Verify your account",
+      html: emailTemplate,
+    });
+    console.log("A9");
+    console.log("A10");
     return res.status(200).json({
       success: true,
       message: "Admin logged in successfully",
-      data: {
-        adminId: admin._id,
-        admintoken,
-      },
+      data: admin._id
     });
   } catch (error) {
     console.error(`Error during admin login for email: ${email}`, error);
     return Response(res, 500, false, "Internal server error");
   }
 };
-
-
-// export const verifyAdminOtp = async (req, res) => {
-//   const { email, id } = req.params; // Extract email and ID from request params
-//   const { otp } = req.body; // Extract OTP from request body
-
-//   try {
-//     // Validate required parameters
-//     if (!email || !id) {
-//       return Response(res, 400, false, "Email or ID not provided");
-//     }
-
-//     // Log parameters for debugging
-//     console.log("Verifying OTP for:", { email, id });
-
-//     // Find admin by email and ID
-//     const admin = await Admin.findOne({ email, _id: id });
-
-//     if (!admin) {
-//       return Response(res, 404, false, "Admin not found");
-//     }
-
-//     // Check if OTP has expired
-//     if (new Date() > new Date(admin.otpExpire)) {
-//       return Response(res, 400, false, "OTP has expired");
-//     }
-
-//     // Check if OTP matches
-//     if (String(admin.otp) !== String(otp)) {
-//       return Response(res, 400, false, "Invalid OTP");
-//     }
-
-//     // Clear OTP and expiration after successful verification
-//     admin.otp = undefined;
-//     admin.otpExpire = undefined;
-//     await admin.save();
-
-//     // Generate JWT token
-//     const token = jwt.sign(
-//       { id: admin._id, role: "admin" },
-//       process.env.JWT_SECRET,
-//       { expiresIn: "1h" }
-//     );
-
-//     return Response(res, 200, true, "Admin OTP verified successfully", { token });
-//   } catch (error) {
-//     console.error("Error verifying admin OTP:", error); // Log error for debugging
-//     return Response(res, 500, false, "Server error", error.message);
-//   }
-// };
-
-// export const resendAdminOtp = async (req, res) => {
-//   const { email } = req.body;
-
-//   try {
-//     const admin = await Admin.findOne({ email });
-//     if (!admin) {
-//       return Response(res, 404, false, "Admin not found ");
-//     }
-
-//     const otp = generateOtp();
-//     await saveOtpToAdmin(admin, otp);
-
-//     let emailTemplate = fs.readFileSync(path.join(__dirname, '../templates/mail.html'), 'utf-8');
-//     const subject = "Resend OTP for Admin Registration";
-//     emailTemplate = emailTemplate.replace('{{OTP_CODE}}', otp);
-//     emailTemplate = emailTemplate.replaceAll('{{MAIL}}', process.env.SMTP_USER);
-//     emailTemplate = emailTemplate.replace('{{PORT}}', process.env.PORT);
-//     emailTemplate = emailTemplate.replace('{{USER_ID}}', admin._id.toString());
-
-//     await sendEMail({
-//       email: admin.email,
-//       subject,
-//       html: emailTemplate,
-//     });
-
-//     return Response(res, 200, true, "New OTP sent to your email.");
-//   } catch (error) {
-//     return Response(res, 500, false, "Server error", error.message);
-//   }
-// };
 
 export const verifyAdminLoginOtp = async (req, res) => {
   const { id } = req.params;  // Admin ID
@@ -223,6 +130,13 @@ export const verifyAdminLoginOtp = async (req, res) => {
       expiresIn: "1h",
     });
 
+    res.cookie("adminToken", token, {
+      expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+    });
+
     return Response(res, 200, true, "Admin OTP verified successfully", { token });
   } catch (error) {
     return Response(res, 500, false, "Server error", error.message);
@@ -239,9 +153,6 @@ export const resendAdminLoginOtp = async (req, res) => {
     }
 
     const otp = generateOtp();
-    // await saveOtpToAdmin(admin, otp);
-
-    // await sendOtpEmail(admin.email, otp);
 
     return Response(res, 200, true, "OTP sent to admin's email successfully");
   } catch (error) {
