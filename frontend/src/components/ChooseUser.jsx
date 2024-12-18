@@ -16,11 +16,9 @@ import {
 import { createGlobalStyle } from "styled-components";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useAuth } from "../context/authContext.jsx";
 import { adminLogin } from "../redux/Actions/adminActions";
 import { studentLogin } from "../redux/Actions/studentActions";
 import { teacherLogin } from "../redux/Actions/teacherActions";
-import Cookies from "js-cookie";
 import toastOptions from "../constants/toast.js";
 
 export const GlobalStyle = createGlobalStyle`
@@ -48,33 +46,35 @@ const ChooseUser = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("admin");
-  const { setIsAuthenticated, setUserRole } = useAuth();
-  const [_id, setUserId] = useState(null);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { loading, error, message, id } = useSelector(state => state.admin)
+  const userState = useSelector((state) => {
+    switch (role) {
+      case "admin":
+        return state.admin;
+      case "student":
+        return state.student;
+      case "teacher":
+        return state.teacher;
+      default:
+        return {};
+    }
+  });
+
+  const { loading, error, message, id } = userState;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const roleUrls = {
-      admin: "http://localhost:5000/api/v1/admin/login",
-      student: "http://localhost:5000/api/v1/student/login",
-      teacher: "http://localhost:5000/api/v1/teacher/login",
-    };
-
-    if(role === 'admin'){
+    if (role === "admin") {
       dispatch(adminLogin(email, password));
-    } else if(role === 'student'){
+    } else if (role === "student") {
       dispatch(studentLogin(email, password));
     } else {
       dispatch(teacherLogin(email, password));
     }
-
-      // Redirect to OTP verification page
-      // navigate(`/otp/${userId}`, { state: { role } });
   };
 
   const handleRoleSelection = (selectedRole) => {
@@ -83,16 +83,16 @@ const ChooseUser = () => {
   };
 
   useEffect(() => {
-    if(error){
-      toast.error(error, toastOptions)
-      dispatch({type: "CLEAR_ERROR"})
+    if (error) {
+      toast.error(error, toastOptions);
+      dispatch({ type: "CLEAR_ERROR" });
     }
-    if(message){
-      toast.success(message, toastOptions)
-      dispatch({type: "CLEAR_MESSAGE"})
+    if (message) {
+      toast.success(message, toastOptions);
+      dispatch({ type: "CLEAR_MESSAGE" });
       navigate(`/otp/${id}`, { state: { role } });
     }
-  }, [message, error, navigate, dispatch, role, id])
+  }, [message, error, navigate, dispatch, role, id]);
 
   return (
     <>
@@ -146,7 +146,7 @@ const ChooseUser = () => {
             <Button
               as="button"
               type="submit"
-              disabled={loading || !email || !password}
+              // disabled={loading || !email || !password}
             >
               {loading ? (
                 <Spinner>

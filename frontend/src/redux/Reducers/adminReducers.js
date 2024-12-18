@@ -9,6 +9,7 @@ const initialState = {
     id: null,
     authError: null,
     logoutMessage: null,
+    userRole: null
 };
 
 // Actions
@@ -40,6 +41,7 @@ export const adminReducer = createReducer(initialState, (builder) => {
             state.loading = false;
             state.message = action.payload.message;
             state.id = action.payload.id;
+            state.userRole = action.payload.userRole;
         })
         .addCase(adminLoginFailure, (state, action) => {
             state.loading = false;
@@ -53,7 +55,7 @@ export const adminReducer = createReducer(initialState, (builder) => {
         .addCase(verifyAdminOtpSuccess, (state, action) => {
             state.loading = false;
             state.message = action.payload;
-            state.isAuthenticated = true;  // Authentication confirmed after OTP is verified
+            state.isAuthenticated = true;
         })
         .addCase(verifyAdminOtpFailure, (state, action) => {
             state.loading = false;

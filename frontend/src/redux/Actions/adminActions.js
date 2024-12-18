@@ -24,7 +24,8 @@ export const adminLogin = (email, password) => async (dispatch) => {
             type: "ADMIN_LOGIN_SUCCESS",
             payload: {
                 message: data.message,
-                id: data.data
+                id: data.data,
+                userRole: data.userRole
             }
         });
 
@@ -72,7 +73,6 @@ export const resendAdminOtp = (id) => async (dispatch) => {
             type: "RESEND_ADMIN_OTP_REQUEST"
         });
 
-        // API call to resend OTP
         const { data } = await axios.get(`${URL}/login/resend/${id}`);
 
         dispatch({

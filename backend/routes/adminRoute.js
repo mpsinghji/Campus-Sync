@@ -1,5 +1,12 @@
 import express from "express";
-import { adminRegister, adminLogin, getDashboardData,getAdminProfile,verifyAdminLoginOtp,resendAdminLoginOtp} from "../controllers/adminController.js";
+import {
+  adminRegister,
+  adminLogin,
+  getDashboardData,
+  getAdminProfile,
+  verifyAdminLoginOtp,
+  resendAdminLoginOtp,
+} from "../controllers/adminController.js";
 import { validateUserRegistration } from "../middlewares/userValidator.js";
 
 const adminRoute = express.Router();
@@ -8,9 +15,9 @@ adminRoute.post("/register", validateUserRegistration, adminRegister);
 
 adminRoute.post("/login", adminLogin);
 
-adminRoute.get("/dashboard",getDashboardData);
+adminRoute.get("/dashboard", getDashboardData);
 
-adminRoute.get("/profile",getAdminProfile);
+adminRoute.get("/profile", getAdminProfile);
 
 adminRoute.post("/login/verify/:id", verifyAdminLoginOtp);
 

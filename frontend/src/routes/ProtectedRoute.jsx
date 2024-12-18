@@ -1,19 +1,15 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../context/authContext";
 import Loading from "../components/Loading/loading";
 import { useSelector } from "react-redux";
 
 const ProtectedRoute = ({ children, roles }) => {
-  // const { isAuthenticated, userRole } = useAuth();
-  const { isAuthenticated, loading } = useSelector((state) => state.admin);
+  const { isAuthenticated, loading, userRole } = useSelector((state) => {return state.user || {};});
   console.log("isAuthenticated:", isAuthenticated);
   console.log("userRole:", userRole);
   console.log("allowed roles:", roles);
-
-  // if (isAuthenticated === null) {
-  //   return <Loading />;
-  // }
+  console.log("loading:", loading);
+  console.log("roles and userRole:",roles && roles.includes(userRole));
 
   return (
     loading===true || loading===undefined ? <Loading /> : (

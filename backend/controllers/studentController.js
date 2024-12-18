@@ -1,20 +1,41 @@
 import Student from "../models/studentModel.js";
 import { Response } from "../utils/response.js";
 import jwt from "jsonwebtoken";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { sendEMail } from "../middlewares/sendEmail.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const studentRegister = async (req, res) => {
-  const { email, password, rollno, mobileno,gender,name } = req.body;
+  const { email, password, rollno, mobileno, gender, name } = req.body;
 
   try {
     console.log("Request Body:", req.body);
 
-    const existingStudent = await Student.findOne({ $or: [{ email }, { rollno }] });
+    const existingStudent = await Student.findOne({
+      $or: [{ email }, { rollno }],
+    });
     console.log("Existing student:", existingStudent);
     if (existingStudent) {
-      return Response(res, 400, false, "Student with this email or roll number already exists");
+      return Response(
+        res,
+        400,
+        false,
+        "Student with this email or roll number already exists"
+      );
     }
 
-    const student = new Student({ email, password, rollno, mobileno,gender,name });
+    const student = new Student({
+      email,
+      password,
+      rollno,
+      mobileno,
+      gender,
+      name,
+    });
     await student.save();
 
     return Response(res, 201, true, "Student successfully registered");
@@ -24,11 +45,13 @@ export const studentRegister = async (req, res) => {
   }
 };
 
-
 export const studentLogin = async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    if (!email || !password) {
+      return Response(res, 400, false, "Please provide email and password");
+    }
     const student = await Student.findOne({ email });
     if (!student) {
       return Response(res, 404, false, "Student not found");
@@ -39,12 +62,140 @@ export const studentLogin = async (req, res) => {
       return Response(res, 401, false, "Invalid credentials");
     }
 
-    const studenttoken = jwt.sign({ id: student._id, role: "student" }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
+    const studenttoken = jwt.sign(
+      { id: student._id, role: "student" },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1h",
+      }
+    );
+
+    const loginOtp = Math.floor(100000 + Math.random() * 900000);
+    const loginOtpExpire = new Date(
+      Date.now() + process.env.LOGIN_OTP_EXPIRE * 60 * 1000
+    );
+
+    student.otp = loginOtp;
+    student.otpExpire = loginOtpExpire;
+    await student.save();
+
+    let emailTemplate = fs.readFileSync(
+      path.join(__dirname, "../templates/mail.html"),
+      "utf-8"
+    );
+
+    emailTemplate = emailTemplate
+      .replace("{{OTP_CODE}}", loginOtp)
+      .replaceAll("{{MAIL}}", process.env.SMTP_USER)
+      .replace("{{PORT}}", process.env.PORT)
+      .replace("{{USER_ID}}", student._id.toString());
+
+    await sendEMail({
+      email,
+      subject: "Verify your account",
+      html: emailTemplate,
     });
-    return Response(res, 200, true, "Student logged in", { studenttoken });
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent to your email",
+      token : studenttoken,
+      data: student._id,
+      userRole: "student",
+    })
+  } catch (error) {
+    console.error(`Error logging in student for email :${email}`, error);
+    return Response(res, 500, false, "Internal Server error", error.message);
+  }
+};
+
+export const verifyStudentLoginOtp = async (req, res) => {
+  const { id } = req.params;
+  const { otp } = req.body;
+
+  try {
+    const student = await Student.findById(id);
+    if (!student) {
+      return Response(res, 404, false, "Student not found");
+    }
+
+    if(String(student.otp) !== String(otp)){
+      return Response(res, 400, false, "Invalid OTP");
+    }
+
+    const token = jwt.sign(
+      { id: student._id, role: "student" },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1h",
+      }
+    );  
+
+    res.cookie("studentToken", token, {
+      expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+    });
+
+    return Response(res, 200, true, "Student OTP verified successfully", {
+      token,
+    });
   } catch (error) {
     return Response(res, 500, false, "Server error", error.message);
+  }
+};
+
+export const resendStudentLoginOtp = async (req, res) => {
+  try{
+    const { id } = req.params;
+
+    if(!id){
+      return res.status(400).json({
+        success: false,
+        message: "Student ID is required",
+      });
+    }
+    const student = await Student.findById(id);
+
+    if(!student){
+      return res.status(404).json({
+        success: false,
+        message: "Student not found",
+      });
+    }
+
+    const loginOtp = Math.floor(100000 + Math.random() * 900000);
+    const loginOtpExpire = new Date(
+      Date.now() + process.env.OTP_EXPIRE * 60 * 1000
+    );
+
+    student.otp = loginOtp;
+    student.otpExpire = loginOtpExpire;
+    await student.save();
+
+    let emailTemplate = fs.readFileSync(
+      path.join(__dirname, "../templates/mail.html"),
+      "utf-8"
+    );
+
+    emailTemplate = emailTemplate
+      .replace("{{OTP_CODE}}", loginOtp)
+      .replaceAll("{{MAIL}}", process.env.SMTP_USER)
+      .replace("{{PORT}}", process.env.PORT)
+      .replace("{{USER_ID}}", student._id.toString());
+
+    await sendEMail({
+      email: student.email,
+      subject: "Verify your account",
+      html: emailTemplate,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent to your email",
+    });
+  }catch(error){
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -54,9 +205,8 @@ export const getAllStudents = async (req, res) => {
     res.status(200).json({ success: true, students });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
-  } 
+  }
 };
-
 
 export const deleteStudent = async (req, res) => {
   const { id } = req.params;
@@ -74,7 +224,7 @@ export const deleteStudent = async (req, res) => {
 
 export const getStudentProfile = async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(" ")[1]; 
+    const token = req.headers.authorization?.split(" ")[1];
     if (!token) {
       return res.status(401).json({ message: "No token provided" });
     }
@@ -108,6 +258,8 @@ export const getStudentCount = async (req, res) => {
     const totalStudents = await Student.countDocuments({ role: "student" });
     res.status(200).json({ success: true, totalStudents });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };

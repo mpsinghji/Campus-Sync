@@ -33,6 +33,12 @@ const studentSchema = new mongoose.Schema({
     type: String,
     default: "student",
   },
+  otp: {
+    type: String,
+  },
+  otpExpire: {
+    type: Date,
+  },
 });
 
 // Hash password before saving
@@ -44,6 +50,7 @@ studentSchema.pre("save", async function (next) {
 
 // Compare password method
 studentSchema.methods.comparePassword = async function (password) {
+  if (!password) return false;
   return await bcrypt.compare(password, this.password);
 };
 

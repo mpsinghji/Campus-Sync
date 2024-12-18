@@ -15,6 +15,12 @@ const teacherSchema = new mongoose.Schema({
     type: String,
     default: "teacher",
   },
+  otp: {
+    type: String,
+  },
+  otpExpire: {
+    type: Date,
+  },
 });
 
 teacherSchema.pre("save", async function (next) {
@@ -24,6 +30,7 @@ teacherSchema.pre("save", async function (next) {
 });
 
 teacherSchema.methods.comparePassword = async function (password) {
+  if (!password) return false;
   return await bcrypt.compare(password, this.password);
 };
 
