@@ -62,7 +62,10 @@ export const verifyTeacherOtp = (id, otp) => async (dispatch) => {
 
     dispatch({
       type: "VERIFY_TEACHER_OTP_SUCCESS",
-      payload: data.message,
+      payload: {
+        message: data.message,
+        userRole: "teacher",
+      }
     });
   } catch (error) {
     dispatch({

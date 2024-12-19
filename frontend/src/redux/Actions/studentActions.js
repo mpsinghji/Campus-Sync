@@ -62,7 +62,10 @@ export const verifyStudentOtp = (id, otp) => async (dispatch) => {
 
     dispatch({
       type: "VERIFY_STUDENT_OTP_SUCCESS",
-      payload: data.message,
+      payload: {
+        message: data.message,
+        userRole: "student",
+      }
     });
   } catch (error) {
     dispatch({

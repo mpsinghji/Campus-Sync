@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { BACKEND_URL } from '../../constants/url';
+import { message } from '../../../../backend/utils/message';
 
 const URL = BACKEND_URL + "api/v1/admin";
 
@@ -55,7 +56,10 @@ export const verifyAdminOtp = (id, otp) => async (dispatch) => {
 
         dispatch({
             type: "VERIFY_ADMIN_OTP_SUCCESS",
-            payload: data.message
+            payload: {
+                message: data.message,
+                userRole: 'admin',
+            }
         });
 
     } catch (error) {

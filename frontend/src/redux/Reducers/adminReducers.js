@@ -2,14 +2,14 @@ import { createAction, createReducer } from '@reduxjs/toolkit';
 
 // Initial state for the reducer
 const initialState = {
-    loading: false,
-    message: null,
-    error: null,
-    isAuthenticated: false,
-    id: null,
-    authError: null,
-    logoutMessage: null,
-    userRole: null
+    // loading: false,
+    // message: null,
+    // error: null,
+    // isAuthenticated: false,
+    // id: null,
+    // authError: null,
+    // logoutMessage: null,
+    // userRole: null
 };
 
 // Actions
@@ -54,8 +54,10 @@ export const adminReducer = createReducer(initialState, (builder) => {
         })
         .addCase(verifyAdminOtpSuccess, (state, action) => {
             state.loading = false;
-            state.message = action.payload;
+            state.message = action.payload.message;
+            state.userRole = action.payload.userRole;
             state.isAuthenticated = true;
+            state.error = null;
         })
         .addCase(verifyAdminOtpFailure, (state, action) => {
             state.loading = false;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import AdminSidebar from "./Sidebar.jsx";
-import Loading from "../../components/Loading/loading.jsx";
+// import Loading from "../../components/Loading/loading.jsx";
 import axios from "axios";
 import { AdminDashboardContainer, Content, TopContent, BottomContent, Section, SectionTitle } from "../../styles/DashboardStyles.js";
 import { toast } from "react-toastify";
@@ -10,7 +10,7 @@ import AttendanceGraph from "../../components/Analysis/Attendance.jsx";
 import PaymentGraph from "../../components/Analysis/paymentDisplay.jsx";
 import ActivityGraph from "../../components/Analysis/Activitycount.jsx";
 import UserAnalysis from "../../components/Analysis/userAnalysis.jsx";
-import Cookies from "js-cookie";
+// import Cookies from "js-cookie";
 
 const AdminDashboard = () => {
   const [data, setData] = useState({
@@ -18,40 +18,48 @@ const AdminDashboard = () => {
     totalTeachers: 0,
     totalAdmins: 0,
   });
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
 
+    console.log("A1");
     // const token = localStorage.getItem("admintoken");
-    const token = Cookies.get("admintoken");
-    if (!token) {
-      toast.error("Invalid User. Please log in again.");
-      setLoading(false);
-      navigate("/choose-user");
-      return;
-    }
+    // const token = Cookies.get("admintoken");
+    // if (!token) {
+    //   toast.error("Invalid User. Please log in again.");
+    //   // setLoading(false);
+    //   navigate("/choose-user");
+    //   return;
+    // }
+    // console.log("A2");
 
     const fetchData = async () => {
       try {
+        console.log("A2.1");
         const response = await axios.get(
           "http://localhost:5000/api/v1/admin/dashboard",
           {
             headers: {
-              Authorization: `Bearer ${token}`,
+              // Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
             },
+            withCredentials: true,
           }
         );
+        console.log("A2.2");
 
         setData({
           totalStudents: response.data.totalStudents,
           totalTeachers: response.data.totalTeachers,
           totalAdmins: response.data.totalAdmins,
         });
-        setLoading(false);
+        console.log("A2.3");
+        // setLoading(false);
       } catch (err) {
-        setLoading(false);
+        console.log("A2.4");
+        // setLoading(false);
         const status = err.response?.status;
 
         if (status === 401) {
@@ -66,12 +74,18 @@ const AdminDashboard = () => {
       }
     };
 
+    console.log("A3");
     fetchData();
+    console.log("A4");
   }, [navigate]);
 
-  if (loading) {
-    return <Loading />;
-  }
+  // useEffect(() => {
+  //   console.log("Loading: ", loading)
+  // }, [loading])
+
+  // if (loading) {
+  //   return <Loading />;
+  // }
 
   if (error) {
     return <div>Error fetching data. Please try again later.</div>;

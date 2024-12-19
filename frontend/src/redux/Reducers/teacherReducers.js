@@ -54,8 +54,10 @@ export const teacherReducer = createReducer(initialState, (builder) => {
     })
     .addCase(verifyTeacherOtpSuccess, (state, action) => {
       state.loading = false;
-      state.message = action.payload;
+      state.message = action.payload.message;
       state.isAuthenticated = true;
+      state.userRole = action.payload.userRole;
+      state.error = null;
     })
     .addCase(verifyTeacherOtpFailure, (state, action) => {
       state.loading = false;
