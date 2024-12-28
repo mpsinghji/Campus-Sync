@@ -24,7 +24,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
 
-    console.log("A1");
+    // console.log("A1");
     // const token = localStorage.getItem("admintoken");
     // const token = Cookies.get("admintoken");
     // if (!token) {
@@ -37,7 +37,7 @@ const AdminDashboard = () => {
 
     const fetchData = async () => {
       try {
-        console.log("A2.1");
+        // console.log("A2.1");
         const response = await axios.get(
           "http://localhost:5000/api/v1/admin/dashboard",
           {
@@ -48,17 +48,17 @@ const AdminDashboard = () => {
             withCredentials: true,
           }
         );
-        console.log("A2.2");
+        // console.log("A2.2");
 
         setData({
           totalStudents: response.data.totalStudents,
           totalTeachers: response.data.totalTeachers,
           totalAdmins: response.data.totalAdmins,
         });
-        console.log("A2.3");
+        // console.log("A2.3");
         // setLoading(false);
       } catch (err) {
-        console.log("A2.4");
+        // console.log("A2.4");
         // setLoading(false);
         const status = err.response?.status;
 
@@ -74,9 +74,9 @@ const AdminDashboard = () => {
       }
     };
 
-    console.log("A3");
+    // console.log("A3");
     fetchData();
-    console.log("A4");
+    // console.log("A4");
   }, [navigate]);
 
   // useEffect(() => {
