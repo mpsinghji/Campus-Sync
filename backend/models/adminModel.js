@@ -15,6 +15,12 @@ const adminSchema = new mongoose.Schema({
     type: String,
     default: "admin",
   },
+  otp: {
+    type: String,
+  },
+  otpExpire: {
+    type: Date,
+  },
 });
 
 adminSchema.pre("save", async function (next) {
@@ -24,8 +30,10 @@ adminSchema.pre("save", async function (next) {
 });
 
 adminSchema.methods.comparePassword = async function (password) {
+  if (!password) return false;
   return await bcrypt.compare(password, this.password);
 };
+
 
 const Admin = mongoose.model("Admin", adminSchema);
 export default Admin;

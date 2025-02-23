@@ -28,7 +28,7 @@ const ProfileSection = () => {
     const fetchStudentProfile = async () => {
       try {
         // const token = localStorage.getItem('studenttoken');
-        const token = Cookies.get('studenttoken');
+        const token = Cookies.get('studentToken');
         if (!token) {
           toast.error('No token found. Please log in again.');
           setLoading(false);

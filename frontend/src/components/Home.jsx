@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  NavLink,
   ButtonsContainer,
   LoginButton,
   HomeContainer,
@@ -8,7 +7,7 @@ import {
   Title,
   CollegeVideo,
 } from "../styles/styles.js";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import backgroundVideo from "../assets/background_video.mp4";
 
 const Home = () => {
@@ -41,9 +40,6 @@ const Home = () => {
         </CollegeVideo>
         <CollegeInfo>
           <Title>College Management System</Title>
-          {/* <NavLink as={Link} to="/about-me">About Me</NavLink> */}
-          {/* <NavLink>Still Figuring</NavLink> */}
-          {/* <NavLink>Still Figuring</NavLink> */}
         </CollegeInfo>
         <ButtonsContainer>
           <LoginButton onClick={handleLoginClick}>Sign In</LoginButton>

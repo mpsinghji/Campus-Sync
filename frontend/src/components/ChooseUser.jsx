@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import {
   ChooseUserContainer,
   RoleSelector,
@@ -13,10 +14,12 @@ import {
   Circle,
 } from "../styles/ChooseUserStyles";
 import { createGlobalStyle } from "styled-components";
-import { useAuth } from "../context/authContext.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Cookies from "js-cookie"; 
+import { adminLogin } from "../redux/Actions/adminActions";
+import { studentLogin } from "../redux/Actions/studentActions";
+import { teacherLogin } from "../redux/Actions/teacherActions";
+import toastOptions from "../constants/toast.js";
 
 export const GlobalStyle = createGlobalStyle`
   * {
@@ -42,68 +45,54 @@ export const GlobalStyle = createGlobalStyle`
 const ChooseUser = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [role, setRole] = useState("admin");
-  const { setIsAuthenticated, setUserRole } = useAuth();
+
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const userState = useSelector((state) => {
+    switch (role) {
+      case "admin":
+        return state.admin;
+      case "student":
+        return state.student;
+      case "teacher":
+        return state.teacher;
+      default:
+        return {};
+    }
+  });
+
+  const { loading, error, message, id } = userState;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
 
-    const roleUrls = {
-      admin: "http://localhost:5000/api/v1/admin/login",
-      student: "http://localhost:5000/api/v1/student/login",
-      teacher: "http://localhost:5000/api/v1/teacher/login",
-    };
-
-    try {
-      const response = await axios.post(roleUrls[role], {
-        email,
-        password,
-      });
-
-      console.log(response);
-      const tokenKey = `${role}token`;
-      const token =
-        response.data?.[tokenKey] || response.data?.data?.[tokenKey];
-
-      if (!token) {
-        throw new Error("Token not found in response");
-      }
-
-      Cookies.set(tokenKey, token, { expires: 1, secure: true });
-      // localStorage.setItem(tokenKey, token);
-      setIsAuthenticated(true);
-      setUserRole(role);
-      navigate(`/${role}/dashboard`);
-      // if (role === "admin") navigate("/admin/dashboard");
-      // else if (role === "student") navigate("/student/dashboard");
-      // else if (role === "teacher") navigate("/teacher/dashboard");
-    } catch (error) {
-      console.log(error);
-      toast.error(
-        error.response?.data?.message || "Login failed. Please try again."
-      );
-    } finally {
-      setLoading(false);
+    if (role === "admin") {
+      dispatch(adminLogin(email, password));
+    } else if (role === "student") {
+      dispatch(studentLogin(email, password));
+    } else {
+      dispatch(teacherLogin(email, password));
     }
-  };
-
-  const tokenKey = `${role}token`;
-  // const token = localStorage.getItem(tokenKey);
-  const token = Cookies.get(tokenKey);
-  const config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   };
 
   const handleRoleSelection = (selectedRole) => {
     setRole(selectedRole);
     console.log("Selected Role:", selectedRole);
-};
+  };
 
+  useEffect(() => {
+    if (error) {
+      toast.error(error, toastOptions);
+      dispatch({ type: "CLEAR_ERROR" });
+    }
+    if (message) {
+      toast.success(message, toastOptions);
+      dispatch({ type: "CLEAR_MESSAGE" });
+      navigate(`/otp/${id}`, { state: { role } });
+    }
+  }, [message, error, navigate, dispatch, role, id]);
 
   return (
     <>
@@ -154,7 +143,11 @@ const ChooseUser = () => {
                 required
               />
             </div>
-            <Button as="button" type="submit" disabled={loading}>
+            <Button
+              as="button"
+              type="submit"
+              // disabled={loading || !email || !password}
+            >
               {loading ? (
                 <Spinner>
                   <Circle />

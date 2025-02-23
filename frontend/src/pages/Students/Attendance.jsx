@@ -24,7 +24,7 @@ const Attendance = () => {
     const fetchAttendance = async () => {
       try {
         // const token = localStorage.getItem("studenttoken"); // Use 'studenttoken' instead of 'token'
-        const token = Cookies.get("studenttoken");
+        const token = Cookies.get("studentToken");
         console.log("Token being sent:", token); // Log token to ensure it's being passed
 
         const response = await axios.get(

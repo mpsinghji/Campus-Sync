@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Home from "./components/Home.jsx";
 import ChooseUser from "./components/ChooseUser.jsx";
 // import AboutMe from "./components/AboutMe.jsx";
+import ErrorPage from "./components/Error/errorPage.jsx";
 
 import AdminRegister from "./components/AdminRegister.jsx";
 import StudentRegister from "./components/StudentRegister.jsx";
@@ -56,11 +57,14 @@ function App() {
 
     <Router>
       <Routes>
+        <Route path="*" element={<ErrorPage />} />
         <Route path="/" element={<Home />} />
         <Route path="/choose-user" element={<ChooseUser />} />
-        <Route path="/login-otp" element={<LoginOtpPage />} />
         {/* <Route path="/about-me" element={<AboutMe />} /> */}
 
+
+        {/* <Route path="/login/resend/:id" element={<LoginOtpPage />} /> */}
+        <Route path="/otp/:id" element={<LoginOtpPage />} />
 
         {/* Add the Admin Register route here */}
         <Route exact path="/admin-register" element={<AdminRegister />} />
