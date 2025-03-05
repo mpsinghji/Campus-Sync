@@ -1,86 +1,129 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your OTP Code</title>
+    <title>OTP Verification</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 20px;
+            font-family: 'Times New Roman', Times, serif;
+            line-height: 1.6;
             color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
         }
         .email-container {
             max-width: 600px;
+            margin: 20px auto;
             background-color: #ffffff;
+            padding: 40px;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            margin: 0 auto;
-            padding: 20px;
-            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        h1 {
-            color: #007bff;
-            font-size: 24px;
-            margin-top: 0;
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #1ABC9C;
+            padding-bottom: 20px;
+        }
+        .header h1 {
+            color: #1ABC9C;
+            font-size: 28px;
+            margin: 0;
+            font-weight: bold;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #2C3E50;
+        }
+        .message {
+            font-size: 16px;
+            margin-bottom: 25px;
+            color: #34495E;
+        }
+        .otp-container {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
         }
         .otp {
-            background-color: #1db196;
-            color: #ffffff;
-            font-size: 24px;
+            font-size: 32px;
             font-weight: bold;
-            letter-spacing: 2px;
-            padding: 15px;
-            border-radius: 5px;
+            color: #1ABC9C;
+            letter-spacing: 5px;
+            padding: 15px 25px;
+            background-color: #ffffff;
+            border: 2px dashed #1ABC9C;
+            border-radius: 4px;
             display: inline-block;
-            margin: 20px 0;
-        }
-        p {
-            font-size: 16px;
-            line-height: 1.5;
-            color: #555;
-        }
-        .cta-button {
-            background-color: #1db196;
-            color: #ffffff;
-            text-decoration: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            display: inline-block;
-            margin-top: 20px;
-            font-weight: bold;
-        }
-        .cta-button:hover {
-            background-color: #128670;
+            margin: 10px 0;
         }
         .footer {
-            margin-top: 30px;
-            font-size: 12px;
-            color: #999;
             text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 14px;
+            color: #7F8C8D;
         }
-        .footer a {
-            color: #007bff;
-            text-decoration: none;
+        .warning {
+            color: #E74C3C;
+            font-size: 14px;
+            font-style: italic;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #FDF3F2;
+            border-radius: 4px;
         }
-        .footer a:hover {
-            text-decoration: underline;
+        .signature {
+            margin-top: 30px;
+            font-style: italic;
+        }
+        .signature p {
+            margin: 5px 0;
         }
     </style>
 </head>
 <body>
     <div class="email-container">
-        <h1>Welcome to College_Management_App</h1>
-        <p>Dear User,</p>
-        <p>We received a request to verify your account. Please use the OTP code below to proceed:</p>
-        <div class="otp">{{OTP_CODE}}</div>
-        <p>This code is valid for 10 minutes. If you did not request this, please ignore this email.</p>
-        <!-- <a href="http://localhost:{{PORT}}/api/v1/user/verify/{{USER_ID}}" class="cta-button">Verify Your Account</a> -->
+        <div class="header">
+            <h1>CampusSync</h1>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">Dear User,</div>
+            
+            <div class="message">
+                We received a request to verify your account. To proceed with your verification, please use the OTP code provided below:
+            </div>
+            
+            <div class="otp-container">
+                <div class="otp">{{OTP_CODE}}</div>
+            </div>
+            
+            <div class="message">
+                This verification code is valid for 10 minutes. Please do not share this code with anyone.
+            </div>
+            
+            <div class="warning">
+                If you did not request this verification, please ignore this email or contact support if you have concerns.
+            </div>
+            
+            <div class="signature">
+                <p>Best regards,</p>
+                <p>The CampusSync Team</p>
+            </div>
+        </div>
+        
         <div class="footer">
-            <p>If you have any issues, please contact our support team at <a href="mailto:{{MAIL}}">{{MAIL}}</a>.</p>
-            <p>Thank you for using our services!</p>
+            <p>This is an automated message, please do not reply to this email.</p>
         </div>
     </div>
 </body>
