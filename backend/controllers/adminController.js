@@ -37,16 +37,27 @@ export const adminLogin = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    if (!email || !password)
+    console.log("Admin Login Attempt:", { email });
+
+    if (!email || !password) {
+      console.log("Missing credentials");
       return Response(res, 400, false, "Please provide email and password");
+    }
 
     const admin = await Admin.findOne({ email });
-    if (!admin) return Response(res, 404, false, "Admin not found");
+    if (!admin) {
+      console.log("Admin not found for email:", email);
+      return Response(res, 404, false, "Admin not found");
+    }
 
+    console.log("Admin found, verifying password");
     const isPasswordValid = await admin.comparePassword(password);
-    if (!isPasswordValid)
+    if (!isPasswordValid) {
+      console.log("Invalid password for admin:", email);
       return Response(res, 401, false, "Invalid credentials");
+    }
 
+    console.log("Password verified, generating token");
     const adminToken = jwt.sign(
       { id: admin._id, role: "admin" },
       process.env.JWT_SECRET,
@@ -55,15 +66,24 @@ export const adminLogin = async (req, res) => {
       }
     );
 
+    console.log("Generating OTP");
     const loginOtp = Math.floor(100000 + Math.random() * 900000);
     const loginOtpExpire = new Date(
-      Date.now() + process.env.LOGIN_OTP_EXPIRE * 60 * 1000
+      Date.now() + (process.env.LOGIN_OTP_EXPIRE || 10) * 60 * 1000
     );
 
-    admin.otp = loginOtp;
-    admin.otpExpire = loginOtpExpire;
-    await admin.save();
+    console.log("Generated OTP:", loginOtp);
+    console.log("OTP Expire:", loginOtpExpire);
 
+    admin.otp = loginOtp.toString();
+    admin.otpExpire = loginOtpExpire;
+    
+    console.log("Saving admin with OTP");
+    const savedAdmin = await admin.save();
+    console.log("Saved Admin OTP:", savedAdmin.otp);
+    console.log("Saved Admin OTP Expire:", savedAdmin.otpExpire);
+
+    console.log("Reading email template");
     let emailTemplate = fs.readFileSync(
       path.join(__dirname, "../templates/mail.html"),
       "utf-8"
@@ -74,11 +94,14 @@ export const adminLogin = async (req, res) => {
       .replace("{{PORT}}", process.env.PORT)
       .replace("{{USER_ID}}", admin._id.toString());
 
+    console.log("Sending email");
     await sendEMail({
       email,
       subject: "Verify your account",
       html: emailTemplate,
     });
+
+    console.log("Login successful");
     return res.status(200).json({
       success: true,
       message: "Admin logged in successfully",
@@ -87,8 +110,12 @@ export const adminLogin = async (req, res) => {
       userRole: "admin",
     });
   } catch (error) {
-    console.error(`Error during admin login for email: ${email}`, error);
-    return Response(res, 500, false, "Internal server error");
+    console.error("Detailed login error:", {
+      message: error.message,
+      stack: error.stack,
+      email: email
+    });
+    return Response(res, 500, false, "Internal server error", error.message);
   }
 };
 
@@ -97,15 +124,34 @@ export const verifyAdminLoginOtp = async (req, res) => {
   const { otp } = req.body; // OTP
 
   try {
+    console.log("Verifying OTP for admin ID:", id);
+    console.log("Received OTP:", otp);
+
     const admin = await Admin.findById(id);
     if (!admin) {
-      return Response(res, 404, false, "Admin not found ");
+      console.log("Admin not found");
+      return Response(res, 404, false, "Admin not found");
+    }
+
+    console.log("Stored OTP:", admin.otp);
+    console.log("OTP Expire:", admin.otpExpire);
+
+    if (!admin.otp || !admin.otpExpire) {
+      console.log("No OTP found or expired");
+      return Response(res, 400, false, "OTP not found or expired");
+    }
+
+    if (new Date() > admin.otpExpire) {
+      console.log("OTP has expired");
+      return Response(res, 400, false, "OTP has expired");
     }
 
     if (String(admin.otp) !== String(otp)) {
+      console.log("Invalid OTP");
       return Response(res, 400, false, "Invalid OTP");
     }
 
+    console.log("OTP verified successfully, generating token");
     const token = jwt.sign(
       { id: admin._id, role: "admin" },
       process.env.JWT_SECRET,
@@ -113,6 +159,12 @@ export const verifyAdminLoginOtp = async (req, res) => {
         expiresIn: "1h",
       }
     );
+
+    // Clear OTP after successful verification
+    admin.otp = undefined;
+    admin.otpExpire = undefined;
+    await admin.save();
+    console.log("OTP cleared from database");
 
     res.cookie("adminToken", token, {
       expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
@@ -125,6 +177,7 @@ export const verifyAdminLoginOtp = async (req, res) => {
       token,
     });
   } catch (error) {
+    console.error("Error verifying OTP:", error);
     return Response(res, 500, false, "Server error", error.message);
   }
 };

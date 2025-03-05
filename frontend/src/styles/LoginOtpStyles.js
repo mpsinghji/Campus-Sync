@@ -57,3 +57,24 @@ export const Message = styled.p`
   color: #007bff;
   font-size: 14px;
 `;
+
+export const ResendLink = styled.button`
+  background: none;
+  border: none;
+  color: #4a90e2;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 20px;
+  padding: 0;
+  text-decoration: none;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+  
+  &:disabled {
+    color: #999;
+    cursor: not-allowed;
+    text-decoration: none;
+  }
+`;

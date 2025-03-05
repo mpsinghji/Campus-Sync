@@ -9,6 +9,7 @@ import {
   resendTeacherLoginOtp
 } from "../controllers/teacherController.js";
 import { validateUserRegistration } from "../middlewares/userValidator.js";
+import { validateOtp } from "../middlewares/otpValidator.js";
 
 const teacherRoute = express.Router();
 
@@ -22,7 +23,7 @@ teacherRoute.delete("/:id", deleteTeacher);
 
 teacherRoute.get("/profile", getTeacherProfile);
 
-teacherRoute.post("/login/verify/:id", verifyTeacherLoginOtp);
+teacherRoute.post("/login/verify/:id", validateOtp, verifyTeacherLoginOtp);
 
 teacherRoute.get("/login/resend/:id", resendTeacherLoginOtp);
 

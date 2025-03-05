@@ -1,27 +1,53 @@
 import nodemailer from "nodemailer";
 
 export const sendEMail = async (options) => {
-    const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT,
-        service: process.env.SMTP_SERVICE,
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
-        },
-        secure: true
-    });
+    try {
+        console.log("Creating email transporter with config:", {
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            service: process.env.SMTP_SERVICE,
+            user: process.env.SMTP_USER
+        });
 
-    const mailOptions = {
-        from: process.env.SMTP_USER,
-        to: options.email,
-        subject: options.subject,
-        text: options.message,
-        html: options.html
-    };
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            service: process.env.SMTP_SERVICE,
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
+            },
+            secure: true
+        });
 
-    await transporter.sendMail(mailOptions);
-}
+        console.log("Preparing email options:", {
+            from: process.env.SMTP_USER,
+            to: options.email,
+            subject: options.subject
+        });
+
+        const mailOptions = {
+            from: process.env.SMTP_USER,
+            to: options.email,
+            subject: options.subject,
+            text: options.message,
+            html: options.html
+        };
+
+        console.log("Sending email...");
+        const info = await transporter.sendMail(mailOptions);
+        console.log("Email sent successfully:", info.messageId);
+        return info;
+    } catch (error) {
+        console.error("Error sending email:", {
+            message: error.message,
+            stack: error.stack,
+            code: error.code,
+            command: error.command
+        });
+        throw new Error(`Failed to send email: ${error.message}`);
+    }
+};
 
 
 // export const sendOtpEmail = async (user, otp) => {

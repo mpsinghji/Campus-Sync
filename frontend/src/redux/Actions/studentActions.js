@@ -95,3 +95,70 @@ export const resendStudentOtp = (id) => async (dispatch) => {
     });
   }
 };
+
+// Check and restore student state
+export const checkStudentAuth = () => async (dispatch) => {
+    try {
+        const token = localStorage.getItem('studentToken');
+        if (!token) {
+            return;
+        }
+
+        dispatch({
+            type: "VERIFY_STUDENT_OTP_REQUEST"
+        });
+
+        // Verify token with backend
+        const { data } = await axios.get(`${URL}/profile`, {
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            withCredentials: true
+        });
+
+        dispatch({
+            type: "VERIFY_STUDENT_OTP_SUCCESS",
+            payload: {
+                message: "Session restored",
+                userRole: 'student',
+                token: token
+            }
+        });
+
+    } catch (error) {
+        console.error("Auth check error:", error);
+        // Clear invalid token
+        localStorage.removeItem('studentToken');
+        dispatch({
+            type: "VERIFY_STUDENT_OTP_FAILURE",
+            payload: "Session expired"
+        });
+    }
+};
+
+// Student Logout Action
+export const studentLogout = () => async (dispatch) => {
+    try {
+        // Clear localStorage
+        localStorage.removeItem('studentToken');
+        
+        // Clear cookies by calling backend logout endpoint
+        await axios.post(`${URL}/logout`, {}, {
+            withCredentials: true
+        });
+
+        dispatch({
+            type: "STUDENT_LOGOUT",
+            payload: "Logged out successfully"
+        });
+
+    } catch (error) {
+        console.error("Logout Error:", error);
+        // Even if the backend call fails, clear the local state
+        dispatch({
+            type: "STUDENT_LOGOUT",
+            payload: "Logged out successfully"
+        });
+    }
+};

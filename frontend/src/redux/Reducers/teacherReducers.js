@@ -10,6 +10,7 @@ const initialState = {
   authError: null,
   logoutMessage: null,
   userRole: null,
+  token: localStorage.getItem('teacherToken') || null
 };
 
 // Actions
@@ -29,6 +30,8 @@ const clearError = createAction("CLEAR_ERROR");
 const clearAuthError = createAction("CLEAR_AUTH_ERROR");
 const clearMessage = createAction("CLEAR_MESSAGE");
 const clearLogoutMessage = createAction("CLEAR_LOGOUT_MESSAGE");
+
+const teacherLogout = createAction("TEACHER_LOGOUT");
 
 // Reducer
 export const teacherReducer = createReducer(initialState, (builder) => {
@@ -90,5 +93,16 @@ export const teacherReducer = createReducer(initialState, (builder) => {
     })
     .addCase(clearLogoutMessage, (state) => {
       state.logoutMessage = null;
+    })
+
+    // Logout action
+    .addCase(teacherLogout, (state, action) => {
+      state.loading = false;
+      state.message = action.payload;
+      state.error = null;
+      state.isAuthenticated = false;
+      state.id = null;
+      state.userRole = null;
+      state.token = null;
     });
 });

@@ -10,6 +10,7 @@ import {
   DropdownItem,
 } from "../../styles/SidebarStyles";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import {
   BsGraphUp,
   BsFileText,
@@ -26,11 +27,12 @@ import { FaUserPlus } from "react-icons/fa";
 import { IoIosArrowDropdown } from "react-icons/io";
 import { CgUserRemove } from "react-icons/cg";
 import LogoutModal from "../../components/Logout/logOut";
-import Cookies from "js-cookie";
+import { adminLogout } from "../../redux/Actions/adminActions";
 
 const AdminSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isDropdownOpen2, setIsDropdownOpen2] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false); 
@@ -56,12 +58,14 @@ const AdminSidebar = () => {
     setIsModalOpen(status);
   };
 
-  const handleConfirmLogout = () => {
-    console.log('User has logged out');
-    // localStorage.removeItem("admintoken");
-    Cookies.remove("admintoken");
-    navigate("/choose-user"); 
-    setIsModalOpen(false); 
+  const handleConfirmLogout = async () => {
+    try {
+      await dispatch(adminLogout());
+      setIsModalOpen(false);
+      window.location.href = "/choose-user";
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   useEffect(() => {

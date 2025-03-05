@@ -11,6 +11,7 @@ import {
   resendStudentLoginOtp
 } from "../controllers/studentController.js";
 import { validateUserRegistration } from "../middlewares/userValidator.js";
+import { validateOtp } from "../middlewares/otpValidator.js";
 
 const studentRoute = express.Router();
 
@@ -36,10 +37,8 @@ studentRoute.get("/profile", getStudentProfile);
 
 studentRoute.get("/count", getStudentCount);
 
-studentRoute.post("/login/verify/:id", verifyStudentLoginOtp);
+studentRoute.post("/login/verify/:id", validateOtp, verifyStudentLoginOtp);
 
 studentRoute.get("/login/resend/:id", resendStudentLoginOtp);
-
-
 
 export default studentRoute;

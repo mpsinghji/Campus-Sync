@@ -10,56 +10,56 @@ const initialState = {
     authError: null,
     logoutMessage: null,
     userRole: null,
-    token: localStorage.getItem('adminToken') || null
+    token: localStorage.getItem('studentToken') || null
 };
 
 // Actions
-const adminLoginRequest = createAction('ADMIN_LOGIN_REQUEST');
-const adminLoginSuccess = createAction('ADMIN_LOGIN_SUCCESS');
-const adminLoginFailure = createAction('ADMIN_LOGIN_FAILURE');
+const studentLoginRequest = createAction('STUDENT_LOGIN_REQUEST');
+const studentLoginSuccess = createAction('STUDENT_LOGIN_SUCCESS');
+const studentLoginFailure = createAction('STUDENT_LOGIN_FAILURE');
 
-const verifyAdminOtpRequest = createAction('VERIFY_ADMIN_OTP_REQUEST');
-const verifyAdminOtpSuccess = createAction('VERIFY_ADMIN_OTP_SUCCESS');
-const verifyAdminOtpFailure = createAction('VERIFY_ADMIN_OTP_FAILURE');
+const verifyStudentOtpRequest = createAction('VERIFY_STUDENT_OTP_REQUEST');
+const verifyStudentOtpSuccess = createAction('VERIFY_STUDENT_OTP_SUCCESS');
+const verifyStudentOtpFailure = createAction('VERIFY_STUDENT_OTP_FAILURE');
 
-const resendAdminOtpRequest = createAction('RESEND_ADMIN_OTP_REQUEST');
-const resendAdminOtpSuccess = createAction('RESEND_ADMIN_OTP_SUCCESS');
-const resendAdminOtpFailure = createAction('RESEND_ADMIN_OTP_FAILURE');
+const resendStudentOtpRequest = createAction('RESEND_STUDENT_OTP_REQUEST');
+const resendStudentOtpSuccess = createAction('RESEND_STUDENT_OTP_SUCCESS');
+const resendStudentOtpFailure = createAction('RESEND_STUDENT_OTP_FAILURE');
 
 const clearError = createAction('CLEAR_ERROR');
 const clearAuthError = createAction('CLEAR_AUTH_ERROR');
 const clearMessage = createAction('CLEAR_MESSAGE');
 const clearLogoutMessage = createAction('CLEAR_LOGOUT_MESSAGE');
 
-const adminLogout = createAction('ADMIN_LOGOUT');
+const studentLogout = createAction('STUDENT_LOGOUT');
 
 // Reducer
-export const adminReducer = createReducer(initialState, (builder) => {
+export const studentReducer = createReducer(initialState, (builder) => {
     builder
-        // Admin login actions
-        .addCase(adminLoginRequest, (state) => {
+        // Student login actions
+        .addCase(studentLoginRequest, (state) => {
             state.loading = true;
             state.error = null;
         })
-        .addCase(adminLoginSuccess, (state, action) => {
+        .addCase(studentLoginSuccess, (state, action) => {
             state.loading = false;
             state.message = action.payload.message;
             state.id = action.payload.id;
             state.userRole = action.payload.userRole;
             state.error = null;
         })
-        .addCase(adminLoginFailure, (state, action) => {
+        .addCase(studentLoginFailure, (state, action) => {
             state.loading = false;
             state.error = action.payload;
             state.isAuthenticated = false;
         })
         
-        // Admin OTP verification actions
-        .addCase(verifyAdminOtpRequest, (state) => {
+        // Student OTP verification actions
+        .addCase(verifyStudentOtpRequest, (state) => {
             state.loading = true;
             state.error = null;
         })
-        .addCase(verifyAdminOtpSuccess, (state, action) => {
+        .addCase(verifyStudentOtpSuccess, (state, action) => {
             state.loading = false;
             state.message = action.payload.message;
             state.userRole = action.payload.userRole;
@@ -67,26 +67,37 @@ export const adminReducer = createReducer(initialState, (builder) => {
             state.token = action.payload.token;
             state.error = null;
         })
-        .addCase(verifyAdminOtpFailure, (state, action) => {
+        .addCase(verifyStudentOtpFailure, (state, action) => {
             state.loading = false;
             state.error = action.payload;
             state.isAuthenticated = false;
             state.token = null;
         })
 
-        // Admin OTP resend actions
-        .addCase(resendAdminOtpRequest, (state) => {
+        // Student OTP resend actions
+        .addCase(resendStudentOtpRequest, (state) => {
             state.loading = true;
             state.error = null;
         })
-        .addCase(resendAdminOtpSuccess, (state, action) => {
+        .addCase(resendStudentOtpSuccess, (state, action) => {
             state.loading = false;
             state.message = action.payload;
             state.error = null;
         })
-        .addCase(resendAdminOtpFailure, (state, action) => {
+        .addCase(resendStudentOtpFailure, (state, action) => {
             state.loading = false;
             state.error = action.payload;
+        })
+
+        // Logout action
+        .addCase(studentLogout, (state, action) => {
+            state.loading = false;
+            state.message = action.payload;
+            state.error = null;
+            state.isAuthenticated = false;
+            state.id = null;
+            state.userRole = null;
+            state.token = null;
         })
 
         // Clearing error, message, and authentication state
@@ -101,16 +112,5 @@ export const adminReducer = createReducer(initialState, (builder) => {
         })
         .addCase(clearLogoutMessage, (state) => {
             state.logoutMessage = null;
-        })
-
-        // Logout action
-        .addCase(adminLogout, (state, action) => {
-            state.loading = false;
-            state.message = action.payload;
-            state.error = null;
-            state.isAuthenticated = false;
-            state.id = null;
-            state.userRole = null;
-            state.token = null;
         });
-});
+}); 

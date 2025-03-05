@@ -1,4 +1,9 @@
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { checkAdminAuth } from "./redux/Actions/adminActions";
+import { checkStudentAuth } from "./redux/Actions/studentActions";
+import { checkTeacherAuth } from "./redux/Actions/teacherActions";
 import Home from "./components/Home.jsx";
 import ChooseUser from "./components/ChooseUser.jsx";
 // import AboutMe from "./components/AboutMe.jsx";
@@ -53,8 +58,16 @@ import ActivityGraph from "./components/Analysis/Activitycount.jsx";
 import UserAnalysis from "./components/Analysis/userAnalysis.jsx";
 
 function App() {
-  return (
+  const dispatch = useDispatch();
 
+  useEffect(() => {
+    // Check authentication for all user types on app initialization
+    dispatch(checkAdminAuth());
+    dispatch(checkStudentAuth());
+    dispatch(checkTeacherAuth());
+  }, [dispatch]);
+
+  return (
     <Router>
       <Routes>
         <Route path="*" element={<ErrorPage />} />
