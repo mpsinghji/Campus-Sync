@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import {
   BsGraphUp,
   BsPeople,
@@ -22,7 +23,7 @@ import {
 import styled , { css } from "styled-components";
 import bg1 from "../../assets/bg1.png";
 import LogoutModal from "../../components/Logout/logOut";
-import Cookies from "js-cookie";
+import { teacherLogout } from "../../redux/Actions/teacherActions";
 
 export const SidebarNavItem = styled.li`
   display: flex;
@@ -56,6 +57,7 @@ export const SidebarNavItem = styled.li`
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   const handleNavigation = (path) => {
@@ -72,11 +74,17 @@ const Sidebar = () => {
     setIsModalOpen(status);
   };
 
-  const handleConfirmLogout = () => {
-    // localStorage.removeItem("teachertoken");
-    Cookies.remove("teachertoken");
-    navigate("/choose-user"); 
-    setIsModalOpen(false); 
+  const handleConfirmLogout = async () => {
+    try {
+      await dispatch(teacherLogout());
+      navigate("/choose-user");
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if there's an error, still navigate to login
+      navigate("/choose-user");
+      setIsModalOpen(false);
+    }
   };
 
   return (

@@ -55,23 +55,45 @@ export const verifyTeacherOtp = (id, otp) => async (dispatch) => {
       {
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json"
         },
         withCredentials: true,
       }
     );
 
+    console.log("Teacher OTP verification response:", data);
+
+    // Store token in localStorage
+    if (data.token) {
+      localStorage.setItem('teacherToken', data.token);
+      console.log("Teacher token stored in localStorage");
+    } else {
+      console.error("No token received in response");
+      throw new Error("No token received");
+    }
+
+    // Decode token to get user info
+    const tokenPayload = JSON.parse(atob(data.token.split('.')[1]));
+    
     dispatch({
       type: "VERIFY_TEACHER_OTP_SUCCESS",
       payload: {
         message: data.message,
-        userRole: "teacher",
+        userRole: data.userRole,
+        token: data.token,
+        user: {
+          id: tokenPayload.id,
+          userRole: data.userRole
+        }
       }
     });
   } catch (error) {
+    console.error("Teacher OTP Verification Error:", error);
     dispatch({
       type: "VERIFY_TEACHER_OTP_FAILURE",
       payload: error.response?.data?.message || "OTP Verification Failed",
     });
+    throw error;
   }
 };
 
@@ -100,40 +122,77 @@ export const resendTeacherOtp = (id) => async (dispatch) => {
 export const checkTeacherAuth = () => async (dispatch) => {
     try {
         const token = localStorage.getItem('teacherToken');
+        
         if (!token) {
+            console.log("No stored teacher authentication data found");
             return;
         }
 
-        dispatch({
-            type: "VERIFY_TEACHER_OTP_REQUEST"
-        });
-
-        // Verify token with backend
-        const { data } = await axios.get(`${URL}/profile`, {
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-            },
-            withCredentials: true
-        });
-
+        // Decode token to get user info
+        const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+        
+        // First, try to restore state from token
         dispatch({
             type: "VERIFY_TEACHER_OTP_SUCCESS",
             payload: {
-                message: "Session restored",
+                message: "Session restored from cache",
                 userRole: 'teacher',
-                token: token
+                token: token,
+                user: {
+                    id: tokenPayload.id,
+                    userRole: 'teacher'
+                }
             }
         });
 
+        // Then verify with backend in the background
+        try {
+            const { data } = await axios.get(`${URL}/profile`, {
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+                withCredentials: true
+            });
+
+            // Update with fresh data if available
+            if (data.data) {
+                dispatch({
+                    type: "VERIFY_TEACHER_OTP_SUCCESS",
+                    payload: {
+                        message: "Session verified",
+                        userRole: 'teacher',
+                        token: token,
+                        user: {
+                            id: data.data,
+                            userRole: 'teacher'
+                        }
+                    }
+                });
+            }
+        } catch (backendError) {
+            console.error("Teacher backend verification error:", backendError);
+            // Only clear data if it's a 401 error
+            if (backendError.response && backendError.response.status === 401) {
+                localStorage.removeItem('teacherToken');
+                dispatch({
+                    type: "VERIFY_TEACHER_OTP_FAILURE",
+                    payload: "Session expired"
+                });
+            }
+            // For other errors, keep using the cached data
+        }
+
     } catch (error) {
-        console.error("Auth check error:", error);
-        // Clear invalid token
-        localStorage.removeItem('teacherToken');
-        dispatch({
-            type: "VERIFY_TEACHER_OTP_FAILURE",
-            payload: "Session expired"
-        });
+        console.error("Teacher auth check error:", error);
+        // Only clear data if it's a parsing error or other critical error
+        if (error instanceof SyntaxError) {
+            localStorage.removeItem('teacherToken');
+            dispatch({
+                type: "VERIFY_TEACHER_OTP_FAILURE",
+                payload: "Invalid session data"
+            });
+        }
     }
 };
 
@@ -154,7 +213,7 @@ export const teacherLogout = () => async (dispatch) => {
         });
 
     } catch (error) {
-        console.error("Logout Error:", error);
+        console.error("Teacher Logout Error:", error);
         // Even if the backend call fails, clear the local state
         dispatch({
             type: "TEACHER_LOGOUT",

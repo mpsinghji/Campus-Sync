@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import {
   BsGraphUp,
   BsFileText,
@@ -21,11 +22,12 @@ import {
 import bg1 from "../../assets/bg1.png";
 import { MdPayment } from "react-icons/md";
 import LogoutModal from "../../components/Logout/logOut";
-import Cookies from "js-cookie";
+import { studentLogout } from "../../redux/Actions/studentActions";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   const handleNavigation = (path) => {
@@ -42,12 +44,14 @@ const Sidebar = () => {
     setIsModalOpen(status);
   };
 
-  const handleConfirmLogout = () => {
-    console.log("User has logged out");
-    // localStorage.removeItem("studenttoken");
-    Cookies.remove("studenttoken");
-    navigate("/choose-user");
-    setIsModalOpen(false);
+  const handleConfirmLogout = async () => {
+    try {
+      await dispatch(studentLogout());
+      navigate("/choose-user");
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
   };
 
   return (

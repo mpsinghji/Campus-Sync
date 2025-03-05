@@ -10,7 +10,8 @@ const initialState = {
     authError: null,
     logoutMessage: null,
     userRole: null,
-    token: localStorage.getItem('studentToken') || null
+    token: localStorage.getItem('studentToken') || null,
+    user: JSON.parse(localStorage.getItem('studentUser')) || null
 };
 
 // Actions
@@ -52,6 +53,7 @@ export const studentReducer = createReducer(initialState, (builder) => {
             state.loading = false;
             state.error = action.payload;
             state.isAuthenticated = false;
+            state.user = null;
         })
         
         // Student OTP verification actions
@@ -65,6 +67,7 @@ export const studentReducer = createReducer(initialState, (builder) => {
             state.userRole = action.payload.userRole;
             state.isAuthenticated = true;
             state.token = action.payload.token;
+            state.user = action.payload.user;
             state.error = null;
         })
         .addCase(verifyStudentOtpFailure, (state, action) => {
@@ -72,6 +75,7 @@ export const studentReducer = createReducer(initialState, (builder) => {
             state.error = action.payload;
             state.isAuthenticated = false;
             state.token = null;
+            state.user = null;
         })
 
         // Student OTP resend actions
@@ -98,6 +102,7 @@ export const studentReducer = createReducer(initialState, (builder) => {
             state.id = null;
             state.userRole = null;
             state.token = null;
+            state.user = null;
         })
 
         // Clearing error, message, and authentication state

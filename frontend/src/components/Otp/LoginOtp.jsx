@@ -32,10 +32,13 @@ const LoginOtpPage = () => {
 
   useEffect(() => {
     if (!role) {
+      console.log("No role found in location state");
       toast.error("Please login first", toastOptions);
       navigate("/");
       return;
     }
+
+    console.log("Current state:", { role, isAuthenticated, loading, error, otpMessage });
 
     if (otpMessage) {
       toast.success(otpMessage, toastOptions);
@@ -45,20 +48,41 @@ const LoginOtpPage = () => {
       toast.error(error, toastOptions);
       dispatch({ type: "CLEAR_ERROR" });
     }
-  }, [otpMessage, error, dispatch, navigate, role]);
+  }, [otpMessage, error, dispatch, navigate, role, isAuthenticated, loading]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      const token = localStorage.getItem(`${role}Token`);
-      console.log("Navigation check:", { isAuthenticated, role, token });
-      if (token) {
-        console.log("Navigating to dashboard");
-        navigate(`/${role}/dashboard`, { replace: true });
-      } else {
-        console.log("No token found in localStorage");
-        toast.error("Authentication failed. Please try again.", toastOptions);
+    const handleNavigation = async () => {
+      if (isAuthenticated) {
+        const token = localStorage.getItem(`${role}Token`);
+        console.log("Navigation check:", { 
+          isAuthenticated, 
+          role, 
+          token,
+          path: `/${role}/dashboard`
+        });
+        
+        if (token) {
+          console.log("Navigating to dashboard");
+          // Add a small delay to ensure state is updated
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Force navigation
+          try {
+            navigate(`/${role}/dashboard`, { replace: true });
+          } catch (navError) {
+            console.error("Navigation error:", navError);
+            // Try again after a delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+            navigate(`/${role}/dashboard`, { replace: true });
+          }
+        } else {
+          console.log("No token found in localStorage");
+          toast.error("Authentication failed. Please try again.", toastOptions);
+        }
       }
-    }
+    };
+
+    handleNavigation();
   }, [isAuthenticated, navigate, role]);
 
   useEffect(() => {
@@ -91,12 +115,30 @@ const LoginOtpPage = () => {
 
     setMessage("");
     try {
+      console.log("Verifying OTP for role:", role);
       if(role === "admin"){
         await dispatch(verifyAdminOtp(id, otp));
       }else if(role === "student"){
         await dispatch(verifyStudentOtp(id, otp));
       }else{
         await dispatch(verifyTeacherOtp(id, otp));
+      }
+      console.log("OTP verification completed");
+      
+      // Add a small delay before navigation
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Force navigation if not already navigated
+      const token = localStorage.getItem(`${role}Token`);
+      if (token) {
+        try {
+          navigate(`/${role}/dashboard`, { replace: true });
+        } catch (navError) {
+          console.error("Navigation error:", navError);
+          // Try again after a delay
+          await new Promise(resolve => setTimeout(resolve, 500));
+          navigate(`/${role}/dashboard`, { replace: true });
+        }
       }
     } catch (error) {
       console.error("Error verifying OTP:", error);

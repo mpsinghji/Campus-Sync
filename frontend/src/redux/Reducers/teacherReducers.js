@@ -10,7 +10,8 @@ const initialState = {
   authError: null,
   logoutMessage: null,
   userRole: null,
-  token: localStorage.getItem('teacherToken') || null
+  token: localStorage.getItem('teacherToken') || null,
+  user: JSON.parse(localStorage.getItem('teacherUser')) || null
 };
 
 // Actions
@@ -39,46 +40,69 @@ export const teacherReducer = createReducer(initialState, (builder) => {
     // Teacher login actions
     .addCase(teacherLoginRequest, (state) => {
       state.loading = true;
+      state.error = null;
     })
     .addCase(teacherLoginSuccess, (state, action) => {
       state.loading = false;
       state.message = action.payload.message;
       state.id = action.payload.id;
       state.userRole = action.payload.userRole;
+      state.error = null;
     })
     .addCase(teacherLoginFailure, (state, action) => {
       state.loading = false;
       state.error = action.payload;
+      state.isAuthenticated = false;
+      state.user = null;
     })
 
     // Teacher OTP verification actions
     .addCase(verifyTeacherOtpRequest, (state) => {
       state.loading = true;
+      state.error = null;
     })
     .addCase(verifyTeacherOtpSuccess, (state, action) => {
       state.loading = false;
       state.message = action.payload.message;
-      state.isAuthenticated = true;
       state.userRole = action.payload.userRole;
+      state.isAuthenticated = true;
+      state.token = action.payload.token;
+      state.user = action.payload.user;
       state.error = null;
     })
     .addCase(verifyTeacherOtpFailure, (state, action) => {
       state.loading = false;
       state.error = action.payload;
       state.isAuthenticated = false;
+      state.token = null;
+      state.user = null;
     })
 
     // Teacher OTP resend actions
     .addCase(resendTeacherOtpRequest, (state) => {
       state.loading = true;
+      state.error = null;
     })
     .addCase(resendTeacherOtpSuccess, (state, action) => {
       state.loading = false;
       state.message = action.payload;
+      state.error = null;
     })
     .addCase(resendTeacherOtpFailure, (state, action) => {
       state.loading = false;
       state.error = action.payload;
+    })
+
+    // Logout action
+    .addCase(teacherLogout, (state, action) => {
+      state.loading = false;
+      state.message = action.payload;
+      state.error = null;
+      state.isAuthenticated = false;
+      state.id = null;
+      state.userRole = null;
+      state.token = null;
+      state.user = null;
     })
 
     // Clearing error, message, and authentication state
@@ -93,16 +117,5 @@ export const teacherReducer = createReducer(initialState, (builder) => {
     })
     .addCase(clearLogoutMessage, (state) => {
       state.logoutMessage = null;
-    })
-
-    // Logout action
-    .addCase(teacherLogout, (state, action) => {
-      state.loading = false;
-      state.message = action.payload;
-      state.error = null;
-      state.isAuthenticated = false;
-      state.id = null;
-      state.userRole = null;
-      state.token = null;
     });
 });
