@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   ChooseUserContainer,
@@ -46,9 +46,39 @@ const ChooseUser = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("admin");
-
-  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch();
+
+  // Check for role-specific tokens on component mount
+  useEffect(() => {
+    const checkExistingSession = () => {
+      const path = location.pathname;
+      const adminToken = localStorage.getItem('adminToken');
+      const studentToken = localStorage.getItem('studentToken');
+      const teacherToken = localStorage.getItem('teacherToken');
+
+      // If we're coming from a specific role's page, check that role's token
+      if (path.includes('/student/')) {
+        if (studentToken) {
+          navigate('/student/dashboard');
+        }
+        setRole('student');
+      } else if (path.includes('/teacher/')) {
+        if (teacherToken) {
+          navigate('/teacher/dashboard');
+        }
+        setRole('teacher');
+      } else if (path.includes('/admin/')) {
+        if (adminToken) {
+          navigate('/admin/dashboard');
+        }
+        setRole('admin');
+      }
+    };
+
+    checkExistingSession();
+  }, [navigate, location.pathname]);
 
   const userState = useSelector((state) => {
     switch (role) {
@@ -146,7 +176,6 @@ const ChooseUser = () => {
             <Button
               as="button"
               type="submit"
-              // disabled={loading || !email || !password}
             >
               {loading ? (
                 <Spinner>

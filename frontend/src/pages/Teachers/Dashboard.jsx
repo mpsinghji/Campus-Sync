@@ -16,36 +16,14 @@ import {
 } from "../../styles/DashboardStyles";
 import axios from "axios";
 import { useState, useEffect } from "react";
-import { checkTeacherAuth } from "../../redux/Actions/teacherActions";
 
 const TeacherDashboard = () => {
   const [totalStudents, setTotalStudents] = useState(0);
   const [events, setEvents] = useState([]);
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { isAuthenticated, token } = useSelector((state) => state.teacher);
+  const { token } = useSelector((state) => state.teacher);
 
   useEffect(() => {
-    // Check authentication on component mount
-    const checkAuth = async () => {
-      const teacherToken = localStorage.getItem('teacherToken');
-      if (!teacherToken) {
-        navigate('/choose-user');
-        return;
-      }
-      await dispatch(checkTeacherAuth());
-    };
-
-    checkAuth();
-  }, [dispatch, navigate]);
-
-  useEffect(() => {
-    // If not authenticated, redirect to login
-    if (!isAuthenticated) {
-      navigate('/choose-user');
-      return;
-    }
-
     const fetchData = async () => {
       try {
         // Fetch student count
@@ -65,15 +43,11 @@ const TeacherDashboard = () => {
         setEvents(eventsResponse.data.events || []);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
-        if (error.response?.status === 401) {
-          // If unauthorized, redirect to login
-          navigate('/choose-user');
-        }
       }
     };
 
     fetchData();
-  }, [isAuthenticated, token, navigate]);
+  }, [token]);
 
   return (
     <TeacherDashboardContainer>

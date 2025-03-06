@@ -56,6 +56,7 @@ import AttendanceGraph from "./components/Analysis/Attendance.jsx";
 import PaymentGraph from "./components/Analysis/paymentDisplay.jsx";
 import ActivityGraph from "./components/Analysis/Activitycount.jsx";
 import UserAnalysis from "./components/Analysis/userAnalysis.jsx";
+import AuthGuard from './components/AuthGuard';
 
 function App() {
   const dispatch = useDispatch();
@@ -85,51 +86,51 @@ function App() {
         <Route exact path="/student-register" element={<StudentRegister />} />
 
         {/* All dashboard routes */}
-        <Route exact path="/admin/dashboard" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
-        <Route exact path="/student/dashboard" element={<ProtectedRoute roles={['student']}><StudentDashboard /></ProtectedRoute>} />
-        <Route exact path="/teacher/dashboard" element={<ProtectedRoute roles={['teacher']}><TeacherDashboard /></ProtectedRoute>} />
+        <Route exact path="/admin/dashboard" element={<AuthGuard><AdminDashboard /></AuthGuard>} />
+        <Route exact path="/student/dashboard" element={<AuthGuard><StudentDashboard /></AuthGuard>} />
+        <Route exact path="/teacher/dashboard" element={<AuthGuard><TeacherDashboard /></AuthGuard>} />
 
         {/* Admin Section */}
 
-        <Route path="/admin/user-graph" element={<ProtectedRoute roles={['admin']}><UserAnalysis /> </ProtectedRoute>} />
-        <Route path="/admin/attendance-graph" element={<ProtectedRoute roles={['admin']}> <AttendanceGraph /> </ProtectedRoute> } />
-        <Route path="/admin/payment-graph" element={<ProtectedRoute roles={['admin']}><PaymentGraph /> </ProtectedRoute>} />
-        <Route path="/admin/activity-graph" element={<ProtectedRoute roles={['admin']}><ActivityGraph /> </ProtectedRoute> } />
-        <Route exact path="/admin/Announcement" element={<ProtectedRoute roles={['admin']}><AdminAnnouncement /></ProtectedRoute>} />
-        <Route exact path="/admin/Assignment" element={<ProtectedRoute roles={['admin']}><AdminAssignment /></ProtectedRoute>} />
-        <Route exact path="/admin/Attendance" element={<ProtectedRoute roles={['admin']}><AdminAttendance /></ProtectedRoute>} />
-        <Route exact path="/admin/Classes" element={<ProtectedRoute roles={['admin']}><AdminClasses /></ProtectedRoute>} />
-        <Route exact path="/admin/EventCalender" element={<ProtectedRoute roles={['admin']}><AdminEventCalender /></ProtectedRoute>} />
-        <Route exact path="/admin/Exam" element={<ProtectedRoute roles={['admin']}><AdminExam /></ProtectedRoute>} />
-        <Route exact path="/admin/Library" element={<ProtectedRoute roles={['admin']}><AdminLibrary /></ProtectedRoute>} />
-        <Route exact path="/admin/Performance" element={<ProtectedRoute roles={['admin']}><AdminPerformance /></ProtectedRoute>} />
-        <Route exact path="/admin/Profile" element={<ProtectedRoute roles={['admin']}><AdminSettingProfile /></ProtectedRoute>} />
-        <Route exact path="/admin/Students" element={<ProtectedRoute roles={['admin']}><Students /></ProtectedRoute>} />
-        <Route exact path="/admin/Teachers" element={<ProtectedRoute roles={['admin']}><Teachers /></ProtectedRoute>} />
+        <Route path="/admin/user-graph" element={<AuthGuard><UserAnalysis /></AuthGuard>} />
+        <Route path="/admin/attendance-graph" element={<AuthGuard><AttendanceGraph /></AuthGuard>} />
+        <Route path="/admin/payment-graph" element={<AuthGuard><PaymentGraph /></AuthGuard>} />
+        <Route path="/admin/activity-graph" element={<AuthGuard><ActivityGraph /></AuthGuard>} />
+        <Route exact path="/admin/Announcement" element={<AuthGuard><AdminAnnouncement /></AuthGuard>} />
+        <Route exact path="/admin/Assignment" element={<AuthGuard><AdminAssignment /></AuthGuard>} />
+        <Route exact path="/admin/Attendance" element={<AuthGuard><AdminAttendance /></AuthGuard>} />
+        <Route exact path="/admin/Classes" element={<AuthGuard><AdminClasses /></AuthGuard>} />
+        <Route exact path="/admin/EventCalender" element={<AuthGuard><AdminEventCalender /></AuthGuard>} />
+        <Route exact path="/admin/Exam" element={<AuthGuard><AdminExam /></AuthGuard>} />
+        <Route exact path="/admin/Library" element={<AuthGuard><AdminLibrary /></AuthGuard>} />
+        <Route exact path="/admin/Performance" element={<AuthGuard><AdminPerformance /></AuthGuard>} />
+        <Route exact path="/admin/Profile" element={<AuthGuard><AdminSettingProfile /></AuthGuard>} />
+        <Route exact path="/admin/Students" element={<AuthGuard><Students /></AuthGuard>} />
+        <Route exact path="/admin/Teachers" element={<AuthGuard><Teachers /></AuthGuard>} />
 
         {/* Student Dashboard routes */}
-        <Route exact path="/student/assignments" element={<ProtectedRoute roles={['student']}><StudentAssignments /></ProtectedRoute>} />
-        <Route exact path="/student/exams" element={<ProtectedRoute roles={['student']}><ExamSection /></ProtectedRoute>} />
-        <Route exact path="/student/performance" element={<ProtectedRoute roles={['student']}><PerformanceSection /></ProtectedRoute>} />
-        <Route exact path="/student/attendance" element={<ProtectedRoute roles={['student']}><AttendanceSection /></ProtectedRoute>} />
-        <Route exact path="/student/library" element={<ProtectedRoute roles={['student']}><LibrarySection /></ProtectedRoute>} />
-        <Route exact path="/student/fees" element={<ProtectedRoute roles={['student']}><Fees /></ProtectedRoute>} />
-        <Route exact path="/student/communication" element={<ProtectedRoute roles={['student']}><AnnouncementSection /></ProtectedRoute>} />
-        <Route exact path="/student/EventCalendar" element={<ProtectedRoute roles={['student']}><StudentEventSection /></ProtectedRoute>} />
-        <Route exact path="/student/settings" element={<ProtectedRoute roles={['student']}><ProfileSection /></ProtectedRoute>} />
-        <Route path="/payment" element={<ProtectedRoute roles={['student']}><Payment /> </ProtectedRoute>} />
-        <Route path="/payment-success" element={<ProtectedRoute roles={['student']}> <PaymentSuccess /> </ProtectedRoute>} />
+        <Route exact path="/student/assignments" element={<AuthGuard><StudentAssignments /></AuthGuard>} />
+        <Route exact path="/student/exams" element={<AuthGuard><ExamSection /></AuthGuard>} />
+        <Route exact path="/student/performance" element={<AuthGuard><PerformanceSection /></AuthGuard>} />
+        <Route exact path="/student/attendance" element={<AuthGuard><AttendanceSection /></AuthGuard>} />
+        <Route exact path="/student/library" element={<AuthGuard><LibrarySection /></AuthGuard>} />
+        <Route exact path="/student/fees" element={<AuthGuard><Fees /></AuthGuard>} />
+        <Route exact path="/student/communication" element={<AuthGuard><AnnouncementSection /></AuthGuard>} />
+        <Route exact path="/student/EventCalendar" element={<AuthGuard><StudentEventSection /></AuthGuard>} />
+        <Route exact path="/student/settings" element={<AuthGuard><ProfileSection /></AuthGuard>} />
+        <Route path="/payment" element={<AuthGuard><Payment /></AuthGuard>} />
+        <Route path="/payment-success" element={<AuthGuard><PaymentSuccess /></AuthGuard>} />
 
         {/* Teachers sections here */}
-        <Route exact path="/teacher/classes" element={<ProtectedRoute roles={['teacher']}><ClassSection /></ProtectedRoute>} />
-        <Route exact path="/teacher/students" element={<ProtectedRoute roles={['teacher']}><StudentSection /></ProtectedRoute>} />
-        <Route exact path="/teacher/assignments" element={<ProtectedRoute roles={['teacher']}><AssignmentSection /></ProtectedRoute>} />
-        <Route exact path="/teacher/exams" element={<ProtectedRoute roles={['teacher']}><CheckExamSection /></ProtectedRoute>} />
-        <Route exact path="/teacher/performance" element={<ProtectedRoute roles={['teacher']}><CheckPerformanceSection /></ProtectedRoute>} />
-        <Route exact path="/teacher/attendance" element={<ProtectedRoute roles={['teacher']}><CheckAttendanceSection /></ProtectedRoute>} />
-        <Route exact path="/teacher/communication" element={<ProtectedRoute roles={['teacher']}><CheckAnnouncementSection /></ProtectedRoute>} />
-        <Route exact path="/teacher/events" element={<ProtectedRoute roles={['teacher']}><EventSection /></ProtectedRoute>} />
-        <Route exact path="/teacher/settings" element={<ProtectedRoute roles={['teacher']}><TeacherProfileSection /></ProtectedRoute>} />
+        <Route exact path="/teacher/classes" element={<AuthGuard><ClassSection /></AuthGuard>} />
+        <Route exact path="/teacher/students" element={<AuthGuard><StudentSection /></AuthGuard>} />
+        <Route exact path="/teacher/assignments" element={<AuthGuard><AssignmentSection /></AuthGuard>} />
+        <Route exact path="/teacher/exams" element={<AuthGuard><CheckExamSection /></AuthGuard>} />
+        <Route exact path="/teacher/performance" element={<AuthGuard><CheckPerformanceSection /></AuthGuard>} />
+        <Route exact path="/teacher/attendance" element={<AuthGuard><CheckAttendanceSection /></AuthGuard>} />
+        <Route exact path="/teacher/communication" element={<AuthGuard><CheckAnnouncementSection /></AuthGuard>} />
+        <Route exact path="/teacher/events" element={<AuthGuard><EventSection /></AuthGuard>} />
+        <Route exact path="/teacher/settings" element={<AuthGuard><TeacherProfileSection /></AuthGuard>} />
       </Routes>
     </Router>
   );
