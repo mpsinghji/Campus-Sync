@@ -22,13 +22,14 @@ const LoginOtpPage = () => {
   const [otp, setOtp] = useState("");
   const [message, setMessage] = useState("");
   const [countdown, setCountdown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
   const dispatch = useDispatch();
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
   const { role } = location.state || {}; 
-  const { message: otpMessage, error, isAuthenticated, loading } = useSelector(state => state[role]);
+  const { error, isAuthenticated, loading } = useSelector(state => state[role]);
 
   useEffect(() => {
     if (!role) {
@@ -38,17 +39,10 @@ const LoginOtpPage = () => {
       return;
     }
 
-    console.log("Current state:", { role, isAuthenticated, loading, error, otpMessage });
-
-    if (otpMessage) {
-      toast.success(otpMessage, toastOptions);
-      dispatch({ type: "CLEAR_MESSAGE" });
-    }
     if (error) {
-      toast.error(error, toastOptions);
       dispatch({ type: "CLEAR_ERROR" });
     }
-  }, [otpMessage, error, dispatch, navigate, role, isAuthenticated, loading]);
+  }, [error, dispatch, navigate, role]);
 
   useEffect(() => {
     const handleNavigation = async () => {
@@ -66,7 +60,6 @@ const LoginOtpPage = () => {
           // Add a small delay to ensure state is updated
           await new Promise(resolve => setTimeout(resolve, 100));
           
-          // Force navigation
           try {
             navigate(`/${role}/dashboard`, { replace: true });
           } catch (navError) {
@@ -77,7 +70,6 @@ const LoginOtpPage = () => {
           }
         } else {
           console.log("No token found in localStorage");
-          toast.error("Authentication failed. Please try again.", toastOptions);
         }
       }
     };
@@ -104,12 +96,12 @@ const LoginOtpPage = () => {
     e.preventDefault();
 
     if (otp.length !== 6) {
-      toast.error("OTP must contain 6 digits", toastOptions);
+      setMessage("OTP must contain 6 digits");
       return;
     }
 
     if (!/^\d{6}$/.test(otp)) {
-      toast.error("OTP must contain only numbers", toastOptions);
+      setMessage("OTP must contain only numbers");
       return;
     }
 
@@ -142,17 +134,17 @@ const LoginOtpPage = () => {
       }
     } catch (error) {
       console.error("Error verifying OTP:", error);
-      toast.error("Failed to verify OTP. Please try again.", toastOptions);
+      setMessage("Invalid OTP. Please try again.");
     }
   };
 
   const handleResendOtp = async () => {
     if (countdown > 0) {
-      toast.error(`Please wait ${countdown} seconds before requesting another OTP`, toastOptions);
       return;
     }
     
     try {
+      setIsResending(true);
       if(role === "admin"){
         await dispatch(resendAdminOtp(id));
       }else if(role === "student"){
@@ -163,7 +155,8 @@ const LoginOtpPage = () => {
       setCountdown(60); // 60 seconds cooldown
     } catch (error) {
       console.error("Error resending OTP:", error);
-      toast.error("Failed to resend OTP. Please try again.", toastOptions);
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -188,8 +181,8 @@ const LoginOtpPage = () => {
             {loading ? "Verifying..." : "Verify OTP"}
           </SubmitButton>
         </form>
-        <ResendLink onClick={handleResendOtp} disabled={countdown > 0 || loading}>
-          {countdown > 0 ? `Resend OTP in ${countdown}s` : "Resend OTP"}
+        <ResendLink onClick={handleResendOtp} disabled={countdown > 0 || isResending}>
+          {isResending ? "Resending..." : countdown > 0 ? `Resend OTP in ${countdown}s` : "Resend OTP"}
         </ResendLink>
       </LoginBox>
     </LoginPageContainer>

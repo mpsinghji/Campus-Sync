@@ -138,12 +138,12 @@ export const verifyAdminLoginOtp = async (req, res) => {
 
     if (!admin.otp || !admin.otpExpire) {
       console.log("No OTP found or expired");
-      return Response(res, 400, false, "OTP not found or expired");
+      return Response(res, 400, false, "Invalid OTP");
     }
 
     if (new Date() > admin.otpExpire) {
       console.log("OTP has expired");
-      return Response(res, 400, false, "OTP has expired");
+      return Response(res, 400, false, "Invalid OTP");
     }
 
     if (String(admin.otp) !== String(otp)) {
@@ -166,6 +166,18 @@ export const verifyAdminLoginOtp = async (req, res) => {
     await admin.save();
     console.log("OTP cleared from database");
 
+    // Create user data object excluding sensitive information
+    const userData = {
+      id: admin._id,
+      name: admin.name,
+      email: admin.email,
+      phone: admin.phone,
+      address: admin.address,
+      qualification: admin.qualification,
+      role: "admin"
+    };
+
+    // Set token cookie
     res.cookie("adminToken", token, {
       expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       httpOnly: true,
@@ -173,8 +185,16 @@ export const verifyAdminLoginOtp = async (req, res) => {
       sameSite: "none",
     });
 
-    return Response(res, 200, true, "Admin OTP verified successfully", {
+    // Set user data cookie
+    res.cookie("adminData", JSON.stringify(userData), {
+      expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+    });
+
+    return Response(res, 200, true, "Admin verified successfully", {
       token,
+      user: userData
     });
   } catch (error) {
     console.error("Error verifying OTP:", error);
@@ -263,5 +283,26 @@ export const getAdminProfile = async (req, res) => {
   } catch (error) {
     console.error("Error fetching admin profile:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const adminLogout = async (req, res) => {
+  try {
+    // Clear all admin related cookies
+    res.clearCookie('adminToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none"
+    });
+    
+    res.clearCookie('adminData', {
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none"
+    });
+
+    return Response(res, 200, true, "Logged out successfully");
+  } catch (error) {
+    console.error("Logout Error:", error);
+    return Response(res, 500, false, "Error during logout", error.message);
   }
 };

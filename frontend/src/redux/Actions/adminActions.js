@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { BACKEND_URL } from '../../constants/url';
 import { message } from '../../../../backend/utils/message';
+import Cookies from 'js-cookie';
 
 const URL = BACKEND_URL + "api/v1/admin";
 
@@ -98,21 +99,23 @@ export const verifyAdminOtp = (id, otp) => async (dispatch) => {
 
         console.log("OTP verification response:", data);
 
-        // Store token in localStorage
-        if (data.data && data.data.token) {
-            localStorage.setItem('adminToken', data.data.token);
-            console.log("Token stored in localStorage");
-        } else {
+        // Check if we have token in response
+        if (!data.data || !data.data.token) {
             console.error("No token received in response");
             throw new Error("No token received");
         }
+
+        // Store token in localStorage for backup
+        localStorage.setItem('adminToken', data.data.token);
+        console.log("Token stored in localStorage");
 
         dispatch({
             type: "VERIFY_ADMIN_OTP_SUCCESS",
             payload: {
                 message: data.message,
                 userRole: 'admin',
-                token: data.data.token
+                token: data.data.token,
+                user: data.data.user
             }
         });
 
@@ -163,15 +166,21 @@ export const adminLogout = () => async (dispatch) => {
             payload: "Logged out successfully"
         });
         
-        // Then clear cookies by calling backend logout endpoint
+        // Clear cookies by calling backend logout endpoint
         await axios.post(`${URL}/logout`, {}, {
             withCredentials: true
         });
 
+        // Force remove cookies from client side as backup
+        Cookies.remove('adminToken', { path: '/' });
+        Cookies.remove('adminData', { path: '/' });
+
     } catch (error) {
         console.error("Logout Error:", error);
-        // Even if the backend call fails, ensure token is cleared
+        // Even if the backend call fails, ensure everything is cleared
         localStorage.removeItem('adminToken');
+        Cookies.remove('adminToken', { path: '/' });
+        Cookies.remove('adminData', { path: '/' });
         dispatch({
             type: "ADMIN_LOGOUT",
             payload: "Logged out successfully"

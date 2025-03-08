@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios"; // Make sure to import axios
+import { useNavigate } from "react-router-dom";
 import AdminSidebar from "./Sidebar";
 import {
   ProfileContainer,
@@ -25,35 +25,39 @@ const AdminSettingProfile = () => {
     qualification: '',
   });
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchAdminProfile = async () => {
+    const loadAdminProfile = () => {
       try {
-        // const token = localStorage.getItem("admintoken");
-        const token = Cookies.get("admintoken");
-        if (!token) {
-          toast.error("No token found. Please log in again.");
-          setLoading(false);
+        // Get admin data from cookie
+        const adminDataCookie = Cookies.get("adminData");
+        
+        if (!adminDataCookie) {
+          navigate('/choose-user');
           return;
         }
 
-        const response = await axios.get("http://localhost:5000/api/v1/admin/profile", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        // Parse and set admin data from cookie
+        const adminData = JSON.parse(adminDataCookie);
+        setAdminInfo({
+          name: adminData.name || '',
+          email: adminData.email || '',
+          phone: adminData.phone || '',
+          address: adminData.address || '',
+          qualification: adminData.qualification || '',
         });
-
-        setAdminInfo(response.data);
+        toast.success("Admin profile fetched successfully");
+        
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching admin profile:", error);
-        toast.error("Failed to fetch profile. Please try again later.");
-        setLoading(false);
+        console.error("Error loading admin profile:", error);
+        navigate('/choose-user');
       }
     };
 
-    fetchAdminProfile();
-  }, []);
+    loadAdminProfile();
+  }, [navigate]);
 
   if (loading) {
     return <Loading />;
@@ -69,15 +73,15 @@ const AdminSettingProfile = () => {
           <ProfileHeader>Profile Details</ProfileHeader>
           <ProfileDetails>
             <ProfileLabel>Name:</ProfileLabel>
-            <ProfileInfo>{adminInfo.name}</ProfileInfo>
+            <ProfileInfo>{adminInfo.name || 'Not provided'}</ProfileInfo>
             <ProfileLabel>Email:</ProfileLabel>
-            <ProfileInfo>{adminInfo.email}</ProfileInfo>
+            <ProfileInfo>{adminInfo.email || 'Not provided'}</ProfileInfo>
             <ProfileLabel>Phone:</ProfileLabel>
-            <ProfileInfo>{adminInfo.phone}</ProfileInfo>
+            <ProfileInfo>{adminInfo.phone || 'Not provided'}</ProfileInfo>
             <ProfileLabel>Address:</ProfileLabel>
-            <ProfileInfo>{adminInfo.address}</ProfileInfo>
+            <ProfileInfo>{adminInfo.address || 'Not provided'}</ProfileInfo>
             <ProfileLabel>Qualification:</ProfileLabel>
-            <ProfileInfo>{adminInfo.qualification}</ProfileInfo>
+            <ProfileInfo>{adminInfo.qualification || 'Not provided'}</ProfileInfo>
           </ProfileDetails>
           <EditButton>Edit Profile</EditButton>
         </Content>

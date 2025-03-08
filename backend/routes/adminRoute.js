@@ -6,6 +6,7 @@ import {
   getAdminProfile,
   verifyAdminLoginOtp,
   resendAdminLoginOtp,
+  adminLogout
 } from "../controllers/adminController.js";
 import { validateUserRegistration } from "../middlewares/userValidator.js";
 import { validateOtp } from "../middlewares/otpValidator.js";
@@ -23,5 +24,7 @@ adminRoute.get("/profile", getAdminProfile);
 adminRoute.post("/login/verify/:id", validateOtp, verifyAdminLoginOtp);
 
 adminRoute.get("/login/resend/:id", resendAdminLoginOtp);
+
+adminRoute.post("/logout", adminLogout);
 
 export default adminRoute;
