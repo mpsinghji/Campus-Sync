@@ -1,4 +1,5 @@
 import { createAction, createReducer } from "@reduxjs/toolkit";
+import Cookies from 'js-cookie';
 
 // Initial state for the reducer
 const initialState = {
@@ -10,8 +11,7 @@ const initialState = {
   authError: null,
   logoutMessage: null,
   userRole: null,
-  token: localStorage.getItem('teacherToken') || null,
-  user: JSON.parse(localStorage.getItem('teacherUser')) || null
+  user: null
 };
 
 // Actions
@@ -26,6 +26,10 @@ const verifyTeacherOtpFailure = createAction("VERIFY_TEACHER_OTP_FAILURE");
 const resendTeacherOtpRequest = createAction("RESEND_TEACHER_OTP_REQUEST");
 const resendTeacherOtpSuccess = createAction("RESEND_TEACHER_OTP_SUCCESS");
 const resendTeacherOtpFailure = createAction("RESEND_TEACHER_OTP_FAILURE");
+
+const checkTeacherAuthRequest = createAction("CHECK_TEACHER_AUTH_REQUEST");
+const checkTeacherAuthSuccess = createAction("CHECK_TEACHER_AUTH_SUCCESS");
+const checkTeacherAuthFailure = createAction("CHECK_TEACHER_AUTH_FAILURE");
 
 const clearError = createAction("CLEAR_ERROR");
 const clearAuthError = createAction("CLEAR_AUTH_ERROR");
@@ -66,7 +70,6 @@ export const teacherReducer = createReducer(initialState, (builder) => {
       state.message = action.payload.message;
       state.userRole = action.payload.userRole;
       state.isAuthenticated = true;
-      state.token = action.payload.token;
       state.user = action.payload.user;
       state.error = null;
     })
@@ -74,7 +77,6 @@ export const teacherReducer = createReducer(initialState, (builder) => {
       state.loading = false;
       state.error = action.payload;
       state.isAuthenticated = false;
-      state.token = null;
       state.user = null;
     })
 
@@ -93,6 +95,26 @@ export const teacherReducer = createReducer(initialState, (builder) => {
       state.error = action.payload;
     })
 
+    // Teacher auth check actions
+    .addCase(checkTeacherAuthRequest, (state) => {
+      state.loading = true;
+      state.error = null;
+    })
+    .addCase(checkTeacherAuthSuccess, (state, action) => {
+      state.loading = false;
+      state.isAuthenticated = true;
+      state.user = action.payload.user;
+      state.userRole = action.payload.userRole;
+      state.error = null;
+    })
+    .addCase(checkTeacherAuthFailure, (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+      state.isAuthenticated = false;
+      state.user = null;
+      state.userRole = null;
+    })
+
     // Logout action
     .addCase(teacherLogout, (state, action) => {
       state.loading = false;
@@ -101,7 +123,6 @@ export const teacherReducer = createReducer(initialState, (builder) => {
       state.isAuthenticated = false;
       state.id = null;
       state.userRole = null;
-      state.token = null;
       state.user = null;
     })
 

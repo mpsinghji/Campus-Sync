@@ -1,4 +1,5 @@
 import { createAction, createReducer } from '@reduxjs/toolkit';
+import Cookies from 'js-cookie';
 
 // Initial state for the reducer
 const initialState = {
@@ -10,8 +11,7 @@ const initialState = {
     authError: null,
     logoutMessage: null,
     userRole: null,
-    token: localStorage.getItem('studentToken') || null,
-    user: JSON.parse(localStorage.getItem('studentUser')) || null
+    user: null
 };
 
 // Actions
@@ -26,6 +26,10 @@ const verifyStudentOtpFailure = createAction('VERIFY_STUDENT_OTP_FAILURE');
 const resendStudentOtpRequest = createAction('RESEND_STUDENT_OTP_REQUEST');
 const resendStudentOtpSuccess = createAction('RESEND_STUDENT_OTP_SUCCESS');
 const resendStudentOtpFailure = createAction('RESEND_STUDENT_OTP_FAILURE');
+
+const checkStudentAuthRequest = createAction('CHECK_STUDENT_AUTH_REQUEST');
+const checkStudentAuthSuccess = createAction('CHECK_STUDENT_AUTH_SUCCESS');
+const checkStudentAuthFailure = createAction('CHECK_STUDENT_AUTH_FAILURE');
 
 const clearError = createAction('CLEAR_ERROR');
 const clearAuthError = createAction('CLEAR_AUTH_ERROR');
@@ -66,7 +70,6 @@ export const studentReducer = createReducer(initialState, (builder) => {
             state.message = action.payload.message;
             state.userRole = action.payload.userRole;
             state.isAuthenticated = true;
-            state.token = action.payload.token;
             state.user = action.payload.user;
             state.error = null;
         })
@@ -74,7 +77,6 @@ export const studentReducer = createReducer(initialState, (builder) => {
             state.loading = false;
             state.error = action.payload;
             state.isAuthenticated = false;
-            state.token = null;
             state.user = null;
         })
 
@@ -93,6 +95,26 @@ export const studentReducer = createReducer(initialState, (builder) => {
             state.error = action.payload;
         })
 
+        // Student auth check actions
+        .addCase(checkStudentAuthRequest, (state) => {
+            state.loading = true;
+            state.error = null;
+        })
+        .addCase(checkStudentAuthSuccess, (state, action) => {
+            state.loading = false;
+            state.isAuthenticated = true;
+            state.user = action.payload.user;
+            state.userRole = action.payload.userRole;
+            state.error = null;
+        })
+        .addCase(checkStudentAuthFailure, (state, action) => {
+            state.loading = false;
+            state.error = action.payload;
+            state.isAuthenticated = false;
+            state.user = null;
+            state.userRole = null;
+        })
+
         // Logout action
         .addCase(studentLogout, (state, action) => {
             state.loading = false;
@@ -101,7 +123,6 @@ export const studentReducer = createReducer(initialState, (builder) => {
             state.isAuthenticated = false;
             state.id = null;
             state.userRole = null;
-            state.token = null;
             state.user = null;
         })
 

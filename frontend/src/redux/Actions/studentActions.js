@@ -1,5 +1,6 @@
 import axios from "axios";
 import { BACKEND_URL } from "../../constants/url";
+import Cookies from 'js-cookie';
 
 const URL = BACKEND_URL + "api/v1/student";
 
@@ -63,20 +64,20 @@ export const verifyStudentOtp = (id, otp) => async (dispatch) => {
 
     console.log("OTP verification response:", data);
 
-    // Store token in localStorage
-    if (data.data && data.data.token) {
-      localStorage.setItem('studentToken', data.data.token);
-      console.log("Token stored in localStorage");
-    } else {
+    // Check if we have token in response
+    if (!data.data || !data.data.token) {
       console.error("No token received in response");
       throw new Error("No token received");
     }
 
-    // Store user data in localStorage
-    if (data.data && data.data.user) {
-      localStorage.setItem('studentUser', JSON.stringify(data.data.user));
-      console.log("User data stored in localStorage");
-    }
+    // Clear any existing student data
+    Cookies.remove('studentData', { path: '/' });
+    
+    // Store user data in cookie
+    Cookies.set('studentData', JSON.stringify({
+      user: data.data.user,
+      token: data.data.token
+    }), { path: '/' });
 
     dispatch({
       type: "VERIFY_STUDENT_OTP_SUCCESS",
@@ -87,8 +88,13 @@ export const verifyStudentOtp = (id, otp) => async (dispatch) => {
         user: data.data.user
       }
     });
+
+    return true;
+
   } catch (error) {
     console.error("OTP Verification Error:", error);
+    // Clear any partial data
+    Cookies.remove('studentData', { path: '/' });
     dispatch({
       type: "VERIFY_STUDENT_OTP_FAILURE",
       payload: error.response?.data?.message || "OTP Verification Failed",
@@ -104,7 +110,9 @@ export const resendStudentOtp = (id) => async (dispatch) => {
       type: "RESEND_STUDENT_OTP_REQUEST",
     });
 
-    const { data } = await axios.get(`${URL}/login/resend/${id}`);
+    const { data } = await axios.get(`${URL}/login/resend/${id}`, {
+      withCredentials: true
+    });
 
     dispatch({
       type: "RESEND_STUDENT_OTP_SUCCESS",
@@ -118,100 +126,76 @@ export const resendStudentOtp = (id) => async (dispatch) => {
   }
 };
 
-// Check and restore student state
+// Check Student Auth Action
 export const checkStudentAuth = () => async (dispatch) => {
     try {
-        const token = localStorage.getItem('studentToken');
-        const userData = localStorage.getItem('studentUser');
-        
-        if (!token || !userData) {
-            console.log("No stored authentication data found");
-            return;
+        dispatch({
+            type: "CHECK_STUDENT_AUTH_REQUEST"
+        });
+
+        const studentData = Cookies.get('studentData');
+        if (!studentData) {
+            throw new Error("No student data found");
         }
 
-        // First, try to restore state from localStorage
-        const parsedUserData = JSON.parse(userData);
+        // Parse the student data to get the token
+        const { token } = JSON.parse(studentData);
+        if (!token) {
+            throw new Error("No token found in student data");
+        }
+
+        const { data } = await axios.get(`${URL}/profile`, {
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            withCredentials: true
+        });
+
         dispatch({
-            type: "VERIFY_STUDENT_OTP_SUCCESS",
+            type: "CHECK_STUDENT_AUTH_SUCCESS",
             payload: {
-                message: "Session restored from cache",
-                userRole: 'student',
-                token: token,
-                user: parsedUserData
+                isAuthenticated: true,
+                user: data,
+                userRole: 'student'
             }
         });
 
-        // Then verify with backend in the background
-        try {
-            const { data } = await axios.get(`${URL}/profile`, {
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                },
-                withCredentials: true
-            });
-
-            // Update with fresh data if available
-            if (data.data && data.data.user) {
-                localStorage.setItem('studentUser', JSON.stringify(data.data.user));
-                dispatch({
-                    type: "VERIFY_STUDENT_OTP_SUCCESS",
-                    payload: {
-                        message: "Session verified",
-                        userRole: 'student',
-                        token: token,
-                        user: data.data.user
-                    }
-                });
-            }
-        } catch (backendError) {
-            console.error("Backend verification error:", backendError);
-            // Only clear data if it's a 401 error
-            if (backendError.response && backendError.response.status === 401) {
-                localStorage.removeItem('studentToken');
-                localStorage.removeItem('studentUser');
-                dispatch({
-                    type: "VERIFY_STUDENT_OTP_FAILURE",
-                    payload: "Session expired"
-                });
-            }
-            // For other errors, keep using the cached data
-        }
+        return true;
 
     } catch (error) {
-        console.error("Auth check error:", error);
-        // Only clear data if it's a parsing error or other critical error
-        if (error instanceof SyntaxError) {
-            localStorage.removeItem('studentToken');
-            localStorage.removeItem('studentUser');
-            dispatch({
-                type: "VERIFY_STUDENT_OTP_FAILURE",
-                payload: "Invalid session data"
-            });
-        }
+        console.error("Auth check failed:", error);
+        // Clear invalid data
+        Cookies.remove('studentData', { path: '/' });
+        dispatch({
+            type: "CHECK_STUDENT_AUTH_FAILURE",
+            payload: error.message
+        });
+        throw error;
     }
 };
 
 // Student Logout Action
 export const studentLogout = () => async (dispatch) => {
     try {
-        // Clear localStorage
-        localStorage.removeItem('studentToken');
-        localStorage.removeItem('studentUser');
+        // Clear Redux state immediately
+        dispatch({
+            type: "STUDENT_LOGOUT",
+            payload: "Logged out successfully"
+        });
         
         // Clear cookies by calling backend logout endpoint
         await axios.post(`${URL}/logout`, {}, {
             withCredentials: true
         });
 
-        dispatch({
-            type: "STUDENT_LOGOUT",
-            payload: "Logged out successfully"
-        });
+        // Force remove cookies from client side as backup
+        Cookies.remove('studentData', { path: '/' });
 
     } catch (error) {
         console.error("Logout Error:", error);
-        // Even if the backend call fails, clear the local state
+        // Even if the backend call fails, ensure everything is cleared
+        Cookies.remove('studentData', { path: '/' });
         dispatch({
             type: "STUDENT_LOGOUT",
             payload: "Logged out successfully"

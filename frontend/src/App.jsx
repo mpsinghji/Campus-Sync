@@ -1,9 +1,5 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { checkAdminAuth } from "./redux/Actions/adminActions";
-import { checkStudentAuth } from "./redux/Actions/studentActions";
-import { checkTeacherAuth } from "./redux/Actions/teacherActions";
 import Home from "./components/Home.jsx";
 import ChooseUser from "./components/ChooseUser.jsx";
 // import AboutMe from "./components/AboutMe.jsx";
@@ -59,15 +55,6 @@ import UserAnalysis from "./components/Analysis/userAnalysis.jsx";
 import AuthGuard from './components/AuthGuard';
 
 function App() {
-  const dispatch = useDispatch();
-
-  useEffect(() => {
-    // Check authentication for all user types on app initialization
-    dispatch(checkAdminAuth());
-    dispatch(checkStudentAuth());
-    dispatch(checkTeacherAuth());
-  }, [dispatch]);
-
   return (
     <Router>
       <Routes>
@@ -75,7 +62,6 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/choose-user" element={<ChooseUser />} />
         {/* <Route path="/about-me" element={<AboutMe />} /> */}
-
 
         {/* <Route path="/login/resend/:id" element={<LoginOtpPage />} /> */}
         <Route path="/otp/:id" element={<LoginOtpPage />} />
@@ -91,7 +77,6 @@ function App() {
         <Route exact path="/teacher/dashboard" element={<AuthGuard><TeacherDashboard /></AuthGuard>} />
 
         {/* Admin Section */}
-
         <Route path="/admin/user-graph" element={<AuthGuard><UserAnalysis /></AuthGuard>} />
         <Route path="/admin/attendance-graph" element={<AuthGuard><AttendanceGraph /></AuthGuard>} />
         <Route path="/admin/payment-graph" element={<AuthGuard><PaymentGraph /></AuthGuard>} />

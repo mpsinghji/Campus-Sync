@@ -13,6 +13,7 @@ import Loading from '../../components/Loading/loading';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Cookies from 'js-cookie';
+import { useNavigate } from 'react-router-dom';
 
 const ProfileSection = () => {
   const [studentProfile, setStudentProfile] = useState({
@@ -23,15 +24,22 @@ const ProfileSection = () => {
     email: '',
   });
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchStudentProfile = async () => {
       try {
-        // const token = localStorage.getItem('studenttoken');
-        const token = Cookies.get('studentToken');
+        const studentData = Cookies.get('studentData');
+        if (!studentData) {
+          toast.error('No student data found. Please log in again.');
+          navigate('/choose-user');
+          return;
+        }
+
+        const { token } = JSON.parse(studentData);
         if (!token) {
           toast.error('No token found. Please log in again.');
-          setLoading(false);
+          navigate('/choose-user');
           return;
         }
 
@@ -40,20 +48,32 @@ const ProfileSection = () => {
           {
             headers: {
               Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
             },
+            withCredentials: true
           }
         );
-        setStudentProfile(response.data);
+
+        if (response.data) {
+          setStudentProfile(response.data);
+        } else {
+          toast.error('No profile data received');
+        }
         setLoading(false);
       } catch (error) {
         console.error('Error fetching student profile:', error);
-        toast.error('Failed to fetch profile. Please try again later.');
+        if (error.response?.status === 401) {
+          toast.error('Session expired. Please log in again.');
+          navigate('/choose-user');
+        } else {
+          toast.error('Failed to fetch profile. Please try again later.');
+        }
         setLoading(false);
       }
     };
 
     fetchStudentProfile();
-  }, []);
+  }, [navigate]);
 
   if (loading) {
     return <Loading />;

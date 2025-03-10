@@ -15,6 +15,8 @@ import Loading from "../../components/Loading/loading";
 import { ToastContainer, toast } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import Cookies from "js-cookie";
+import axios from "axios";
+import { BACKEND_URL } from "../../constants/url";
 
 const AdminSettingProfile = () => {
   const [adminInfo, setAdminInfo] = useState({
@@ -28,7 +30,7 @@ const AdminSettingProfile = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const loadAdminProfile = () => {
+    const loadAdminProfile = async () => {
       try {
         // Get admin data from cookie
         const adminDataCookie = Cookies.get("adminData");
@@ -38,21 +40,41 @@ const AdminSettingProfile = () => {
           return;
         }
 
-        // Parse and set admin data from cookie
+        // Parse admin data to get token
         const adminData = JSON.parse(adminDataCookie);
-        setAdminInfo({
-          name: adminData.name || '',
-          email: adminData.email || '',
-          phone: adminData.phone || '',
-          address: adminData.address || '',
-          qualification: adminData.qualification || '',
+        if (!adminData.token) {
+          navigate('/choose-user');
+          return;
+        }
+
+        // Fetch latest admin data from API
+        const response = await axios.get(`${BACKEND_URL}api/v1/admin/profile`, {
+          withCredentials: true
         });
-        toast.success("Admin profile fetched successfully");
+
+        if (response.data) {
+          setAdminInfo({
+            name: response.data.name || '',
+            email: response.data.email || '',
+            phone: response.data.phone || '',
+            address: response.data.address || '',
+            qualification: response.data.qualification || '',
+          });
+          toast.success("Admin profile fetched successfully");
+        }
         
         setLoading(false);
       } catch (error) {
         console.error("Error loading admin profile:", error);
-        navigate('/choose-user');
+        if (error.response?.status === 401) {
+          // Clear invalid data and redirect
+          Cookies.remove('adminData', { path: '/' });
+          navigate('/choose-user');
+        } else {
+          toast.error("Failed to load admin profile");
+        }
+      } finally {
+        setLoading(false);
       }
     };
 

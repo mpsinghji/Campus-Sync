@@ -1,5 +1,6 @@
 import axios from "axios";
 import { BACKEND_URL } from "../../constants/url";
+import Cookies from 'js-cookie';
 
 const URL = BACKEND_URL + "api/v1/teacher";
 
@@ -63,18 +64,24 @@ export const verifyTeacherOtp = (id, otp) => async (dispatch) => {
 
     console.log("Teacher OTP verification response:", data);
 
-    // Store token in localStorage
-    if (data.token) {
-      localStorage.setItem('teacherToken', data.token);
-      console.log("Teacher token stored in localStorage");
-    } else {
+    // Check if we have token in response
+    if (!data.token) {
       console.error("No token received in response");
       throw new Error("No token received");
     }
 
-    // Decode token to get user info
-    const tokenPayload = JSON.parse(atob(data.token.split('.')[1]));
+    // Clear any existing teacher data
+    Cookies.remove('teacherData', { path: '/' });
     
+    // Store user data in cookie
+    Cookies.set('teacherData', JSON.stringify({
+      user: {
+        id: data.data,
+        userRole: data.userRole
+      },
+      token: data.token
+    }), { path: '/' });
+
     dispatch({
       type: "VERIFY_TEACHER_OTP_SUCCESS",
       payload: {
@@ -82,13 +89,18 @@ export const verifyTeacherOtp = (id, otp) => async (dispatch) => {
         userRole: data.userRole,
         token: data.token,
         user: {
-          id: tokenPayload.id,
+          id: data.data,
           userRole: data.userRole
         }
       }
     });
+
+    return true;
+
   } catch (error) {
     console.error("Teacher OTP Verification Error:", error);
+    // Clear any partial data
+    Cookies.remove('teacherData', { path: '/' });
     dispatch({
       type: "VERIFY_TEACHER_OTP_FAILURE",
       payload: error.response?.data?.message || "OTP Verification Failed",
@@ -104,7 +116,9 @@ export const resendTeacherOtp = (id) => async (dispatch) => {
       type: "RESEND_TEACHER_OTP_REQUEST",
     });
 
-    const { data } = await axios.get(`${URL}/login/resend/${id}`);
+    const { data } = await axios.get(`${URL}/login/resend/${id}`, {
+      withCredentials: true
+    });
 
     dispatch({
       type: "RESEND_TEACHER_OTP_SUCCESS",
@@ -118,103 +132,76 @@ export const resendTeacherOtp = (id) => async (dispatch) => {
   }
 };
 
-// Check and restore teacher state
+// Check Teacher Auth Action
 export const checkTeacherAuth = () => async (dispatch) => {
     try {
-        const token = localStorage.getItem('teacherToken');
-        
-        if (!token) {
-            console.log("No stored teacher authentication data found");
-            return;
+        dispatch({
+            type: "CHECK_TEACHER_AUTH_REQUEST"
+        });
+
+        const teacherData = Cookies.get('teacherData');
+        if (!teacherData) {
+            throw new Error("No teacher data found");
         }
 
-        // Decode token to get user info
-        const tokenPayload = JSON.parse(atob(token.split('.')[1]));
-        
-        // First, try to restore state from token
+        // Parse the teacher data to get the token
+        const { token } = JSON.parse(teacherData);
+        if (!token) {
+            throw new Error("No token found in teacher data");
+        }
+
+        const { data } = await axios.get(`${URL}/profile`, {
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            withCredentials: true
+        });
+
         dispatch({
-            type: "VERIFY_TEACHER_OTP_SUCCESS",
+            type: "CHECK_TEACHER_AUTH_SUCCESS",
             payload: {
-                message: "Session restored from cache",
-                userRole: 'teacher',
-                token: token,
-                user: {
-                    id: tokenPayload.id,
-                    userRole: 'teacher'
-                }
+                isAuthenticated: true,
+                user: data,
+                userRole: 'teacher'
             }
         });
 
-        // Then verify with backend in the background
-        try {
-            const { data } = await axios.get(`${URL}/profile`, {
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                },
-                withCredentials: true
-            });
-
-            // Update with fresh data if available
-            if (data.data) {
-                dispatch({
-                    type: "VERIFY_TEACHER_OTP_SUCCESS",
-                    payload: {
-                        message: "Session verified",
-                        userRole: 'teacher',
-                        token: token,
-                        user: {
-                            id: data.data,
-                            userRole: 'teacher'
-                        }
-                    }
-                });
-            }
-        } catch (backendError) {
-            console.error("Teacher backend verification error:", backendError);
-            // Only clear data if it's a 401 error
-            if (backendError.response && backendError.response.status === 401) {
-                localStorage.removeItem('teacherToken');
-                dispatch({
-                    type: "VERIFY_TEACHER_OTP_FAILURE",
-                    payload: "Session expired"
-                });
-            }
-            // For other errors, keep using the cached data
-        }
+        return true;
 
     } catch (error) {
-        console.error("Teacher auth check error:", error);
-        // Only clear data if it's a parsing error or other critical error
-        if (error instanceof SyntaxError) {
-            localStorage.removeItem('teacherToken');
-            dispatch({
-                type: "VERIFY_TEACHER_OTP_FAILURE",
-                payload: "Invalid session data"
-            });
-        }
+        console.error("Auth check failed:", error);
+        // Clear invalid data
+        Cookies.remove('teacherData', { path: '/' });
+        dispatch({
+            type: "CHECK_TEACHER_AUTH_FAILURE",
+            payload: error.message
+        });
+        throw error;
     }
 };
 
 // Teacher Logout Action
 export const teacherLogout = () => async (dispatch) => {
     try {
-        // Clear localStorage
-        localStorage.removeItem('teacherToken');
+        // Clear Redux state immediately
+        dispatch({
+            type: "TEACHER_LOGOUT",
+            payload: "Logged out successfully"
+        });
         
         // Clear cookies by calling backend logout endpoint
         await axios.post(`${URL}/logout`, {}, {
             withCredentials: true
         });
 
-        dispatch({
-            type: "TEACHER_LOGOUT",
-            payload: "Logged out successfully"
-        });
+        // Force remove cookies from client side as backup
+        Cookies.remove('teacherData', { path: '/' });
 
     } catch (error) {
-        console.error("Teacher Logout Error:", error);
-        // Even if the backend call fails, clear the local state
+        console.error("Logout Error:", error);
+        // Even if the backend call fails, ensure everything is cleared
+        Cookies.remove('teacherData', { path: '/' });
         dispatch({
             type: "TEACHER_LOGOUT",
             payload: "Logged out successfully"

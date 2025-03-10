@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import Sidebar from './Sidebar';
 import Loading from '../../components/Loading/loading';
-import axios from 'axios'; // Add axios import
+import axios from 'axios';
 import { ProfileContainer, SidebarContainer, Content, ProfileHeader, ProfileDetails, ProfileLabel, ProfileInfo, EditButton } from '../../styles/SettingsProfileStyles';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Cookies from 'js-cookie';
+import { useNavigate } from 'react-router-dom';
 
 const TeacherProfileSection = () => {
   const [teacherInfo, setTeacherInfo] = useState({
@@ -16,35 +17,56 @@ const TeacherProfileSection = () => {
     qualification: "",
   });
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchTeacherProfile = async () => {
       try {
-        // const token = localStorage.getItem("teachertoken");
-        const token = Cookies.get("teachertoken");
-        if (!token) {
-          toast.error("No token found. Please log in again.");
-          setLoading(false);
+        const teacherData = Cookies.get('teacherData');
+        if (!teacherData) {
+          toast.error('No teacher data found. Please log in again.');
+          navigate('/choose-user');
           return;
         }
 
-        const response = await axios.get("http://localhost:5000/api/v1/teacher/profile", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const { token } = JSON.parse(teacherData);
+        if (!token) {
+          toast.error('No token found. Please log in again.');
+          navigate('/choose-user');
+          return;
+        }
 
-        setTeacherInfo(response.data);
+        const response = await axios.get(
+          "http://localhost:5000/api/v1/teacher/profile",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            withCredentials: true
+          }
+        );
+
+        if (response.data) {
+          setTeacherInfo(response.data);
+        } else {
+          toast.error('No profile data received');
+        }
         setLoading(false);
       } catch (error) {
         console.error("Error fetching teacher profile:", error);
-        toast.error("Failed to fetch profile. Please try again later.");
+        if (error.response?.status === 401) {
+          toast.error('Session expired. Please log in again.');
+          navigate('/choose-user');
+        } else {
+          toast.error("Failed to fetch profile. Please try again later.");
+        }
         setLoading(false);
       }
     };
 
     fetchTeacherProfile();
-  }, []);
+  }, [navigate]);
 
   if (loading) {
     return <Loading />;

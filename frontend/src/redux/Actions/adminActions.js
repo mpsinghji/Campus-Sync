@@ -7,44 +7,42 @@ const URL = BACKEND_URL + "api/v1/admin";
 
 axios.defaults.withCredentials = true;
 
-// Check and restore admin state
+// Check Admin Auth Action
 export const checkAdminAuth = () => async (dispatch) => {
     try {
-        const token = localStorage.getItem('adminToken');
-        if (!token) {
-            return;
-        }
-
         dispatch({
-            type: "VERIFY_ADMIN_OTP_REQUEST"
+            type: "CHECK_ADMIN_AUTH_REQUEST"
         });
 
-        // Verify token with backend
+        const adminData = Cookies.get('adminData');
+        if (!adminData) {
+            throw new Error("No admin data found");
+        }
+
         const { data } = await axios.get(`${URL}/profile`, {
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-            },
             withCredentials: true
         });
 
         dispatch({
-            type: "VERIFY_ADMIN_OTP_SUCCESS",
+            type: "CHECK_ADMIN_AUTH_SUCCESS",
             payload: {
-                message: "Session restored",
-                userRole: 'admin',
-                token: token
+                isAuthenticated: true,
+                user: data,
+                userRole: 'admin'
             }
         });
 
+        return true;
+
     } catch (error) {
-        console.error("Auth check error:", error);
-        // Clear invalid token
-        localStorage.removeItem('adminToken');
+        console.error("Auth check failed:", error);
+        // Clear invalid data
+        Cookies.remove('adminData', { path: '/' });
         dispatch({
-            type: "VERIFY_ADMIN_OTP_FAILURE",
-            payload: "Session expired"
+            type: "CHECK_ADMIN_AUTH_FAILURE",
+            payload: error.message
         });
+        throw error;
     }
 };
 
@@ -105,9 +103,14 @@ export const verifyAdminOtp = (id, otp) => async (dispatch) => {
             throw new Error("No token received");
         }
 
-        // Store token in localStorage for backup
-        localStorage.setItem('adminToken', data.data.token);
-        console.log("Token stored in localStorage");
+        // Clear any existing admin data
+        Cookies.remove('adminData', { path: '/' });
+        
+        // Store user data in cookie
+        Cookies.set('adminData', JSON.stringify({
+            user: data.data.user,
+            token: data.data.token
+        }), { path: '/' });
 
         dispatch({
             type: "VERIFY_ADMIN_OTP_SUCCESS",
@@ -119,8 +122,12 @@ export const verifyAdminOtp = (id, otp) => async (dispatch) => {
             }
         });
 
+        return true;
+
     } catch (error) {
         console.error("OTP Verification Error:", error);
+        // Clear any partial data
+        Cookies.remove('adminData', { path: '/' });
         dispatch({
             type: "VERIFY_ADMIN_OTP_FAILURE",
             payload: error.response?.data?.message || "OTP Verification Failed"
@@ -157,9 +164,6 @@ export const resendAdminOtp = (id) => async (dispatch) => {
 // Admin Logout Action
 export const adminLogout = () => async (dispatch) => {
     try {
-        // Clear localStorage first
-        localStorage.removeItem('adminToken');
-        
         // Clear Redux state immediately
         dispatch({
             type: "ADMIN_LOGOUT",
@@ -178,7 +182,6 @@ export const adminLogout = () => async (dispatch) => {
     } catch (error) {
         console.error("Logout Error:", error);
         // Even if the backend call fails, ensure everything is cleared
-        localStorage.removeItem('adminToken');
         Cookies.remove('adminToken', { path: '/' });
         Cookies.remove('adminData', { path: '/' });
         dispatch({

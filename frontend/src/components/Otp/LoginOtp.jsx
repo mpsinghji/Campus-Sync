@@ -8,6 +8,7 @@ import { resendAdminOtp, verifyAdminOtp } from "../../redux/Actions/adminActions
 import { resendStudentOtp, verifyStudentOtp } from "../../redux/Actions/studentActions.js";
 import { resendTeacherOtp, verifyTeacherOtp } from "../../redux/Actions/teacherActions.js";
 import { LoginPageContainer, LoginBox, Heading, InputField, SubmitButton, Message, ResendLink } from "../../styles/LoginOtpStyles.js";
+import Cookies from 'js-cookie';
 
 export const GlobalStyle = createGlobalStyle`
   html, body {
@@ -47,15 +48,15 @@ const LoginOtpPage = () => {
   useEffect(() => {
     const handleNavigation = async () => {
       if (isAuthenticated) {
-        const token = localStorage.getItem(`${role}Token`);
+        const userData = Cookies.get(`${role}Data`);
         console.log("Navigation check:", { 
           isAuthenticated, 
           role, 
-          token,
+          userData,
           path: `/${role}/dashboard`
         });
         
-        if (token) {
+        if (userData) {
           console.log("Navigating to dashboard");
           // Add a small delay to ensure state is updated
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -69,7 +70,7 @@ const LoginOtpPage = () => {
             navigate(`/${role}/dashboard`, { replace: true });
           }
         } else {
-          console.log("No token found in localStorage");
+          console.log("No user data found in cookies");
         }
       }
     };
@@ -121,8 +122,8 @@ const LoginOtpPage = () => {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Force navigation if not already navigated
-      const token = localStorage.getItem(`${role}Token`);
-      if (token) {
+      const userData = Cookies.get(`${role}Data`);
+      if (userData) {
         try {
           navigate(`/${role}/dashboard`, { replace: true });
         } catch (navError) {
