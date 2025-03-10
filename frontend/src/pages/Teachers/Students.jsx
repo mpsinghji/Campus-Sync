@@ -21,7 +21,7 @@ const StudentSection = () => {
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/v1/student");
+        const response = await fetch("https://campus-sync-ez7y.onrender.com/api/v1/student");
         const data = await response.json();
 
         // Check if `data` is an array

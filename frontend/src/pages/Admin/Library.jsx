@@ -34,7 +34,7 @@ const Library = () => {
 
   const fetchBooks = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/v1/library/getall');
+      const response = await axios.get('https://campus-sync-ez7y.onrender.com/api/v1/library/getall');
       setBooks(response.data.books.reverse());
     } catch (error) {
       toast.error('Error fetching books');
@@ -43,7 +43,7 @@ const Library = () => {
 
   const addBook = async (book) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/v1/library/books', {
+      const response = await axios.post('https://campus-sync-ez7y.onrender.com/api/v1/library/books', {
         bookname: book.title,
         author: book.author,
       });

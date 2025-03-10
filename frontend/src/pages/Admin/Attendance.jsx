@@ -35,7 +35,7 @@ const AdminAttendance = () => {
     const fetchStudents = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:5000/api/v1/attendance/students"
+          "https://campus-sync-ez7y.onrender.com/api/v1/attendance/students"
         );
         console.log("Response Status:", response.status); // Log the status
         console.log("API Response:", response.data); // Log the data
@@ -85,7 +85,7 @@ const AdminAttendance = () => {
         return;
       }
       // Send the attendance data to the server
-      await axios.post("http://localhost:5000/api/v1/attendance/attendance", {
+      await axios.post("https://campus-sync-ez7y.onrender.com/api/v1/attendance/attendance", {
         attendance,
         date,
       });

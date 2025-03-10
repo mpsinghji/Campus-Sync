@@ -23,7 +23,7 @@ const AnnouncementSection = () => {
   
   const fetchAnnouncements = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/v1/announcements/getall');
+      const response = await axios.get('https://campus-sync-ez7y.onrender.com/api/v1/announcements/getall');
       setAnnouncements(response.data.announcements.reverse());
     } catch (error) {
       toast.error('Error fetching announcements');

@@ -24,7 +24,7 @@ const LibrarySection = () => {
 
   const fetchBooks = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/v1/library/getall');
+      const response = await axios.get('https://campus-sync-ez7y.onrender.com/api/v1/library/getall');
       setBooks(response.data.books);
     } catch (error) {
       toast.error('Error fetching books');

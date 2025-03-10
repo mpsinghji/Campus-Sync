@@ -28,7 +28,7 @@ const PaymentGraph = () => {
   useEffect(() => {
     const fetchPaymentData = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/payments");
+        const response = await axios.get("https://campus-sync-ez7y.onrender.com/payments");
 
         if (response.data.success) {
           const payments = response.data.data;

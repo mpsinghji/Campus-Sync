@@ -16,7 +16,7 @@ const StudentEventSection = () => {
   const fetchEvents = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:5000/api/v1/events/getall"
+        "https://campus-sync-ez7y.onrender.com/api/v1/events/getall"
       );
       setEvents(response.data.events || []);
     } catch (error) {

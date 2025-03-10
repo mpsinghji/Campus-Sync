@@ -61,7 +61,7 @@ const StudentRegister = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/v1/student/register`,
+        `https://campus-sync-ez7y.onrender.com/api/v1/student/register`,
         {
           method: "POST",
           headers: {

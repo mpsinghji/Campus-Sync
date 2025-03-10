@@ -31,7 +31,7 @@ const AdminAssignments = () => {
 
     const fetchAssignments = async () => {
         try {
-            const response = await axios.get('http://localhost:5000/api/v1/assignments/getall');
+            const response = await axios.get('https://campus-sync-ez7y.onrender.com/api/v1/assignments/getall');
             setAssignments(response.data.assignments.reverse());
         } catch (error) {
             toast.error('Error fetching assignments');
@@ -51,7 +51,7 @@ const AdminAssignments = () => {
         }
 
         try {
-            const response = await axios.post('http://localhost:5000/api/v1/assignments/add', newAssignment);
+            const response = await axios.post('https://campus-sync-ez7y.onrender.com/api/v1/assignments/add', newAssignment);
             if (response.data.success) {
                 toast.success('Announcement sent successfully');
                 setNewAssignment({ title: '', description: '' });

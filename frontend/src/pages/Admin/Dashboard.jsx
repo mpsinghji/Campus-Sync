@@ -39,7 +39,7 @@ const AdminDashboard = () => {
       try {
         // console.log("A2.1");
         const response = await axios.get(
-          "http://localhost:5000/api/v1/admin/dashboard",
+          "https://campus-sync-ez7y.onrender.com/api/v1/admin/dashboard",
           {
             headers: {
               // Authorization: `Bearer ${token}`,

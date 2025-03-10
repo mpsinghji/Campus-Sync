@@ -49,10 +49,10 @@ const StudentDashboard = () => {
   useEffect(() => {
     const fetchAllData = async () => {
       await Promise.all([
-        fetchData("http://localhost:5000/api/v1/assignments/count", setAssignmentCount, "count"),
-        fetchData("http://localhost:5000/api/v1/announcements/count", setAnnouncementCount, "count"),
-        fetchData("http://localhost:5000/api/v1/events/count", setEventCount, "count"),
-        fetchData("http://localhost:5000/api/v1/events/getall", setEvents, "events"),
+        fetchData("https://campus-sync-ez7y.onrender.com/api/v1/assignments/count", setAssignmentCount, "count"),
+        fetchData("https://campus-sync-ez7y.onrender.com/api/v1/announcements/count", setAnnouncementCount, "count"),
+        fetchData("https://campus-sync-ez7y.onrender.com/api/v1/events/count", setEventCount, "count"),
+        fetchData("https://campus-sync-ez7y.onrender.com/api/v1/events/getall", setEvents, "events"),
       ]);
       setLoading(false);
     };

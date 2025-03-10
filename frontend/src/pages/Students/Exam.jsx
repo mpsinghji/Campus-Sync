@@ -23,7 +23,7 @@ const ExamSection = () => {
 
   const fetchExams = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/v1/exam/getall');
+      const response = await axios.get('https://campus-sync-ez7y.onrender.com/api/v1/exam/getall');
       if (Array.isArray(response.data.exams)) {
         setExam(response.data.exams.reverse());
       } else {

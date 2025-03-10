@@ -37,7 +37,7 @@ const TeacherProfileSection = () => {
         }
 
         const response = await axios.get(
-          "http://localhost:5000/api/v1/teacher/profile",
+          "https://campus-sync-ez7y.onrender.com/api/v1/teacher/profile",
           {
             headers: {
               Authorization: `Bearer ${token}`,

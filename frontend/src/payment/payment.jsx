@@ -42,7 +42,7 @@ const Payment = () => {
     let config = {
       method: "post",
       maxBodyLength: Infinity,
-      url: "http://localhost:5000/Fees",
+      url: "https://campus-sync-ez7y.onrender.com/Fees",
       headers: {
         "Content-Type": "application/json",
       },
@@ -98,7 +98,7 @@ const Payment = () => {
   //   const paymentId = e.target.paymentId.value;
 
   //   axios
-  //     .get(`http://localhost:5000/payment/${paymentId}`)
+  //     .get(`https://campus-sync-ez7y.onrender.com/payment/${paymentId}`)
   //     .then((response) => {
   //       console.log(response.data);
   //       setResponseState(response.data);

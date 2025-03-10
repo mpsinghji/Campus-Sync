@@ -29,7 +29,7 @@ const CheckExamSection = () => {
 
   const fetchExams = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/v1/exam/getall');
+      const response = await axios.get('https://campus-sync-ez7y.onrender.com/api/v1/exam/getall');
       if (Array.isArray(response.data.exams)) { 
         setExamData(response.data.exams.reverse());
       } else {
@@ -45,7 +45,7 @@ const CheckExamSection = () => {
     e.preventDefault();
     const newExam = { subjectName, subjectCode, batch, date } ;
     try {
-      const response = await axios.post('http://localhost:5000/api/v1/exam', newExam);
+      const response = await axios.post('https://campus-sync-ez7y.onrender.com/api/v1/exam', newExam);
       if (typeof response.data === 'object') {
         setExamData([...examData, response.data]);
         setSubjectname('');

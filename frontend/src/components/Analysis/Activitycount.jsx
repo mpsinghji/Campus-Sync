@@ -31,9 +31,9 @@ const ActivityGraph = () => {
       try {
         const [eventsRes, assignmentsRes, announcementsRes] = await Promise.all(
           [
-            axios.get("http://localhost:5000/api/v1/events/count"),
-            axios.get("http://localhost:5000/api/v1/assignments/count"),
-            axios.get("http://localhost:5000/api/v1/announcements/count"),
+            axios.get("https://campus-sync-ez7y.onrender.com/api/v1/events/count"),
+            axios.get("https://campus-sync-ez7y.onrender.com/api/v1/assignments/count"),
+            axios.get("https://campus-sync-ez7y.onrender.com/api/v1/announcements/count"),
           ]
         );
 

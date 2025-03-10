@@ -30,7 +30,7 @@ const AttendanceGraph = () => {
   useEffect(() => {
     const fetchAttendance = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/v1/attendance/getall");
+        const response = await axios.get("https://campus-sync-ez7y.onrender.com/api/v1/attendance/getall");
         if (response.data.success && Array.isArray(response.data.data)) {
           const attendanceRecords = response.data.data;
 
