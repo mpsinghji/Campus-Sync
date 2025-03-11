@@ -17,6 +17,7 @@ import {
 } from '../../styles/AdminAssignmentsStyles.js';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { BACKEND_URL } from '../../constants/url';
 
 const TeacherAssignments = () => {
     const [newAssignment, setNewAssignment] = useState({ title: '', description: '' });
@@ -29,7 +30,7 @@ const TeacherAssignments = () => {
 
     const fetchAssignments = async () => {
         try {
-            const response = await axios.get('https://campus-sync-ez7y.onrender.com/api/v1/assignments/getall');
+            const response = await axios.get(`${BACKEND_URL}api/v1/assignments/getall`);
             setAssignments(response.data.assignments);
         } catch (error) {
             toast.error('Error fetching assignments');
@@ -49,7 +50,7 @@ const TeacherAssignments = () => {
         }
     
         try {
-            const response = await axios.post('https://campus-sync-ez7y.onrender.com/api/v1/assignments/add', newAssignment);
+            const response = await axios.post(`${BACKEND_URL}api/v1/assignments/add`, newAssignment);
             if (response.data.success) {
                 alert('Assignment added successfully!');
                 setNewAssignment({ title: '', description: '' }); 

@@ -12,7 +12,7 @@ import {
   ExamResult,
 } from '../../styles/ExamStyles';
 import axios from 'axios';
-
+import { BACKEND_URL } from '../../constants/url';
 const ExamSection = () => {
   const [exam, setExam] = useState([]);
 
@@ -23,7 +23,7 @@ const ExamSection = () => {
 
   const fetchExams = async () => {
     try {
-      const response = await axios.get('https://campus-sync-ez7y.onrender.com/api/v1/exam/getall');
+      const response = await axios.get(`${BACKEND_URL}api/v1/exam/getall`);
       if (Array.isArray(response.data.exams)) {
         setExam(response.data.exams.reverse());
       } else {

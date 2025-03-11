@@ -17,6 +17,7 @@ import {
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import AdminSidebar from './Sidebar';
+import { BACKEND_URL } from '../../constants/url';
 
 
 
@@ -31,7 +32,7 @@ const AdminAssignments = () => {
 
     const fetchAssignments = async () => {
         try {
-            const response = await axios.get('https://campus-sync-ez7y.onrender.com/api/v1/assignments/getall');
+            const response = await axios.get(`${BACKEND_URL}api/v1/assignments/getall`);
             setAssignments(response.data.assignments.reverse());
         } catch (error) {
             toast.error('Error fetching assignments');
@@ -51,7 +52,7 @@ const AdminAssignments = () => {
         }
 
         try {
-            const response = await axios.post('https://campus-sync-ez7y.onrender.com/api/v1/assignments/add', newAssignment);
+            const response = await axios.post(`${BACKEND_URL}api/v1/assignments/add`, newAssignment);
             if (response.data.success) {
                 toast.success('Announcement sent successfully');
                 setNewAssignment({ title: '', description: '' });

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Bar } from "react-chartjs-2";
 import axios from "axios";
 import styled from "styled-components";
+import { BACKEND_URL } from "../../constants/url";
 
 const GraphWrapper = styled.div`
   flex: 1; /* Adjust layout responsiveness */
@@ -31,9 +32,9 @@ const ActivityGraph = () => {
       try {
         const [eventsRes, assignmentsRes, announcementsRes] = await Promise.all(
           [
-            axios.get("https://campus-sync-ez7y.onrender.com/api/v1/events/count"),
-            axios.get("https://campus-sync-ez7y.onrender.com/api/v1/assignments/count"),
-            axios.get("https://campus-sync-ez7y.onrender.com/api/v1/announcements/count"),
+            axios.get(`${BACKEND_URL}api/v1/events/count`),
+            axios.get(`${BACKEND_URL}api/v1/assignments/count`),
+            axios.get(`${BACKEND_URL}api/v1/announcements/count`),
           ]
         );
 

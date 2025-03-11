@@ -14,7 +14,7 @@ import {
 import AdminSidebar from './Sidebar.jsx';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
+import { BACKEND_URL } from '../../constants/url';
 const EventCalendar = () => {
   const [events, setEvents] = useState([]);
   const [newEvent, setNewEvent] = useState({ name: '', description: '', date: '' });
@@ -22,7 +22,7 @@ const EventCalendar = () => {
 
   const fetchEvents = async () => {
     try {
-      const response = await axios.get('https://campus-sync-ez7y.onrender.com/api/v1/events/getall');
+      const response = await axios.get(`${BACKEND_URL}api/v1/events/getall`);
       setEvents(response.data.events.reverse() || []);
     } catch (error) {
       toast.error('Error fetching events');
@@ -42,7 +42,7 @@ const EventCalendar = () => {
   const addEvent = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('https://campus-sync-ez7y.onrender.com/api/v1/events', newEvent);
+      const response = await axios.post(`${BACKEND_URL}api/v1/events`, newEvent);
       setEvents([...events, response.data.event]);
       setNewEvent({ name: '', description: '', date: '' });
       toast.success('Event added successfully');

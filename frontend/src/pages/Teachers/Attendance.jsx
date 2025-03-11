@@ -14,7 +14,7 @@ import styled from "styled-components";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
+import { BACKEND_URL } from "../../constants/url";
 export const AttendanceContainer = styled.div`
   display: flex;
   padding-left: 240px;
@@ -35,7 +35,7 @@ const CheckAttendanceSection = () => {
     const fetchStudents = async () => {
       try {
         const response = await axios.get(
-          "https://campus-sync-ez7y.onrender.com/api/v1/attendance/students"
+          `${BACKEND_URL}api/v1/attendance/students`
         );
         console.log("Response Status:", response.status); // Log the status
         console.log("API Response:", response.data); // Log the data
@@ -83,7 +83,7 @@ const CheckAttendanceSection = () => {
         return;
       }
       // Send the attendance data to the server
-      await axios.post("https://campus-sync-ez7y.onrender.com/api/v1/attendance/attendance", {
+      await axios.post(`${BACKEND_URL}api/v1/attendance/attendance`, {
         attendance,
         date,
       });

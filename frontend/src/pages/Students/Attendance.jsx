@@ -15,7 +15,7 @@ import {
   TableData,
 } from "../../styles/AttendanceStyles";
 import Cookies from "js-cookie";
-
+import { BACKEND_URL } from "../../constants/url";
 const Attendance = () => {
   const [attendanceData, setAttendanceData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +28,7 @@ const Attendance = () => {
         console.log("Token being sent:", token); // Log token to ensure it's being passed
 
         const response = await axios.get(
-          "https://campus-sync-ez7y.onrender.com/api/v1/attendance/my-attendance",
+          `${BACKEND_URL}api/v1/attendance/my-attendance`,
           {
             headers: {
               studenttoken: token, // Pass token as 'studenttoken' in headers

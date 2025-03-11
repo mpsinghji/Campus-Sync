@@ -12,7 +12,7 @@ import {
 } from '../../styles/AnnouncementStyles'; 
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
+import { BACKEND_URL } from '../../constants/url';
 const AnnouncementSection = () => {
   const [announcements, setAnnouncements] = useState([]);
 
@@ -23,7 +23,7 @@ const AnnouncementSection = () => {
   
   const fetchAnnouncements = async () => {
     try {
-      const response = await axios.get('https://campus-sync-ez7y.onrender.com/api/v1/announcements/getall');
+      const response = await axios.get(`${BACKEND_URL}api/v1/announcements/getall`);
       setAnnouncements(response.data.announcements.reverse());
     } catch (error) {
       toast.error('Error fetching announcements');

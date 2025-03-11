@@ -13,7 +13,7 @@ import {
   List,
 } from "../styles/paymentStyles";
 import ProjectLogo from "../assets/bg1.png";
-
+import { BACKEND_URL } from "../constants/url";
 const Payment = () => {
   const [responseId, setResponseId] = React.useState("");
   const [responseState, setResponseState] = React.useState("");
@@ -42,7 +42,7 @@ const Payment = () => {
     let config = {
       method: "post",
       maxBodyLength: Infinity,
-      url: "https://campus-sync-ez7y.onrender.com/Fees",
+      url: `${BACKEND_URL}Fees`,
       headers: {
         "Content-Type": "application/json",
       },
@@ -98,7 +98,7 @@ const Payment = () => {
   //   const paymentId = e.target.paymentId.value;
 
   //   axios
-  //     .get(`https://campus-sync-ez7y.onrender.com/payment/${paymentId}`)
+  //     .get(`${BACKEND_URL}payment/${paymentId}`)
   //     .then((response) => {
   //       console.log(response.data);
   //       setResponseState(response.data);

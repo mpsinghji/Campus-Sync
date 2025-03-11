@@ -13,6 +13,7 @@ import {
 } from '../../styles/LibraryStyles';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { BACKEND_URL } from '../../constants/url';
 
 const LibrarySection = () => {
   const [books, setBooks] = useState([]);
@@ -24,7 +25,7 @@ const LibrarySection = () => {
 
   const fetchBooks = async () => {
     try {
-      const response = await axios.get('https://campus-sync-ez7y.onrender.com/api/v1/library/getall');
+      const response = await axios.get(`${BACKEND_URL}api/v1/library/getall`);
       setBooks(response.data.books);
     } catch (error) {
       toast.error('Error fetching books');

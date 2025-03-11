@@ -11,7 +11,7 @@ import {
   RemoveButton,
 } from "../../styles/StudentsStyles";
 import { ToastContainer, toast } from "react-toastify";
-
+import { BACKEND_URL } from "../../constants/url";
 const Students = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ const Students = () => {
     const fetchStudents = async () => {
       try {
         const response = await axios.get(
-          "https://campus-sync-ez7y.onrender.com/api/v1/student/getall"
+          `${BACKEND_URL}api/v1/student/getall`
         );
         console.log("Response Status:", response.status);
         console.log("API Response:", response.data);
@@ -51,7 +51,7 @@ const Students = () => {
 
 
     try {
-      const response = await axios.delete(`https://campus-sync-ez7y.onrender.com/api/v1/student/${studentId}`);
+      const response = await axios.delete(`${BACKEND_URL}api/v1/student/${studentId}`);
       console.log("Response:", response);
       setStudents(students.filter(student => student._id !== studentId));
 

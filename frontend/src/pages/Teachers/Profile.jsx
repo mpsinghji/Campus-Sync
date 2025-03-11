@@ -7,7 +7,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Cookies from 'js-cookie';
 import { useNavigate } from 'react-router-dom';
-
+import { BACKEND_URL } from '../../constants/url';
 const TeacherProfileSection = () => {
   const [teacherInfo, setTeacherInfo] = useState({
     email: "",
@@ -37,7 +37,7 @@ const TeacherProfileSection = () => {
         }
 
         const response = await axios.get(
-          "https://campus-sync-ez7y.onrender.com/api/v1/teacher/profile",
+          `${BACKEND_URL}api/v1/teacher/profile`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

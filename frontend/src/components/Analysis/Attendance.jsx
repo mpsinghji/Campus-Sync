@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Bar } from "react-chartjs-2";
 import axios from "axios";
 import styled from "styled-components";
+import { BACKEND_URL } from "../../constants/url";
 
 const GraphWrapper = styled.div`
   flex: 1;
@@ -30,7 +31,7 @@ const AttendanceGraph = () => {
   useEffect(() => {
     const fetchAttendance = async () => {
       try {
-        const response = await axios.get("https://campus-sync-ez7y.onrender.com/api/v1/attendance/getall");
+        const response = await axios.get(`${BACKEND_URL}api/v1/attendance/getall`);
         if (response.data.success && Array.isArray(response.data.data)) {
           const attendanceRecords = response.data.data;
 

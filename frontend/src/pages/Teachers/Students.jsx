@@ -12,6 +12,7 @@ import {
 } from "../../styles/StudentsStyles";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { BACKEND_URL } from "../../constants/url";
 
 const StudentSection = () => {
   const [students, setStudents] = useState([]); // Initialize as an empty array
@@ -21,7 +22,7 @@ const StudentSection = () => {
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const response = await fetch("https://campus-sync-ez7y.onrender.com/api/v1/student");
+        const response = await fetch(`${BACKEND_URL}api/v1/student`);
         const data = await response.json();
 
         // Check if `data` is an array

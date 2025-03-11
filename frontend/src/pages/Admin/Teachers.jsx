@@ -11,7 +11,7 @@ import {
   RemoveButton
 } from '../../styles/TeachersStyles';
 import { ToastContainer, toast } from "react-toastify";
-
+import { BACKEND_URL } from "../../constants/url";
 const Teachers = () => {
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ const Teachers = () => {
     const fetchTeachers = async () => {
       try {
         const response = await axios.get(
-          "https://campus-sync-ez7y.onrender.com/api/v1/teacher/getall"
+          `${BACKEND_URL}api/v1/teacher/getall`
         );
         console.log("Response Status:", response.status);
         console.log("API Response:", response.data);
@@ -50,7 +50,7 @@ const Teachers = () => {
     }
 
     try {
-      const response = await axios.delete(`https://campus-sync-ez7y.onrender.com/api/v1/teacher/${teacherId}`);
+      const response = await axios.delete(`${BACKEND_URL}api/v1/teacher/${teacherId}`);
       console.log("Response:", response);
       setTeachers(teachers.filter(teacher => teacher._id !== teacherId)); // Corrected to update 'teachers' state
 

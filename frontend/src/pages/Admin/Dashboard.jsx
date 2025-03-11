@@ -11,6 +11,7 @@ import PaymentGraph from "../../components/Analysis/paymentDisplay.jsx";
 import ActivityGraph from "../../components/Analysis/Activitycount.jsx";
 import UserAnalysis from "../../components/Analysis/userAnalysis.jsx";
 // import Cookies from "js-cookie";
+import { BACKEND_URL } from "../../constants/url";
 
 const AdminDashboard = () => {
   const [data, setData] = useState({
@@ -39,7 +40,7 @@ const AdminDashboard = () => {
       try {
         // console.log("A2.1");
         const response = await axios.get(
-          "https://campus-sync-ez7y.onrender.com/api/v1/admin/dashboard",
+          `${BACKEND_URL}api/v1/admin/dashboard`,
           {
             headers: {
               // Authorization: `Bearer ${token}`,

@@ -10,6 +10,7 @@ import styled, { createGlobalStyle } from "styled-components";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { message } from "../../../backend/utils/message";
+import { BACKEND_URL } from "../constants/url";
 
 const ScrollLockStyle = createGlobalStyle`
   html, body {
@@ -61,7 +62,7 @@ const StudentRegister = () => {
 
     try {
       const response = await fetch(
-        `https://campus-sync-ez7y.onrender.com/api/v1/student/register`,
+        `${BACKEND_URL}api/v1/student/register`,
         {
           method: "POST",
           headers: {

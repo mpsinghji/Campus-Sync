@@ -16,6 +16,7 @@ import {
   AnnouncementItem,
   AnnouncementContent,
 } from "../../styles/AnnouncementStyles";
+import { BACKEND_URL } from "../../constants/url";
 
 const CheckAnnouncementSection = () => {
   const [announcement, setAnnouncement] = useState("");
@@ -25,7 +26,7 @@ const CheckAnnouncementSection = () => {
   const fetchAnnouncements = async () => {
     try {
       const response = await axios.get(
-        "https://campus-sync-ez7y.onrender.com/api/v1/announcements/getall"
+        `${BACKEND_URL}api/v1/announcements/getall`
       );
       setAnnouncements(response.data.announcements.reverse());
     } catch (error) {
@@ -42,7 +43,7 @@ const CheckAnnouncementSection = () => {
     e.preventDefault();
     try {
       const response = await axios.post(
-        "https://campus-sync-ez7y.onrender.com/api/v1/announcements",
+        `${BACKEND_URL}api/v1/announcements`,
         {
           announcement: announcement,
         }

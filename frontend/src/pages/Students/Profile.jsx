@@ -14,7 +14,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Cookies from 'js-cookie';
 import { useNavigate } from 'react-router-dom';
-
+import { BACKEND_URL } from '../../constants/url';
 const ProfileSection = () => {
   const [studentProfile, setStudentProfile] = useState({
     name: '',
@@ -44,7 +44,7 @@ const ProfileSection = () => {
         }
 
         const response = await axios.get(
-          'https://campus-sync-ez7y.onrender.com/api/v1/student/profile',
+          `${BACKEND_URL}api/v1/student/profile`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -89,23 +89,23 @@ const ProfileSection = () => {
           <ProfileHeader>Profile</ProfileHeader>
           <ProfileInfo>
             <ProfileDetail>
-              <div style={{ fontWeight: 'bold' }}>Name:</div>
+              <div style={{ fontWeight: 'bold' }}>Name: </div>
               <div>{studentProfile.name}</div>
             </ProfileDetail>
             <ProfileDetail>
-              <div style={{ fontWeight: 'bold' }}>Roll. No. :</div>
+              <div style={{ fontWeight: 'bold' }}>Roll. No. : </div>
               <div>{studentProfile.rollno}</div>
             </ProfileDetail>
             <ProfileDetail>
-              <div style={{ fontWeight: 'bold' }}>Gender:</div>
+              <div style={{ fontWeight: 'bold' }}>Gender: </div>
               <div>{studentProfile.gender}</div>
             </ProfileDetail>
             <ProfileDetail>
-              <div style={{ fontWeight: 'bold' }}>Mobile No. :</div>
+              <div style={{ fontWeight: 'bold' }}>Mobile No. : </div>
               <div>{studentProfile.mobileno}</div>
             </ProfileDetail>
             <ProfileDetail>
-              <div style={{ fontWeight: 'bold' }}>Email:</div>
+              <div style={{ fontWeight: 'bold' }}>Email: </div>
               <div>{studentProfile.email}</div>
             </ProfileDetail>
           </ProfileInfo>

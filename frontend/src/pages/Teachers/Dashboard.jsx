@@ -16,6 +16,7 @@ import {
 } from "../../styles/DashboardStyles";
 import axios from "axios";
 import { useState, useEffect } from "react";
+import { BACKEND_URL } from "../../constants/url";
 
 const TeacherDashboard = () => {
   const [totalStudents, setTotalStudents] = useState(0);
@@ -27,7 +28,7 @@ const TeacherDashboard = () => {
     const fetchData = async () => {
       try {
         // Fetch student count
-        const studentResponse = await axios.get("https://campus-sync-ez7y.onrender.com/api/v1/student/count", {
+        const studentResponse = await axios.get(`${BACKEND_URL}api/v1/student/count`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -35,7 +36,7 @@ const TeacherDashboard = () => {
         setTotalStudents(studentResponse.data.totalStudents);
 
         // Fetch events
-        const eventsResponse = await axios.get("https://campus-sync-ez7y.onrender.com/api/v1/events/getall", {
+        const eventsResponse = await axios.get(`${BACKEND_URL}api/v1/events/getall`, {
           headers: {
             Authorization: `Bearer ${token}`
           }

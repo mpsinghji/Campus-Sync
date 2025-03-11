@@ -14,7 +14,7 @@ import {
   EventList,
 } from "../../styles/DashboardStyles";
 import Loading from "../../components/Loading/loading.jsx";
-
+import { BACKEND_URL } from "../../constants/url";
 const StudentDashboard = () => {
   const [assignmentCount, setAssignmentCount] = useState(null);
   const [announcementCount, setAnnouncementCount] = useState(null);
@@ -49,10 +49,10 @@ const StudentDashboard = () => {
   useEffect(() => {
     const fetchAllData = async () => {
       await Promise.all([
-        fetchData("https://campus-sync-ez7y.onrender.com/api/v1/assignments/count", setAssignmentCount, "count"),
-        fetchData("https://campus-sync-ez7y.onrender.com/api/v1/announcements/count", setAnnouncementCount, "count"),
-        fetchData("https://campus-sync-ez7y.onrender.com/api/v1/events/count", setEventCount, "count"),
-        fetchData("https://campus-sync-ez7y.onrender.com/api/v1/events/getall", setEvents, "events"),
+        fetchData(`${BACKEND_URL}api/v1/assignments/count`, setAssignmentCount, "count"),
+        fetchData(`${BACKEND_URL}api/v1/announcements/count`, setAnnouncementCount, "count"),
+        fetchData(`${BACKEND_URL}api/v1/events/count`, setEventCount, "count"),
+        fetchData(`${BACKEND_URL}api/v1/events/getall`, setEvents, "events"),
       ]);
       setLoading(false);
     };

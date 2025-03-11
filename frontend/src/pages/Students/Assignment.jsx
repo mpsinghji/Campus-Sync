@@ -24,7 +24,7 @@ const StudentAssignments = () => {
 
   const fetchAssignments = async () => {
     try {
-      const response = await axios.get('https://campus-sync-ez7y.onrender.com/api/v1/assignments/getall');
+      const response = await axios.get('${BACKEND_URL}api/v1/assignments/getall');
       setAssignments(response.data.assignments);
     } catch (error) {
       toast.error('Error fetching assignments');
@@ -33,7 +33,7 @@ const StudentAssignments = () => {
 
   // const handleDoAssignment = async (id) => {
   //   try {
-  //     const response = await axios.put(`https://campus-sync-ez7y.onrender.com/api/v1/assignments/done/${id}`);
+  //     const response = await axios.put(`${BACKEND_URL}api/v1/assignments/done/${id}`);
       
   //     if (response.data.success) {
   //       setAssignments((prevAssignments) =>

@@ -11,6 +11,7 @@ import AdminSidebar from "../pages/Admin/Sidebar";
 import { createGlobalStyle } from "styled-components";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { BACKEND_URL } from "../constants/url";
 
 export const GlobalStyle = createGlobalStyle`
   html, body {
@@ -44,7 +45,7 @@ const AdminRegister = () => {
     setLoading(true);
   
     try {
-      const response = await fetch(`https://campus-sync-ez7y.onrender.com/api/v1/admin/register`, {
+      const response = await fetch(`${BACKEND_URL}api/v1/admin/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

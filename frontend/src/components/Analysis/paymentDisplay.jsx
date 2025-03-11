@@ -3,6 +3,7 @@ import axios from "axios";
 import { Line } from "react-chartjs-2";
 import { Chart as ChartJS, Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement } from "chart.js";
 import styled from "styled-components";
+import { BACKEND_URL } from "../../constants/url";
 
 const GraphWrapper = styled.div`
   flex: 1;
@@ -28,7 +29,7 @@ const PaymentGraph = () => {
   useEffect(() => {
     const fetchPaymentData = async () => {
       try {
-        const response = await axios.get("https://campus-sync-ez7y.onrender.com/payments");
+        const response = await axios.get(`${BACKEND_URL}payments`);
 
         if (response.data.success) {
           const payments = response.data.data;

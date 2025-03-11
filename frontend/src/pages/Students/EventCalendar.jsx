@@ -9,6 +9,7 @@ import {
 import Sidebar from "./Sidebar.jsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { BACKEND_URL } from "../../constants/url";
 
 const StudentEventSection = () => {
   const [events, setEvents] = useState([]);
@@ -16,7 +17,7 @@ const StudentEventSection = () => {
   const fetchEvents = async () => {
     try {
       const response = await axios.get(
-        "https://campus-sync-ez7y.onrender.com/api/v1/events/getall"
+        `${BACKEND_URL}api/v1/events/getall`
       );
       setEvents(response.data.events || []);
     } catch (error) {

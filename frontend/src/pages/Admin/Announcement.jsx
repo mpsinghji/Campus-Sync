@@ -16,14 +16,14 @@ import {
   AnnouncementItem,
   AnnouncementContent,
 } from '../../styles/AnnouncementStyles';
-
+import { BACKEND_URL } from '../../constants/url';
 const Announcement = () => {
   const [announcement, setAnnouncement] = useState('');
   const [announcements, setAnnouncements] = useState([]);
 
   const fetchAnnouncements = async () => {
     try {
-      const response = await axios.get('https://campus-sync-ez7y.onrender.com/api/v1/announcements/getall');
+      const response = await axios.get(`${BACKEND_URL}api/v1/announcements/getall`);
       setAnnouncements(response.data.announcements.reverse());
     } catch (error) {
       toast.error('Error fetching announcements');
@@ -39,7 +39,7 @@ const Announcement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('https://campus-sync-ez7y.onrender.com/api/v1/announcements', {
+      const response = await axios.post(`${BACKEND_URL}api/v1/announcements`, {
         announcement: announcement, 
       });
       setAnnouncement('');
