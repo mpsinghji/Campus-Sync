@@ -17,6 +17,35 @@ export const ChooseUserContainer = styled.div`
   transition: all 0.3s ease-in-out;
 `;
 
+// Marquee container for contact information
+export const MarqueeContainer = styled.div`
+  width: 100%;
+  background-color: rgba(26, 37, 47, 0.9);
+  color: #fff;
+  padding: 10px 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+`;
+
+// Marquee text style
+export const MarqueeText = styled.div`
+  font-size: 16px;
+  font-weight: 500;
+  
+  a {
+    color: #1abc9c;
+    text-decoration: none;
+    font-weight: bold;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+`;
+
 // Role selector tabs
 export const RoleSelector = styled.div`
   display: flex;

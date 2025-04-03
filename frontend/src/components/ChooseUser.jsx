@@ -12,6 +12,8 @@ import {
   InputField,
   Spinner,
   Circle,
+  MarqueeContainer,
+  MarqueeText
 } from "../styles/ChooseUserStyles";
 import { createGlobalStyle } from "styled-components";
 import { ToastContainer, toast } from "react-toastify";
@@ -127,6 +129,11 @@ const ChooseUser = () => {
   return (
     <>
       <GlobalStyle />
+      <MarqueeContainer>
+        <MarqueeText>
+          To login to the system, please contact the admin at <a href="mailto:manpreet.singhcomet@gmail.com">manpreet.singhcomet@gmail.com</a>
+        </MarqueeText>
+      </MarqueeContainer>
       <ChooseUserContainer>
         <div className="overlay"></div>
         <Title>Login</Title>
