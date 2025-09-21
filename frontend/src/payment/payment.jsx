@@ -37,6 +37,8 @@ const Payment = () => {
     let data = JSON.stringify({
       amount: amount * 100,
       currency: "INR",
+      studentId: "temp_student", // You can get this from user context
+      academicYear: new Date().getFullYear().toString()
     });
 
     let config = {
@@ -57,6 +59,7 @@ const Payment = () => {
       })
       .catch((error) => {
         console.log("error at", error);
+        console.log("Error details:", error.response?.data);
       });
   };
 
@@ -70,10 +73,10 @@ const Payment = () => {
     }
 
     const options = {
-      key: "rzp_test_ZckQfzoE6FR8D6",
+      key: "rzp_test_RJjIrWx8F7ZuO8", // Updated to match backend key
       amount: amount,
       currency: "INR",
-      name: "PROJECT_ZERO",
+      name: "Campus Sync",
       description: "Fee Payment",
       image: "../assets/bg1.png",
       handler: function (response) {
@@ -81,7 +84,7 @@ const Payment = () => {
         navigate("/payment-success");
       },
       prefill: {
-        name: "PROJECT_ZERO",
+        name: "Campus Sync",
         email: "m2210991889@gmail.com",
       },
       theme: {

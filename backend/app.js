@@ -11,8 +11,10 @@ import examRouter from "./routes/examRoute.js";
 import libraryRouter from "./routes/libraryRoute.js";
 import assignmentRouter from "./routes/assignmentRouter.js";
 import attendanceRouter from "./routes/attendanceRouter.js";
+import feeRouter from "./routes/feeRoutes.js";
 
 import Razorpay from "razorpay";
+import Fee from "./models/feeModel.js";
 
 dotenv.config({ path: "./config/config.env" });
 
@@ -39,6 +41,7 @@ app.use("/api/v1/exam", examRouter);
 app.use("/api/v1/library", libraryRouter);
 app.use("/api/v1/assignments", assignmentRouter);
 app.use("/api/v1/attendance", attendanceRouter);
+app.use("api/v1/fees",feeRouter);
 
 app.post('/Fees', async(req, res) => {
   const razorpay = new Razorpay({
@@ -46,6 +49,8 @@ app.post('/Fees', async(req, res) => {
     key_secret: process.env.RAZORPAY_KEY_SECRET,
   });
 
+  const { amount, currency, studentId, academicYear } = req.body;
+  
   const options = {
     amount: req.body.amount,
     currency: req.body.currency,
@@ -54,13 +59,30 @@ app.post('/Fees', async(req, res) => {
   };
   try{
     const response = await razorpay.orders.create(options);
+    
+    // Create Fee record with order ID for tracking
+    // We'll update the payment status when payment is completed
+    const feeRecord = await Fee.create({
+      studentId: studentId || "temp_student", // Use temp if not provided
+      amount: amount/100,
+      paymentId: response.id,
+      academicYear: academicYear || new Date().getFullYear().toString(),
+      paymentStatus: 'pending'
+    });
+    
     res.json({
       order_id: response.id,
       currency: response.currency,
-      amount: response.amount
+      amount: response.amount,
+      feeId: feeRecord._id
     })
   }catch(error){
-    res.status(500).send("Internal Server Error");
+    console.error('Error in /Fees endpoint:', error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message
+    });
   }
 })
 
@@ -76,6 +98,16 @@ app.get("/payment/:paymentId", async (req, res) => {
     if(!payment){
       return res.status(500).json("Error at razorpay loading");
     }
+    
+    // Update fee record with payment status
+    await Fee.findOneAndUpdate(
+      { paymentId: paymentId },
+      { 
+        paymentStatus: payment.status === 'captured' ? 'completed' : 'failed',
+        PaidAt: new Date()
+      }
+    );
+    
     res.json({
       status:payment.status,
       amount:payment.amount,
@@ -85,8 +117,53 @@ app.get("/payment/:paymentId", async (req, res) => {
   }catch(error){
     res.status(500).send("Failed to fetch payment details");
   }
-}
-)
+})
+
+// Get student fee payment status
+app.get("/student-fees/:studentId", async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { academicYear } = req.query;
+    
+    const query = { studentId };
+    if (academicYear) {
+      query.academicYear = academicYear;
+    }
+    
+    const fees = await Fee.find(query).sort({ createdAt: -1 });
+    
+    const totalFees = fees.length;
+    const paidFees = fees.filter(fee => fee.paymentStatus === 'completed').length;
+    const pendingFees = fees.filter(fee => fee.paymentStatus === 'pending').length;
+    const failedFees = fees.filter(fee => fee.paymentStatus === 'failed').length;
+    
+    res.json({
+      success: true,
+      data: {
+        totalFees,
+        paidFees,
+        pendingFees,
+        failedFees,
+        fees: fees.map(fee => ({
+          id: fee._id,
+          amount: fee.amount,
+          paymentStatus: fee.paymentStatus,
+          paymentId: fee.paymentId,
+          academicYear: fee.academicYear,
+          paidAt: fee.PaidAt,
+          createdAt: fee.createdAt
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching student fees:', error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching fee data",
+      error: error.message
+    });
+  }
+})
 
 app.get("/payments", async (req, res) => {
   const { fromDate, toDate } = req.query;

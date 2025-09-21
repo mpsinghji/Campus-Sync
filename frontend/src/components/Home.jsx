@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   ButtonsContainer,
   LoginButton,
@@ -13,10 +13,18 @@ import backgroundVideo from "../assets/background_video.mp4";
 const Home = () => {
   const navigate = useNavigate();
 
-  const handleLoginClick = () => {
+  useEffect(() => {
     navigate("/choose-user");
-  };
+  }, [navigate]);
 
+  // const handleLoginClick = () => {
+  //   navigate("/choose-user");
+  // };
+
+  return null;
+  
+  // Or keep the existing JSX if you want it to briefly show before redirect:
+  /*
   return (
     <>
       <HomeContainer>
@@ -47,6 +55,7 @@ const Home = () => {
       </HomeContainer>
     </>
   );
+  */
 };
 
 export default Home;

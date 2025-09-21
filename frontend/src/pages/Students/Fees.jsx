@@ -15,18 +15,33 @@ import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
 import Loading from "../../components/Loading/loading.jsx";
 import Cookies from "js-cookie";
+import axios from "axios";
+import { BACKEND_URL } from "../../constants/url";
 
 const Fees = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [semesterTitle, setSemesterTitle] = useState("");
+  const [feeData, setFeeData] = useState(null);
+  const [studentId, setStudentId] = useState("temp_student"); // You can get this from user context
   
-  // Retrieve paid semesters from localStorage
-  const [paidFees, setPaidFees] = useState(() => {
-    // const storedPaidFees = localStorage.getItem("paidFees");
-    const storedPaidFees = Cookies.get("paidFees");
-    return storedPaidFees ? JSON.parse(storedPaidFees) : [];
-  });
+  // Fetch fee data from backend
+  useEffect(() => {
+    const fetchFeeData = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${BACKEND_URL}student-fees/${studentId}`);
+        setFeeData(response.data.data);
+      } catch (error) {
+        console.error('Error fetching fee data:', error);
+        toast.error("Failed to fetch fee data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeeData();
+  }, [studentId]);
 
   const feesData = [
     { semester: "1st Semester", amount: "₹100" },
@@ -39,21 +54,46 @@ const Fees = () => {
 
   const handlePayment = (semester) => {
     setSemesterTitle(semester);
-    setLoading(true); 
+    // Navigate to payment page
+    navigate("/payment", { state: { semesterTitle: semester } });
+  };
 
-    setTimeout(() => {
-      // Update the state and save it in localStorage
-      const updatedPaidFees = [...paidFees, semester];
-      setPaidFees(updatedPaidFees);
-      // localStorage.setItem("paidFees", JSON.stringify(updatedPaidFees)); // Store in localStorage
-      Cookies.set("paidFees", JSON.stringify(updatedPaidFees));
+  const getPaymentStatus = (semester) => {
+    if (!feeData || !feeData.fees) return 'pending';
+    
+    // Check if there's a completed payment for this semester
+    const completedPayment = feeData.fees.find(fee => 
+      fee.paymentStatus === 'completed' && 
+      fee.academicYear === new Date().getFullYear().toString()
+    );
+    
+    return completedPayment ? 'completed' : 'pending';
+  };
 
-      toast.success("No fee due left!"); // Show success toast
-      setLoading(false);
+  const getPaymentButtonText = (semester) => {
+    const status = getPaymentStatus(semester);
+    switch (status) {
+      case 'completed':
+        return 'Paid';
+      case 'pending':
+        return 'Pay';
+      case 'failed':
+        return 'Retry';
+      default:
+        return 'Pay';
+    }
+  };
 
-      // Navigate to payment page after processing payment
-      navigate("/payment", { state: { semesterTitle: semester } });
-    }, 2000);
+  const getPaymentButtonColor = (semester) => {
+    const status = getPaymentStatus(semester);
+    switch (status) {
+      case 'completed':
+        return { backgroundColor: "green", color: "white" };
+      case 'failed':
+        return { backgroundColor: "red", color: "white" };
+      default:
+        return {};
+    }
   };
 
   return (
@@ -72,24 +112,26 @@ const Fees = () => {
               </FeesTableRow>
             </FeesTableHead>
             <tbody>
-              {feesData.map((fee, index) => (
-                <FeesTableRow key={index}>
-                  <FeesTableData>{fee.semester}</FeesTableData>
-                  <FeesTableData>{fee.amount}</FeesTableData>
-                  <FeesTableData>
-                    <FeesPayButton
-                      onClick={() => handlePayment(fee.semester)}
-                      style={{
-                        backgroundColor: paidFees.includes(fee.semester) ? "green" : "",
-                        color: paidFees.includes(fee.semester) ? "white" : "",
-                      }}
-                      disabled={paidFees.includes(fee.semester)} // Disable the button if fee is paid
-                    >
-                      {paidFees.includes(fee.semester) ? "Paid" : "Pay"}
-                    </FeesPayButton>
-                  </FeesTableData>
-                </FeesTableRow>
-              ))}
+              {feesData.map((fee, index) => {
+                const paymentStatus = getPaymentStatus(fee.semester);
+                const isDisabled = paymentStatus === 'completed';
+                
+                return (
+                  <FeesTableRow key={index}>
+                    <FeesTableData>{fee.semester}</FeesTableData>
+                    <FeesTableData>{fee.amount}</FeesTableData>
+                    <FeesTableData>
+                      <FeesPayButton
+                        onClick={() => handlePayment(fee.semester)}
+                        style={getPaymentButtonColor(fee.semester)}
+                        disabled={isDisabled}
+                      >
+                        {getPaymentButtonText(fee.semester)}
+                      </FeesPayButton>
+                    </FeesTableData>
+                  </FeesTableRow>
+                );
+              })}
             </tbody>
           </FeesTable>
         </FeesContainer>
