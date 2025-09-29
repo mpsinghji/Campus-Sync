@@ -1,6 +1,6 @@
 import axios from "axios";
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Container,
   FormContainer,
@@ -18,6 +18,8 @@ const Payment = () => {
   const [responseId, setResponseId] = React.useState("");
   const [responseState, setResponseState] = React.useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+  const semester = location.state?.semester || "1st Semester";
 
   const loadScript = (src) => {
     return new Promise((resolve) => {
@@ -33,12 +35,23 @@ const Payment = () => {
     });
   };
 
+  const updatePaymentStatus = async (paymentId) => {
+    try {
+      console.log('Updating payment status for:', paymentId);
+      const response = await axios.get(`${BACKEND_URL}payment/${paymentId}`);
+      console.log('Payment status update response:', response.data);
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+    }
+  };
+
   const createRazorpayOrder = (amount) => {
     let data = JSON.stringify({
       amount: amount * 100,
       currency: "INR",
-      studentId: "temp_student", // You can get this from user context
-      academicYear: new Date().getFullYear().toString()
+      studentId: "507f1f77bcf86cd799439011", // You can get this from user context or Redux store
+      academicYear: new Date().getFullYear().toString(),
+      semester: semester
     });
 
     let config = {
@@ -81,6 +94,8 @@ const Payment = () => {
       image: "../assets/bg1.png",
       handler: function (response) {
         setResponseId(response.razorpay_payment_id);
+        // Update payment status in backend
+        updatePaymentStatus(response.razorpay_payment_id);
         navigate("/payment-success");
       },
       prefill: {

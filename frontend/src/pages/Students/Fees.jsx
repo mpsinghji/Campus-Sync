@@ -23,7 +23,7 @@ const Fees = () => {
   const [loading, setLoading] = useState(false);
   const [semesterTitle, setSemesterTitle] = useState("");
   const [feeData, setFeeData] = useState(null);
-  const [studentId, setStudentId] = useState("temp_student"); // You can get this from user context
+  const [studentId, setStudentId] = useState("507f1f77bcf86cd799439011"); // You can get this from user context or Redux store
   
   // Fetch fee data from backend
   useEffect(() => {
@@ -31,6 +31,7 @@ const Fees = () => {
       try {
         setLoading(true);
         const response = await axios.get(`${BACKEND_URL}student-fees/${studentId}`);
+        console.log('Fee data fetched:', response.data.data);
         setFeeData(response.data.data);
       } catch (error) {
         console.error('Error fetching fee data:', error);
@@ -53,34 +54,80 @@ const Fees = () => {
   ];
 
   const handlePayment = (semester) => {
+    const status = getPaymentStatus(semester);
+    if (status === 'completed' || status === 'pending') {
+      return; // Don't allow payment for completed or pending fees
+    }
     setSemesterTitle(semester);
-    // Navigate to payment page
-    navigate("/payment", { state: { semesterTitle: semester } });
+    // Navigate to payment page with semester information
+    navigate("/payment", { state: { semesterTitle: semester, semester: semester } });
   };
 
+  const refreshFeeData = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${BACKEND_URL}student-fees/${studentId}`);
+      setFeeData(response.data.data);
+      toast.success("Fee data refreshed!");
+    } catch (error) {
+      console.error('Error refreshing fee data:', error);
+      toast.error("Failed to refresh fee data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   const getPaymentStatus = (semester) => {
-    if (!feeData || !feeData.fees) return 'pending';
+    if (!feeData || !feeData.fees) return 'unpaid';
     
-    // Check if there's a completed payment for this semester
+    console.log('Checking payment status for semester:', semester);
+    console.log('Available fees:', feeData.fees);
+    
+    // Check if there's a completed payment for this specific semester
     const completedPayment = feeData.fees.find(fee => 
       fee.paymentStatus === 'completed' && 
+      fee.semester === semester &&
       fee.academicYear === new Date().getFullYear().toString()
     );
     
-    return completedPayment ? 'completed' : 'pending';
+    console.log('Completed payment found:', completedPayment);
+    if (completedPayment) return 'completed';
+    
+    // Check for pending payments for this specific semester
+    const pendingPayment = feeData.fees.find(fee => 
+      fee.paymentStatus === 'pending' && 
+      fee.semester === semester &&
+      fee.academicYear === new Date().getFullYear().toString()
+    );
+    
+    if (pendingPayment) return 'pending';
+    
+    // Check for failed payments for this specific semester
+    const failedPayment = feeData.fees.find(fee => 
+      fee.paymentStatus === 'failed' && 
+      fee.semester === semester &&
+      fee.academicYear === new Date().getFullYear().toString()
+    );
+    
+    if (failedPayment) return 'failed';
+    
+    return 'unpaid';
   };
 
   const getPaymentButtonText = (semester) => {
     const status = getPaymentStatus(semester);
     switch (status) {
       case 'completed':
-        return 'Paid';
+        return 'Paid ✓';
       case 'pending':
-        return 'Pay';
+        return 'Processing...';
       case 'failed':
-        return 'Retry';
+        return 'Retry Payment';
+      case 'unpaid':
+        return 'Pay Now';
       default:
-        return 'Pay';
+        return 'Pay Now';
     }
   };
 
@@ -88,11 +135,15 @@ const Fees = () => {
     const status = getPaymentStatus(semester);
     switch (status) {
       case 'completed':
-        return { backgroundColor: "green", color: "white" };
+        return { backgroundColor: "#28a745", color: "white", cursor: "not-allowed" };
+      case 'pending':
+        return { backgroundColor: "#ffc107", color: "black", cursor: "not-allowed" };
       case 'failed':
-        return { backgroundColor: "red", color: "white" };
+        return { backgroundColor: "#dc3545", color: "white" };
+      case 'unpaid':
+        return { backgroundColor: "#007bff", color: "white" };
       default:
-        return {};
+        return { backgroundColor: "#007bff", color: "white" };
     }
   };
 
@@ -102,7 +153,24 @@ const Fees = () => {
         {loading && <Loading />} 
         <Sidebar />
         <FeesContainer>
-          <FeesHeader>Fees</FeesHeader>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <FeesHeader>Fees</FeesHeader>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                onClick={refreshFeeData}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
           <FeesTable>
             <FeesTableHead>
               <FeesTableRow>
@@ -114,7 +182,7 @@ const Fees = () => {
             <tbody>
               {feesData.map((fee, index) => {
                 const paymentStatus = getPaymentStatus(fee.semester);
-                const isDisabled = paymentStatus === 'completed';
+                const isDisabled = paymentStatus === 'completed' || paymentStatus === 'pending';
                 
                 return (
                   <FeesTableRow key={index}>

@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 
 const feeSchema=new mongoose.Schema({
     studentId:{
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Student',
         required:true
     },
     amount:{
@@ -19,6 +20,10 @@ const feeSchema=new mongoose.Schema({
         default:'pending'
     },
     academicYear:{
+        type:String,
+        required:true
+    },
+    semester:{
         type:String,
         required:true
     },

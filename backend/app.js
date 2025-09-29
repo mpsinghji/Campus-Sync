@@ -15,6 +15,7 @@ import feeRouter from "./routes/feeRoutes.js";
 
 import Razorpay from "razorpay";
 import Fee from "./models/feeModel.js";
+import mongoose from "mongoose";
 
 dotenv.config({ path: "./config/config.env" });
 
@@ -49,7 +50,7 @@ app.post('/Fees', async(req, res) => {
     key_secret: process.env.RAZORPAY_KEY_SECRET,
   });
 
-  const { amount, currency, studentId, academicYear } = req.body;
+  const { amount, currency, studentId, academicYear, semester } = req.body;
   
   const options = {
     amount: req.body.amount,
@@ -63,12 +64,15 @@ app.post('/Fees', async(req, res) => {
     // Create Fee record with order ID for tracking
     // We'll update the payment status when payment is completed
     const feeRecord = await Fee.create({
-      studentId: studentId || "temp_student", // Use temp if not provided
+      studentId: studentId || new mongoose.Types.ObjectId(), // Use ObjectId
       amount: amount/100,
       paymentId: response.id,
       academicYear: academicYear || new Date().getFullYear().toString(),
+      semester: semester || "1st Semester", // Default semester
       paymentStatus: 'pending'
     });
+    
+    console.log('Fee record created:', feeRecord);
     
     res.json({
       order_id: response.id,
@@ -100,13 +104,23 @@ app.get("/payment/:paymentId", async (req, res) => {
     }
     
     // Update fee record with payment status
-    await Fee.findOneAndUpdate(
+    let newStatus = 'failed';
+    if (payment.status === 'captured' || payment.status === 'authorized') {
+      newStatus = 'completed';
+    }
+    
+    const updateResult = await Fee.findOneAndUpdate(
       { paymentId: paymentId },
       { 
-        paymentStatus: payment.status === 'captured' ? 'completed' : 'failed',
+        paymentStatus: newStatus,
         PaidAt: new Date()
-      }
+      },
+      { new: true }
     );
+    
+    console.log('Payment status update result:', updateResult);
+    console.log('Payment status from Razorpay:', payment.status);
+    console.log('New status set to:', newStatus);
     
     res.json({
       status:payment.status,
@@ -150,6 +164,7 @@ app.get("/student-fees/:studentId", async (req, res) => {
           paymentStatus: fee.paymentStatus,
           paymentId: fee.paymentId,
           academicYear: fee.academicYear,
+          semester: fee.semester,
           paidAt: fee.PaidAt,
           createdAt: fee.createdAt
         }))
@@ -209,6 +224,35 @@ app.get("/payments", async (req, res) => {
   }
 });
 
-
+// Manual payment status update endpoint for testing
+app.post('/update-payment-status', async (req, res) => {
+  try {
+    const { paymentId, status } = req.body;
+    
+    const updateResult = await Fee.findOneAndUpdate(
+      { paymentId: paymentId },
+      { 
+        paymentStatus: status,
+        PaidAt: new Date()
+      },
+      { new: true }
+    );
+    
+    console.log('Manual payment status update:', updateResult);
+    
+    res.json({
+      success: true,
+      message: 'Payment status updated successfully',
+      data: updateResult
+    });
+  } catch (error) {
+    console.error('Error updating payment status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating payment status',
+      error: error.message
+    });
+  }
+});
 
 export default app;
