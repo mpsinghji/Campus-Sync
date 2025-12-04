@@ -1,14 +1,11 @@
-import nodemailer from "nodemailer";
 import { google } from "googleapis";
 
 const OAuth2 = google.auth.OAuth2;
 
 export const sendEMail = async (options) => {
     try {
-        console.log("Sending email via Gmail API (OAuth2)...");
+        console.log("Sending email via Gmail HTTP API...");
 
-        // Hardcoded credentials removed for security.
-        // These must be set in your .env file and Render Environment Variables.
         const CLIENT_ID = process.env.GMAIL_CLIENT_ID;
         const CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET;
         const REFRESH_TOKEN = process.env.GMAIL_REFRESH_TOKEN;
@@ -24,44 +21,52 @@ export const sendEMail = async (options) => {
             refresh_token: REFRESH_TOKEN
         });
 
-        const accessToken = await new Promise((resolve, reject) => {
-            oauth2Client.getAccessToken((err, token) => {
-                if (err) {
-                    console.error("Failed to create access token :(", err);
-                    reject("Failed to create access token");
-                }
-                resolve(token);
-            });
-        });
+        const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-        const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                type: "OAuth2",
-                user: USER_EMAIL,
-                accessToken,
-                clientId: CLIENT_ID,
-                clientSecret: CLIENT_SECRET,
-                refreshToken: REFRESH_TOKEN
+        // Construct the email in MIME format
+        const subject = options.subject;
+        const to = options.email;
+        const from = USER_EMAIL;
+        const body = options.html || options.message;
+
+        // Encode subject to handle special characters
+        const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
+
+        const messageParts = [
+            `From: <${from}>`,
+            `To: <${to}>`,
+            `Subject: ${utf8Subject}`,
+            `MIME-Version: 1.0`,
+            `Content-Type: text/html; charset=utf-8`,
+            `Content-Transfer-Encoding: 7bit`,
+            ``,
+            body
+        ];
+
+        const message = messageParts.join('\n');
+
+        // Encode the message to base64url (required by Gmail API)
+        const encodedMessage = Buffer.from(message)
+            .toString('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+
+        const res = await gmail.users.messages.send({
+            userId: 'me',
+            requestBody: {
+                raw: encodedMessage
             }
         });
 
-        const mailOptions = {
-            from: USER_EMAIL,
-            to: options.email,
-            subject: options.subject,
-            html: options.html,
-            text: options.message
-        };
-
-        const info = await transporter.sendMail(mailOptions);
-        console.log("Email sent successfully via Gmail API:", info.messageId);
-        return info;
+        console.log("Email sent successfully via Gmail HTTP API:", res.data.id);
+        return res.data;
 
     } catch (error) {
         console.error("Error sending email:", {
             message: error.message,
-            stack: error.stack
+            stack: error.stack,
+            response: error.response ? error.response.data : null
         });
         throw new Error(`Failed to send email: ${error.message}`);
     }
