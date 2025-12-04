@@ -2,28 +2,21 @@ import nodemailer from "nodemailer";
 
 export const sendEMail = async (options) => {
     try {
-        // Fix for Render/Network timeouts:
-        // 1. Try 'smtp.googlemail.com' which sometimes bypasses blocks on 'smtp.gmail.com'
-        // 2. Keep Port 587 and IPv4
-        console.log("Creating email transporter with smtp.googlemail.com...");
+        console.log("Creating email transporter for SMTP...");
 
         const transporter = nodemailer.createTransport({
-            host: 'smtp.googlemail.com', // Alternative host
-            port: 587,
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
             secure: false,
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS
             },
-            family: 4,
             logger: true,
             debug: true,
-            connectionTimeout: 30000, // 30s is usually enough if it works
-            greetingTimeout: 30000,
-            socketTimeout: 30000,
-            tls: {
-                rejectUnauthorized: false
-            }
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 10000
         });
 
         console.log("Preparing email options:", {
