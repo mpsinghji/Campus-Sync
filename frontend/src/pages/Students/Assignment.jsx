@@ -12,7 +12,8 @@ import {
 } from '../../styles/AssignmentsStyles';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Sidebar from './Sidebar'; 
+import Sidebar from './Sidebar';
+import { BACKEND_URL } from '../../constants/url';
 
 const StudentAssignments = () => {
   const [assignments, setAssignments] = useState([]);
@@ -24,7 +25,7 @@ const StudentAssignments = () => {
 
   const fetchAssignments = async () => {
     try {
-      const response = await axios.get('${BACKEND_URL}api/v1/assignments/getall');
+      const response = await axios.get(`${BACKEND_URL}api/v1/assignments/getall`);
       setAssignments(response.data.assignments);
     } catch (error) {
       toast.error('Error fetching assignments');
@@ -34,7 +35,7 @@ const StudentAssignments = () => {
   // const handleDoAssignment = async (id) => {
   //   try {
   //     const response = await axios.put(`${BACKEND_URL}api/v1/assignments/done/${id}`);
-      
+
   //     if (response.data.success) {
   //       setAssignments((prevAssignments) =>
   //         prevAssignments.map((assignment) =>
@@ -50,35 +51,35 @@ const StudentAssignments = () => {
 
   return (
     <>
-    <AssignmentsContainer>
-      <SidebarContainer>
-        <Sidebar /> 
-      </SidebarContainer>
-      <Content>
-        <h1>Assignments</h1>
+      <AssignmentsContainer>
+        <SidebarContainer>
+          <Sidebar />
+        </SidebarContainer>
+        <Content>
+          <h1>Assignments</h1>
 
-        <div>
-          {assignments.length > 0 ? (
-            assignments.map((assignment) => (
-              <AssignmentCard key={assignment._id}>
-                <AssignmentTitle>{assignment.title}</AssignmentTitle>
-                <AssignmentDescription>{assignment.description}</AssignmentDescription>
-                {/* {assignment.done ? (
+          <div>
+            {assignments && assignments.length > 0 ? (
+              assignments.map((assignment) => (
+                <AssignmentCard key={assignment._id}>
+                  <AssignmentTitle>{assignment.title}</AssignmentTitle>
+                  <AssignmentDescription>{assignment.description}</AssignmentDescription>
+                  {/* {assignment.done ? (
                   <AssignmentDoneMessage>Assignment Done</AssignmentDoneMessage>
                 ) : (
                   <AssignmentButton onClick={() => handleDoAssignment(assignment._id)}>
                     Mark as Done
                   </AssignmentButton>
                 )} */}
-              </AssignmentCard>
-            ))
-          ) : (
-            <p>No assignments available</p>
-          )}
-        </div>
-      </Content>
-    </AssignmentsContainer>
-    <ToastContainer />
+                </AssignmentCard>
+              ))
+            ) : (
+              <p>No assignments available</p>
+            )}
+          </div>
+        </Content>
+      </AssignmentsContainer>
+      <ToastContainer />
     </>
   );
 };

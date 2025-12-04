@@ -6,10 +6,12 @@ import {
   deleteTeacher,
   getTeacherProfile,
   verifyTeacherLoginOtp,
-  resendTeacherLoginOtp
+  resendTeacherLoginOtp,
+  updateTeacherProfile
 } from "../controllers/teacherController.js";
 import { validateUserRegistration } from "../middlewares/userValidator.js";
 import { validateOtp } from "../middlewares/otpValidator.js";
+import { isAuthenticated } from "../middlewares/auth.js"; // Assuming you have an auth middleware
 
 const teacherRoute = express.Router();
 
@@ -22,6 +24,7 @@ teacherRoute.get("/getall", getAllTeachers);
 teacherRoute.delete("/:id", deleteTeacher);
 
 teacherRoute.get("/profile", getTeacherProfile);
+teacherRoute.put("/profile", isAuthenticated, updateTeacherProfile);
 
 teacherRoute.post("/login/verify/:id", validateOtp, verifyTeacherLoginOtp);
 

@@ -8,8 +8,7 @@ import {
   resendAdminLoginOtp,
   adminLogout
 } from "../controllers/adminController.js";
-import { validateUserRegistration } from "../middlewares/userValidator.js";
-import { validateOtp } from "../middlewares/otpValidator.js";
+import { isAuthenticated } from "../middlewares/auth.js";
 
 const adminRoute = express.Router();
 
@@ -19,7 +18,7 @@ adminRoute.post("/login", adminLogin);
 
 adminRoute.get("/dashboard", getDashboardData);
 
-adminRoute.get("/profile", getAdminProfile);
+adminRoute.get("/profile", isAuthenticated, getAdminProfile);
 
 adminRoute.post("/login/verify/:id", validateOtp, verifyAdminLoginOtp);
 

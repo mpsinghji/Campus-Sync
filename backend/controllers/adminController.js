@@ -77,7 +77,7 @@ export const adminLogin = async (req, res) => {
 
     admin.otp = loginOtp.toString();
     admin.otpExpire = loginOtpExpire;
-    
+
     console.log("Saving admin with OTP");
     const savedAdmin = await admin.save();
     console.log("Saved Admin OTP:", savedAdmin.otp);
@@ -274,7 +274,7 @@ export const getDashboardData = async (req, res) => {
 
 export const getAdminProfile = async (req, res) => {
   try {
-    const admin = await Admin.findOne({});
+    const admin = req.user;
     if (!admin) {
       return res.status(404).json({ message: "Admin not found" });
     }
@@ -294,7 +294,7 @@ export const adminLogout = async (req, res) => {
       secure: process.env.NODE_ENV === "production",
       sameSite: "none"
     });
-    
+
     res.clearCookie('adminData', {
       secure: process.env.NODE_ENV === "production",
       sameSite: "none"

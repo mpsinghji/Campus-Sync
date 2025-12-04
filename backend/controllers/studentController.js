@@ -98,7 +98,7 @@ export const studentLogin = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "OTP sent to your email",
-      token : studenttoken,
+      token: studenttoken,
       data: student._id,
       userRole: "student",
     })
@@ -118,7 +118,7 @@ export const verifyStudentLoginOtp = async (req, res) => {
       return Response(res, 404, false, "Student not found");
     }
 
-    if(String(student.otp) !== String(otp)){
+    if (String(student.otp) !== String(otp)) {
       return Response(res, 400, false, "Invalid OTP");
     }
 
@@ -128,7 +128,7 @@ export const verifyStudentLoginOtp = async (req, res) => {
       {
         expiresIn: "1h",
       }
-    );  
+    );
 
     res.cookie("studentToken", token, {
       expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
@@ -146,10 +146,10 @@ export const verifyStudentLoginOtp = async (req, res) => {
 };
 
 export const resendStudentLoginOtp = async (req, res) => {
-  try{
+  try {
     const { id } = req.params;
 
-    if(!id){
+    if (!id) {
       return res.status(400).json({
         success: false,
         message: "Student ID is required",
@@ -157,7 +157,7 @@ export const resendStudentLoginOtp = async (req, res) => {
     }
     const student = await Student.findById(id);
 
-    if(!student){
+    if (!student) {
       return res.status(404).json({
         success: false,
         message: "Student not found",
@@ -194,7 +194,7 @@ export const resendStudentLoginOtp = async (req, res) => {
       success: true,
       message: "OTP sent to your email",
     });
-  }catch(error){
+  } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -257,9 +257,39 @@ export const getStudentCount = async (req, res) => {
   try {
     const totalStudents = await Student.countDocuments({ role: "student" });
     res.status(200).json({ success: true, totalStudents });
-  } catch (error) {
     res
       .status(500)
       .json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+export const updateStudentProfile = async (req, res) => {
+  try {
+    const { name, email, mobileno, gender } = req.body;
+    // Extract token from header
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const studentId = decoded.id;
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    if (name) student.name = name;
+    if (email) student.email = email;
+    if (mobileno) student.mobileno = mobileno;
+    if (gender) student.gender = gender;
+
+    await student.save();
+
+    res.status(200).json({ success: true, message: "Profile updated successfully", student });
+  } catch (error) {
+    console.error("Error updating student profile:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

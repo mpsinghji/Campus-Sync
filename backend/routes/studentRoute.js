@@ -8,7 +8,9 @@ import {
   getStudentProfile,
   getStudentCount,
   verifyStudentLoginOtp,
-  resendStudentLoginOtp
+  verifyStudentLoginOtp,
+  resendStudentLoginOtp,
+  updateStudentProfile
 } from "../controllers/studentController.js";
 import { validateUserRegistration } from "../middlewares/userValidator.js";
 import { validateOtp } from "../middlewares/otpValidator.js";
@@ -34,6 +36,7 @@ studentRoute.get("/", async (req, res) => {
 });
 
 studentRoute.get("/profile", getStudentProfile);
+studentRoute.put("/profile", updateStudentProfile);
 
 studentRoute.get("/count", getStudentCount);
 
