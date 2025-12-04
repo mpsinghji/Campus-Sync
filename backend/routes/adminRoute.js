@@ -9,6 +9,8 @@ import {
   adminLogout
 } from "../controllers/adminController.js";
 import { isAuthenticated } from "../middlewares/auth.js";
+import { validateUserRegistration } from "../middlewares/userValidator.js";
+import { validateOtp } from "../middlewares/otpValidator.js";
 
 const adminRoute = express.Router();
 
