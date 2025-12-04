@@ -133,7 +133,7 @@ export const TableRow = styled.tr`
   }
 
   &:hover {
-    background-color: #f1f1f1;  // Hover effect for rows
+    // background-color: #f1f1f1;  // Hover effect for rows
   }
 `;
 

@@ -10,7 +10,8 @@ import {
   verifyStudentLoginOtp,
   verifyStudentLoginOtp,
   resendStudentLoginOtp,
-  updateStudentProfile
+  updateStudentProfile,
+  updateStudent
 } from "../controllers/studentController.js";
 import { validateUserRegistration } from "../middlewares/userValidator.js";
 import { validateOtp } from "../middlewares/otpValidator.js";
@@ -24,6 +25,7 @@ studentRoute.post("/login", studentLogin);
 studentRoute.get("/getall", getAllStudents);
 
 studentRoute.delete("/:id", deleteStudent);
+studentRoute.put("/:id", updateStudent);
 
 studentRoute.get("/", async (req, res) => {
   try {

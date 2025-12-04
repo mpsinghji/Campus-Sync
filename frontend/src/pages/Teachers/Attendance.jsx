@@ -112,7 +112,16 @@ const CheckAttendanceSection = () => {
                 value={date}
                 onChange={handleDateChange}
                 required
-                style={{ padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
+                  fontSize: "16px",
+                  outline: "none",
+                  transition: "border-color 0.3s"
+                }}
+                onFocus={(e) => e.target.style.borderColor = "#007bff"}
+                onBlur={(e) => e.target.style.borderColor = "#ccc"}
               />
             </div>
 

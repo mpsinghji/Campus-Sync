@@ -245,3 +245,25 @@ export const updateTeacherProfile = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const updateTeacher = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email } = req.body;
+
+    const teacher = await Teacher.findById(id);
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: "Teacher not found" });
+    }
+
+    if (name) teacher.name = name;
+    if (email) teacher.email = email;
+
+    await teacher.save();
+
+    res.status(200).json({ success: true, message: "Teacher updated successfully", teacher });
+  } catch (error) {
+    console.error("Error updating teacher:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};

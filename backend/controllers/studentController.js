@@ -293,3 +293,28 @@ export const updateStudentProfile = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const updateStudent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, mobileno, gender, rollno } = req.body;
+
+    const student = await Student.findById(id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    if (name) student.name = name;
+    if (email) student.email = email;
+    if (mobileno) student.mobileno = mobileno;
+    if (gender) student.gender = gender;
+    if (rollno) student.rollno = rollno;
+
+    await student.save();
+
+    res.status(200).json({ success: true, message: "Student updated successfully", student });
+  } catch (error) {
+    console.error("Error updating student:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
