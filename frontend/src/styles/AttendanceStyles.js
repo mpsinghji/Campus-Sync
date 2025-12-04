@@ -122,7 +122,7 @@ export const Table = styled.table`
 
 // Table Header styles
 export const TableHeader = styled.thead`
-  background-color: #007bff;  // Blue background for header
+  background-color: #1a252f;  // Blue background for header
   color: #fff;
 `;
 
@@ -142,6 +142,7 @@ export const TableHeaderCell = styled.th`
   padding: 12px;
   text-align: left;
   font-size: 16px;
+  color: #02fdd3;
 `;
 
 // Table Body Cell styles

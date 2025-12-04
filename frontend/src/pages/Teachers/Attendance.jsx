@@ -4,17 +4,20 @@ import {
   Content,
   AttendanceContent,
   AttendanceHeader,
-  AttendanceList,
-  AttendanceItem,
-  StudentName,
-  CheckboxLabel,
   SubmitButton,
+  Table,
+  TableHeader,
+  TableRow,
+  TableHeaderCell,
+  TableCell,
+  TableContainer,
 } from "../../styles/AttendanceStyles";
 import styled from "styled-components";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { BACKEND_URL } from "../../constants/url";
+
 export const AttendanceContainer = styled.div`
   display: flex;
   padding-left: 240px;
@@ -100,53 +103,70 @@ const CheckAttendanceSection = () => {
         <Sidebar />
         <Content>
           <AttendanceContent>
-            <AttendanceHeader>Attendance</AttendanceHeader>
+            <AttendanceHeader>Mark Attendance</AttendanceHeader>
 
-            <div>
-              <label>Date:</label>
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ fontWeight: "bold", marginRight: "10px" }}>Select Date:</label>
               <input
                 type="date"
                 value={date}
                 onChange={handleDateChange}
                 required
+                style={{ padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}
               />
             </div>
 
-            <AttendanceList>
-              {Array.isArray(students) && students.length > 0 ? (
-                students.map((student) => (
-                  <AttendanceItem key={student._id}>
-                    <StudentName>{student.rollno}</StudentName>{" "}
-                    {/* Displaying roll number */}
-                    <CheckboxLabel>
-                      <input
-                        type="radio"
-                        name={`attendance-${student._id}`}
-                        checked={attendance[student._id] === "Present"}
-                        onChange={() =>
-                          handleAttendanceChange(student._id, "Present")
-                        }
-                      />
-                      Present
-                    </CheckboxLabel>
-                    <CheckboxLabel>
-                      <input
-                        type="radio"
-                        name={`attendance-${student._id}`}
-                        checked={attendance[student._id] === "Absent"}
-                        onChange={() =>
-                          handleAttendanceChange(student._id, "Absent")
-                        }
-                      />
-                      Absent
-                    </CheckboxLabel>
-                  </AttendanceItem>
-                ))
-              ) : (
-                <p>No students found.</p>
-              )}
-            </AttendanceList>
-            <SubmitButton onClick={handleSubmit}>Submit</SubmitButton>
+            <TableContainer>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHeaderCell>Roll Number</TableHeaderCell>
+                    <TableHeaderCell>Name</TableHeaderCell>
+                    <TableHeaderCell>Email</TableHeaderCell>
+                    <TableHeaderCell>Status</TableHeaderCell>
+                  </TableRow>
+                </TableHeader>
+                <tbody>
+                  {Array.isArray(students) && students.length > 0 ? (
+                    students.map((student) => (
+                      <TableRow key={student._id}>
+                        <TableCell>{student.rollno}</TableCell>
+                        <TableCell>{student.name || "N/A"}</TableCell>
+                        <TableCell>{student.email || "N/A"}</TableCell>
+                        <TableCell>
+                          <label style={{ marginRight: "15px", cursor: "pointer", color: "green", fontWeight: "bold" }}>
+                            <input
+                              type="radio"
+                              name={`attendance-${student._id}`}
+                              checked={attendance[student._id] === "Present"}
+                              onChange={() => handleAttendanceChange(student._id, "Present")}
+                              style={{ marginRight: "5px" }}
+                            />
+                            Present
+                          </label>
+                          <label style={{ cursor: "pointer", color: "red", fontWeight: "bold" }}>
+                            <input
+                              type="radio"
+                              name={`attendance-${student._id}`}
+                              checked={attendance[student._id] === "Absent"}
+                              onChange={() => handleAttendanceChange(student._id, "Absent")}
+                              style={{ marginRight: "5px" }}
+                            />
+                            Absent
+                          </label>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan="4" style={{ textAlign: "center" }}>No students found.</TableCell>
+                    </TableRow>
+                  )}
+                </tbody>
+              </Table>
+            </TableContainer>
+
+            <SubmitButton onClick={handleSubmit} style={{ marginTop: "20px" }}>Submit Attendance</SubmitButton>
           </AttendanceContent>
         </Content>
       </AttendanceContainer>
