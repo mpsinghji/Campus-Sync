@@ -2,26 +2,24 @@ import nodemailer from "nodemailer";
 
 export const sendEMail = async (options) => {
     try {
-        const smtpPort = 587; 
-        const isSecure = false;
-        console.log("Creating email transporter with config:", {
-            host: process.env.SMTP_HOST,
-            port: smtpPort,
-            user: process.env.SMTP_USER,
-            secure: isSecure
-        });
+        // Fix for Render/Network timeouts:
+        // 1. Use 'service: gmail' which sets correct host/ports automatically.
+        // 2. Force IPv4 (family: 4) to avoid IPv6 resolution issues.
+        // 3. Enable debug logging to see exactly what's failing.
+        console.log("Creating email transporter with Gmail service and IPv4...");
 
         const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: smtpPort,
-            secure: isSecure,
+            service: 'gmail',
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS
             },
-            tls: {
-                rejectUnauthorized: false
-            }
+            // Network settings
+            family: 4, // Force IPv4
+            logger: true, // Log to console
+            debug: true, // Include debug info
+            connectionTimeout: 10000, // 10 seconds
+            socketTimeout: 10000
         });
 
         console.log("Preparing email options:", {
