@@ -2,26 +2,26 @@ import nodemailer from "nodemailer";
 
 export const sendEMail = async (options) => {
     try {
-        // Fix for Render deployment where port might be set to 507 incorrectly
-        const smtpPort = process.env.SMTP_PORT == 507 ? 465 : (process.env.SMTP_PORT || 465);
-        const isSecure = smtpPort == 465;
-
+        const smtpPort = 587; 
+        const isSecure = false;
         console.log("Creating email transporter with config:", {
             host: process.env.SMTP_HOST,
             port: smtpPort,
-            service: process.env.SMTP_SERVICE,
-            user: process.env.SMTP_USER
+            user: process.env.SMTP_USER,
+            secure: isSecure
         });
 
         const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
             port: smtpPort,
-            service: process.env.SMTP_SERVICE,
+            secure: isSecure,
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS
             },
-            secure: isSecure
+            tls: {
+                rejectUnauthorized: false
+            }
         });
 
         console.log("Preparing email options:", {
