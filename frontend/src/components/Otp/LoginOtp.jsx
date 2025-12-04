@@ -29,7 +29,7 @@ const LoginOtpPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { role } = location.state || {}; 
+  const { role } = location.state || {};
   const { error, isAuthenticated, loading } = useSelector(state => state[role]);
 
   useEffect(() => {
@@ -49,18 +49,18 @@ const LoginOtpPage = () => {
     const handleNavigation = async () => {
       if (isAuthenticated) {
         const userData = Cookies.get(`${role}Data`);
-        console.log("Navigation check:", { 
-          isAuthenticated, 
-          role, 
+        console.log("Navigation check:", {
+          isAuthenticated,
+          role,
           userData,
           path: `/${role}/dashboard`
         });
-        
+
         if (userData) {
           console.log("Navigating to dashboard");
           // Add a small delay to ensure state is updated
           await new Promise(resolve => setTimeout(resolve, 100));
-          
+
           try {
             navigate(`/${role}/dashboard`, { replace: true });
           } catch (navError) {
@@ -70,7 +70,17 @@ const LoginOtpPage = () => {
             navigate(`/${role}/dashboard`, { replace: true });
           }
         } else {
-          console.log("No user data found in cookies");
+          console.log("No user data found in cookies, retrying...");
+          // Retry checking for cookie
+          setTimeout(() => {
+            const retryUserData = Cookies.get(`${role}Data`);
+            if (retryUserData) {
+              console.log("User data found on retry, navigating...");
+              navigate(`/${role}/dashboard`, { replace: true });
+            } else {
+              console.error("Failed to find user data after retry");
+            }
+          }, 500);
         }
       }
     };
@@ -109,18 +119,18 @@ const LoginOtpPage = () => {
     setMessage("");
     try {
       console.log("Verifying OTP for role:", role);
-      if(role === "admin"){
+      if (role === "admin") {
         await dispatch(verifyAdminOtp(id, otp));
-      }else if(role === "student"){
+      } else if (role === "student") {
         await dispatch(verifyStudentOtp(id, otp));
-      }else{
+      } else {
         await dispatch(verifyTeacherOtp(id, otp));
       }
       console.log("OTP verification completed");
-      
+
       // Add a small delay before navigation
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       // Force navigation if not already navigated
       const userData = Cookies.get(`${role}Data`);
       if (userData) {
@@ -143,14 +153,14 @@ const LoginOtpPage = () => {
     if (countdown > 0) {
       return;
     }
-    
+
     try {
       setIsResending(true);
-      if(role === "admin"){
+      if (role === "admin") {
         await dispatch(resendAdminOtp(id));
-      }else if(role === "student"){
+      } else if (role === "student") {
         await dispatch(resendStudentOtp(id));
-      }else{
+      } else {
         await dispatch(resendTeacherOtp(id));
       }
       setCountdown(60); // 60 seconds cooldown
