@@ -1,3 +1,4 @@
+console.log("Starting server...");
 import app from "./app.js";
 import connectdb from "./config/db.js";
 import dotenv from "dotenv";
@@ -12,4 +13,4 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
-  
+

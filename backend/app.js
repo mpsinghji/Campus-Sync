@@ -42,7 +42,7 @@ app.use("/api/v1/exam", examRouter);
 app.use("/api/v1/library", libraryRouter);
 app.use("/api/v1/assignments", assignmentRouter);
 app.use("/api/v1/attendance", attendanceRouter);
-app.use("api/v1/fees", feeRouter);
+app.use("/api/v1/fees", feeRouter);
 
 app.post('/Fees', async (req, res) => {
   const razorpay = new Razorpay({
