@@ -119,7 +119,7 @@ export const verifyTeacherLoginOtp = async (req, res) => {
     res.cookie("teacherToken", token, {
       expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "none",
     });
 
