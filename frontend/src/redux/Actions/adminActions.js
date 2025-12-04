@@ -23,7 +23,13 @@ export const checkAdminAuth = () => async (dispatch) => {
             throw new Error("No admin data found");
         }
 
+        const parsedData = JSON.parse(adminData);
+        const token = parsedData.token;
+
         const { data } = await axios.get(`${ADMIN_URL}/profile`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            },
             withCredentials: true
         });
 
@@ -55,7 +61,7 @@ export const adminLogin = (email, password) => async (dispatch) => {
     const loginUrl = `${ADMIN_URL}/login`;
     try {
         console.log("Making login request to:", loginUrl);
-        
+
         dispatch({
             type: "ADMIN_LOGIN_REQUEST"
         });
@@ -89,7 +95,7 @@ export const adminLogin = (email, password) => async (dispatch) => {
             url: loginUrl,
             error: error
         });
-        
+
         dispatch({
             type: "ADMIN_LOGIN_FAILURE",
             payload: error.response?.data?.message || "Server Error"
@@ -102,7 +108,7 @@ export const adminLogin = (email, password) => async (dispatch) => {
 export const verifyAdminOtp = (id, otp) => async (dispatch) => {
     try {
         console.log("Making OTP verification request to:", `${ADMIN_URL}/login/verify/${id}`);
-        
+
         dispatch({
             type: "VERIFY_ADMIN_OTP_REQUEST"
         });
@@ -133,7 +139,7 @@ export const verifyAdminOtp = (id, otp) => async (dispatch) => {
         Cookies.set('adminData', JSON.stringify({
             user: data.data.user,
             token: data.data.token
-        }), { 
+        }), {
             path: '/',
             secure: window.location.protocol === 'https:',
             sameSite: 'Lax'
@@ -157,10 +163,10 @@ export const verifyAdminOtp = (id, otp) => async (dispatch) => {
             url: `${ADMIN_URL}/login/verify/${id}`,
             error: error
         });
-        
+
         Cookies.remove('adminToken', { path: '/' });
         Cookies.remove('adminData', { path: '/' });
-        
+
         dispatch({
             type: "VERIFY_ADMIN_OTP_FAILURE",
             payload: error.response?.data?.message || "OTP Verification Failed"
@@ -202,7 +208,7 @@ export const adminLogout = () => async (dispatch) => {
             type: "ADMIN_LOGOUT",
             payload: "Logged out successfully"
         });
-        
+
         // Clear cookies by calling backend logout endpoint
         await axios.post(`${ADMIN_URL}/logout`, {}, {
             withCredentials: true
