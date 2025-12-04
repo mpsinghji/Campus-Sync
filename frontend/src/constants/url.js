@@ -7,6 +7,8 @@ export const BACKEND_URL = window.location.hostname === 'localhost'
   ? LOCAL_URL 
   : PRODUCTION_URL;
 
+// export const BACKEND_URL = PRODUCTION_URL;
+
 // Log which URL is being used
 console.log('Current hostname:', window.location.hostname);
 console.log('Using backend URL:', BACKEND_URL);

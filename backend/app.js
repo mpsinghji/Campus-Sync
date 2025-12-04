@@ -26,7 +26,7 @@ app.use(express.json());
 
 app.use(
   cors({
-    origin: [process.env.LOCAL_URL, process.env.WEB_URL],
+    origin: [process.env.LOCAL_URL, process.env.WEB_URL, "https://mpji-campus-sync.vercel.app", "https://campus-sync-ez7y.onrender.com"],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   })
@@ -42,45 +42,45 @@ app.use("/api/v1/exam", examRouter);
 app.use("/api/v1/library", libraryRouter);
 app.use("/api/v1/assignments", assignmentRouter);
 app.use("/api/v1/attendance", attendanceRouter);
-app.use("api/v1/fees",feeRouter);
+app.use("api/v1/fees", feeRouter);
 
-app.post('/Fees', async(req, res) => {
+app.post('/Fees', async (req, res) => {
   const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
     key_secret: process.env.RAZORPAY_KEY_SECRET,
   });
 
   const { amount, currency, studentId, academicYear, semester } = req.body;
-  
+
   const options = {
     amount: req.body.amount,
     currency: req.body.currency,
     receipt: "fee_receipt#1",
     payment_capture: 1,
   };
-  try{
+  try {
     const response = await razorpay.orders.create(options);
-    
+
     // Create Fee record with order ID for tracking
     // We'll update the payment status when payment is completed
     const feeRecord = await Fee.create({
       studentId: studentId || new mongoose.Types.ObjectId(), // Use ObjectId
-      amount: amount/100,
+      amount: amount / 100,
       paymentId: response.id,
       academicYear: academicYear || new Date().getFullYear().toString(),
       semester: semester || "1st Semester", // Default semester
       paymentStatus: 'pending'
     });
-    
+
     console.log('Fee record created:', feeRecord);
-    
+
     res.json({
       order_id: response.id,
       currency: response.currency,
       amount: response.amount,
       feeId: feeRecord._id
     })
-  }catch(error){
+  } catch (error) {
     console.error('Error in /Fees endpoint:', error);
     res.status(500).json({
       success: false,
@@ -91,44 +91,44 @@ app.post('/Fees', async(req, res) => {
 })
 
 app.get("/payment/:paymentId", async (req, res) => {
-  const {paymentId} = req.params;
+  const { paymentId } = req.params;
 
   const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
     key_secret: process.env.RAZORPAY_KEY_SECRET,
   });
-  try{
+  try {
     const payment = await razorpay.payments.fetch(paymentId);
-    if(!payment){
+    if (!payment) {
       return res.status(500).json("Error at razorpay loading");
     }
-    
+
     // Update fee record with payment status
     let newStatus = 'failed';
     if (payment.status === 'captured' || payment.status === 'authorized') {
       newStatus = 'completed';
     }
-    
+
     const updateResult = await Fee.findOneAndUpdate(
       { paymentId: paymentId },
-      { 
+      {
         paymentStatus: newStatus,
         PaidAt: new Date()
       },
       { new: true }
     );
-    
+
     console.log('Payment status update result:', updateResult);
     console.log('Payment status from Razorpay:', payment.status);
     console.log('New status set to:', newStatus);
-    
+
     res.json({
-      status:payment.status,
-      amount:payment.amount,
-      method:payment.method,
-      currency:payment.currency
+      status: payment.status,
+      amount: payment.amount,
+      method: payment.method,
+      currency: payment.currency
     })
-  }catch(error){
+  } catch (error) {
     res.status(500).send("Failed to fetch payment details");
   }
 })
@@ -138,19 +138,19 @@ app.get("/student-fees/:studentId", async (req, res) => {
   try {
     const { studentId } = req.params;
     const { academicYear } = req.query;
-    
+
     const query = { studentId };
     if (academicYear) {
       query.academicYear = academicYear;
     }
-    
+
     const fees = await Fee.find(query).sort({ createdAt: -1 });
-    
+
     const totalFees = fees.length;
     const paidFees = fees.filter(fee => fee.paymentStatus === 'completed').length;
     const pendingFees = fees.filter(fee => fee.paymentStatus === 'pending').length;
     const failedFees = fees.filter(fee => fee.paymentStatus === 'failed').length;
-    
+
     res.json({
       success: true,
       data: {
@@ -191,8 +191,8 @@ app.get("/payments", async (req, res) => {
     const filter = {};
 
     if (fromDate && toDate) {
-      const startDate = new Date(fromDate).getTime() / 1000; 
-      const endDate = new Date(toDate).getTime() / 1000; 
+      const startDate = new Date(fromDate).getTime() / 1000;
+      const endDate = new Date(toDate).getTime() / 1000;
       filter.created_at = { gte: startDate, lte: endDate };
     }
 
@@ -203,9 +203,9 @@ app.get("/payments", async (req, res) => {
 
     const paymentCounts = {};
     payments.items.forEach(payment => {
-      const paymentDate = new Date(payment.created_at * 1000); 
+      const paymentDate = new Date(payment.created_at * 1000);
       const dateString = `${paymentDate.getDate()}/${paymentDate.getMonth() + 1}/${paymentDate.getFullYear()}`;
-      
+
       paymentCounts[dateString] = (paymentCounts[dateString] || 0) + 1;
     });
 
@@ -216,7 +216,7 @@ app.get("/payments", async (req, res) => {
 
     res.json({
       success: true,
-      data: groupedPayments,  
+      data: groupedPayments,
     });
   } catch (error) {
     console.error('Error fetching payments:', error);
@@ -228,18 +228,18 @@ app.get("/payments", async (req, res) => {
 app.post('/update-payment-status', async (req, res) => {
   try {
     const { paymentId, status } = req.body;
-    
+
     const updateResult = await Fee.findOneAndUpdate(
       { paymentId: paymentId },
-      { 
+      {
         paymentStatus: status,
         PaidAt: new Date()
       },
       { new: true }
     );
-    
+
     console.log('Manual payment status update:', updateResult);
-    
+
     res.json({
       success: true,
       message: 'Payment status updated successfully',

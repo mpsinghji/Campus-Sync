@@ -2,22 +2,26 @@ import nodemailer from "nodemailer";
 
 export const sendEMail = async (options) => {
     try {
+        // Fix for Render deployment where port might be set to 507 incorrectly
+        const smtpPort = process.env.SMTP_PORT == 507 ? 465 : (process.env.SMTP_PORT || 465);
+        const isSecure = smtpPort == 465;
+
         console.log("Creating email transporter with config:", {
             host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT,
+            port: smtpPort,
             service: process.env.SMTP_SERVICE,
             user: process.env.SMTP_USER
         });
 
         const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT,
+            port: smtpPort,
             service: process.env.SMTP_SERVICE,
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS
             },
-            secure: true
+            secure: isSecure
         });
 
         console.log("Preparing email options:", {
@@ -75,4 +79,3 @@ export const sendEMail = async (options) => {
 //       console.error("Error sending OTP email:", error);
 //     }
 //   };
-  
