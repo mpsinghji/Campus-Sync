@@ -23,23 +23,39 @@ export const verifyToken = (req, res, next) => {
 
 export const isAuthenticated = async (req, res, next) => {
   try {
-    // Parsing cookies
+    // Parsing cookies and headers
     const { admintoken, teachertoken, studenttoken } = req.cookies;
+    const authHeader = req.headers["authorization"];
+
     console.log("Cookies:", req.cookies);
+    console.log("Auth Header:", authHeader);
 
     // Check which token is available
     let token;
     let role = "";
 
-    if (admintoken) {
-      token = admintoken;
-      role = "admin";
-    } else if (teachertoken) {
-      token = teachertoken;
-      role = "teacher";
-    } else if (studenttoken) {
-      token = studenttoken;
-      role = "student";
+    // Check header first
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1];
+      // We need to decode the token to know the role if it comes from header
+      const decoded = jwt.decode(token);
+      if (decoded && decoded.role) {
+        role = decoded.role;
+      }
+    }
+
+    // If no token from header, check cookies
+    if (!token) {
+      if (admintoken) {
+        token = admintoken;
+        role = "admin";
+      } else if (teachertoken) {
+        token = teachertoken;
+        role = "teacher";
+      } else if (studenttoken) {
+        token = studenttoken;
+        role = "student";
+      }
     }
 
     // If no token is provided
