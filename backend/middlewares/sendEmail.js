@@ -1,76 +1,31 @@
-import nodemailer from "nodemailer";
+import { Resend } from 'resend';
 
 export const sendEMail = async (options) => {
     try {
-        console.log("Creating email transporter for SMTP...");
+        console.log("Sending email via Resend HTTP API...");
 
-        const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT,
-            secure: false,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS
-            },
-            logger: true,
-            debug: true,
-            connectionTimeout: 10000,
-            greetingTimeout: 10000,
-            socketTimeout: 10000
-        });
+        const resend = new Resend(process.env.SMTP_PASS);
 
-        console.log("Preparing email options:", {
-            from: process.env.SMTP_USER,
-            to: options.email,
-            subject: options.subject
-        });
-
-        const mailOptions = {
-            from: process.env.SMTP_USER,
+        const { data, error } = await resend.emails.send({
+            from: 'onboarding@resend.dev',
             to: options.email,
             subject: options.subject,
-            text: options.message,
-            html: options.html
-        };
+            html: options.html,
+            text: options.message
+        });
 
-        console.log("Sending email...");
-        const info = await transporter.sendMail(mailOptions);
-        console.log("Email sent successfully:", info.messageId);
-        return info;
+        if (error) {
+            console.error("Resend API Error:", error);
+            throw new Error(error.message);
+        }
+
+        console.log("Email sent successfully via Resend:", data.id);
+        return data;
     } catch (error) {
         console.error("Error sending email:", {
             message: error.message,
-            stack: error.stack,
-            code: error.code,
-            command: error.command
+            stack: error.stack
         });
         throw new Error(`Failed to send email: ${error.message}`);
     }
 };
-
-
-// export const sendOtpEmail = async (user, otp) => {
-//     const emailTemplate = `
-//       <html>
-//         <body>
-//           <h2>Verify your account</h2>
-//           <p>Dear User,</p>
-//           <p>Your OTP for verification is: <strong>${otp}</strong></p>
-//           <p>The OTP will expire in 15 minutes.</p>
-//         </body>
-//       </html>
-//     `;
-  
-//     const subject = "Verify your account";
-  
-//     try {
-//       // Send OTP email using the sendEMail function
-//       await sendEMail({
-//         email: user.email,  // Recipient's email
-//         subject: subject,   // Subject for the OTP email
-//         html: emailTemplate, // HTML template for OTP email
-//       });
-//     } catch (error) {
-//       console.error("Error sending OTP email:", error);
-//     }
-//   };
