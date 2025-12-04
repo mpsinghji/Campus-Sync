@@ -8,7 +8,7 @@ import {
   getStudentProfile,
   getStudentCount,
   verifyStudentLoginOtp,
-  verifyStudentLoginOtp,
+
   resendStudentLoginOtp,
   updateStudentProfile,
   updateStudent
