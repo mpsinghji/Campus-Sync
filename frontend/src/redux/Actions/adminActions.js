@@ -133,29 +133,40 @@ export const verifyAdminOtp = (id, otp) => async (dispatch) => {
 
         // Clear existing cookies
         Cookies.remove('adminToken', { path: '/' });
-        token: data.data.token,
+        // Set admin data cookie
+        Cookies.set('adminData', JSON.stringify({
+            token: data.data.token,
             user: data.data.user
-    }
+        }), { expires: 7, path: '/' });
+
+        dispatch({
+            type: "VERIFY_ADMIN_OTP_SUCCESS",
+            payload: {
+                message: data.message,
+                user: data.data.user,
+                token: data.data.token,
+                userRole: 'admin'
+            }
         });
 
-return true;
+        return true;
 
     } catch (error) {
-    console.error("OTP Verification Error:", {
-        message: error.message,
-        url: `${ADMIN_URL}/login/verify/${id}`,
-        error: error
-    });
+        console.error("OTP Verification Error:", {
+            message: error.message,
+            url: `${ADMIN_URL}/login/verify/${id}`,
+            error: error
+        });
 
-    Cookies.remove('adminToken', { path: '/' });
-    Cookies.remove('adminData', { path: '/' });
+        Cookies.remove('adminToken', { path: '/' });
+        Cookies.remove('adminData', { path: '/' });
 
-    dispatch({
-        type: "VERIFY_ADMIN_OTP_FAILURE",
-        payload: error.response?.data?.message || "OTP Verification Failed"
-    });
-    throw error;
-}
+        dispatch({
+            type: "VERIFY_ADMIN_OTP_FAILURE",
+            payload: error.response?.data?.message || "OTP Verification Failed"
+        });
+        throw error;
+    }
 };
 
 // Resend Admin OTP Action
