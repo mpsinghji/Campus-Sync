@@ -135,7 +135,13 @@ const AdminSettingProfile = () => {
           return;
         }
 
+        const adminData = JSON.parse(adminDataCookie);
+        const { token } = adminData;
+
         const response = await axios.get(`${BACKEND_URL}api/v1/admin/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
           withCredentials: true
         });
 
@@ -168,7 +174,13 @@ const AdminSettingProfile = () => {
 
   const handleSave = async () => {
     try {
+      const adminDataCookie = Cookies.get("adminData");
+      const { token } = JSON.parse(adminDataCookie);
+
       await axios.put(`${BACKEND_URL}api/v1/admin/profile`, adminInfo, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
         withCredentials: true
       });
       toast.success("Profile updated successfully");

@@ -24,7 +24,7 @@ export const verifyToken = (req, res, next) => {
 export const isAuthenticated = async (req, res, next) => {
   try {
     // Parsing cookies and headers
-    const { admintoken, teachertoken, studenttoken } = req.cookies;
+    const { adminToken, teacherToken, studentToken } = req.cookies;
     const authHeader = req.headers["authorization"];
 
     console.log("Cookies:", req.cookies);
@@ -46,14 +46,14 @@ export const isAuthenticated = async (req, res, next) => {
 
     // If no token from header, check cookies
     if (!token) {
-      if (admintoken) {
-        token = admintoken;
+      if (adminToken) {
+        token = adminToken;
         role = "admin";
-      } else if (teachertoken) {
-        token = teachertoken;
+      } else if (teacherToken) {
+        token = teacherToken;
         role = "teacher";
-      } else if (studenttoken) {
-        token = studenttoken;
+      } else if (studentToken) {
+        token = studentToken;
         role = "student";
       }
     }

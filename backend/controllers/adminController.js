@@ -177,19 +177,22 @@ export const verifyAdminLoginOtp = async (req, res) => {
       role: "admin"
     };
 
-    // Set token cookie
-    res.cookie("adminToken", token, {
+    // Set cookie options based on environment
+    const isProduction = process.env.NODE_ENV === "production";
+    const cookieOptions = {
       expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
-    });
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+    };
+
+    // Set token cookie
+    res.cookie("adminToken", token, cookieOptions);
 
     // Set user data cookie
     res.cookie("adminData", JSON.stringify(userData), {
-      expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-      secure: true,
-      sameSite: "none",
+      ...cookieOptions,
+      httpOnly: false, // User data needs to be accessible by client
     });
 
     return Response(res, 200, true, "Admin verified successfully", {

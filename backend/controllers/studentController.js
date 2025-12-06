@@ -130,12 +130,15 @@ export const verifyStudentLoginOtp = async (req, res) => {
       }
     );
 
-    res.cookie("studentToken", token, {
+    const isProduction = process.env.NODE_ENV === "production";
+    const cookieOptions = {
       expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
-    });
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+    };
+
+    res.cookie("studentToken", token, cookieOptions);
 
     return Response(res, 200, true, "Student OTP verified successfully", {
       token,
