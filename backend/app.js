@@ -255,8 +255,34 @@ app.post('/update-payment-status', async (req, res) => {
   }
 });
 
-app.get("/api/health", (req, res) => {
-  res.sendStatus(200);
+app.get("/api/health", async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        status: "error",
+        backend: "up",
+        database: "disconnected",
+      });
+    }
+
+    await mongoose.connection.db.admin().ping();
+
+    res.status(200).json({
+      status: "ok",
+      backend: "up",
+      database: "connected",
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error("Health check failed:", error.message);
+
+    res.status(503).json({
+      status: "error",
+      backend: "up",
+      database: "disconnected",
+    });
+  }
 });
 
 export default app;
