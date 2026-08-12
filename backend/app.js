@@ -261,7 +261,7 @@ app.get("/api/health", async (req, res) => {
       return res.status(503).json({
         status: "error",
         backend: "up",
-        database: "disconnected",
+        database: "disconnected"
       });
     }
 
@@ -270,18 +270,30 @@ app.get("/api/health", async (req, res) => {
     res.status(200).json({
       status: "ok",
       backend: "up",
-      database: "connected",
-      timestamp: new Date().toISOString(),
+      database: "connected"
     });
-
   } catch (error) {
-    console.error("Health check failed:", error.message);
-
     res.status(503).json({
       status: "error",
       backend: "up",
-      database: "disconnected",
+      database: "disconnected"
     });
+  }
+});
+
+
+app.head("/api/health", async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.sendStatus(503);
+    }
+
+    await mongoose.connection.db.admin().ping();
+
+    return res.sendStatus(200);
+  } catch (error) {
+    console.error("Health check failed:", error.message);
+    return res.sendStatus(503);
   }
 });
 
