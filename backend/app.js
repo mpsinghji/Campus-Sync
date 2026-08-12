@@ -255,4 +255,8 @@ app.post('/update-payment-status', async (req, res) => {
   }
 });
 
+app.get("/api/health", (req, res) => {
+  res.sendStatus(200);
+});
+
 export default app;
