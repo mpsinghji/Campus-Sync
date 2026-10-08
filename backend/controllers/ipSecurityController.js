@@ -99,7 +99,7 @@ export const getIpSecurityOverview = async (req, res) => {
 export const getIpActivity = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 15;
+    const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
 
     const searchQuery = req.query.search ? req.query.search.trim() : "";

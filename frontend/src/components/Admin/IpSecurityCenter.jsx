@@ -425,12 +425,12 @@ const IpSecurityCenter = () => {
       const res = await axios.get(
         `${BACKEND_URL}api/v1/admin/master/ip-security/activity`,
         {
-          params: { page, limit: 12, search, status: filterStatus, risk: filterRisk },
+          params: { page, limit: 10, search, status: filterStatus, risk: filterRisk },
           withCredentials: true,
         }
       );
       if (res.data?.data) {
-        setActivity(res.data.data.activity || []);
+        setActivity((res.data.data.activity || []).slice(0, 10));
         setTotalPages(res.data.data.pagination?.totalPages || 1);
       }
     } catch (err) {
@@ -768,7 +768,7 @@ const IpSecurityCenter = () => {
                     </td>
                   </tr>
                 ) : (
-                  activity.map((item) => (
+                  activity.slice(0, 10).map((item) => (
                     <tr key={item.ip}>
                       <td>
                         <strong>{item.ip}</strong>

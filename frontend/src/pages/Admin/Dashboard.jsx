@@ -13,59 +13,6 @@ import Cookies from "js-cookie";
 import styled from "styled-components";
 import { BACKEND_URL } from "../../constants/url";
 
-const SuperAdminBanner = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  background: linear-gradient(135deg, #fef9c3 0%, #fef08a 100%);
-  border: 1px solid #fde047;
-  border-radius: 12px;
-  padding: 16px 20px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(234, 179, 8, 0.15);
-  flex-wrap: wrap;
-`;
-
-const SuperAdminLeft = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 14px;
-`;
-
-const CrownIcon = styled.span`
-  font-size: 28px;
-`;
-
-const SuperAdminTitle = styled.div`
-  font-size: 15px;
-  font-weight: 700;
-  color: #854d0e;
-`;
-
-const SuperAdminDesc = styled.div`
-  font-size: 13px;
-  color: #a16207;
-  margin-top: 2px;
-`;
-
-const MasterBtn = styled.button`
-  background: #ca8a04;
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 18px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-
-  &:hover {
-    background: #a16207;
-    transform: translateY(-1px);
-  }
-`;
 
 const StatsGrid = styled.div`
   display: grid;
@@ -204,18 +151,6 @@ const AdminDashboard = () => {
   return (
     <AdminDashboardContainer>
       <Content>
-        {isSuperAdmin && (
-          <SuperAdminBanner>
-            <SuperAdminLeft>
-              <CrownIcon>👑</CrownIcon>
-              <div>
-                <SuperAdminTitle>Super Administrator Console</SuperAdminTitle>
-                <SuperAdminDesc>Master system privilege active — Overseeing all campus operations</SuperAdminDesc>
-              </div>
-            </SuperAdminLeft>
-            <MasterBtn onClick={() => navigate("/master-control")}>Master Control ⚙️</MasterBtn>
-          </SuperAdminBanner>
-        )}
         <TopContent>
           <Section>
             <SectionTitle>Campus Operations & Category Overview</SectionTitle>
