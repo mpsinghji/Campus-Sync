@@ -293,13 +293,14 @@ const TeacherDashboard = () => {
   const fetchDashboardMetrics = async () => {
     try {
       setLoading(true);
-      const [studentsRes, assignmentsRes, eventsRes, announcementsRes, booksRes, issuedRes] = await Promise.all([
+      const [studentsRes, assignmentsRes, eventsRes, announcementsRes, booksRes, issuedRes, attendanceRes] = await Promise.all([
         axios.get(`${BACKEND_URL}api/v1/student/getall`).catch(() => ({ data: { students: [] } })),
-        axios.get(`${BACKEND_URL}api/v1/assignment/getall`).catch(() => ({ data: { assignments: [] } })),
+        axios.get(`${BACKEND_URL}api/v1/assignments/getall`).catch(() => ({ data: { assignments: [] } })),
         axios.get(`${BACKEND_URL}api/v1/events/getall`).catch(() => ({ data: { events: [] } })),
-        axios.get(`${BACKEND_URL}api/v1/announcement/getall`).catch(() => ({ data: { announcements: [] } })),
+        axios.get(`${BACKEND_URL}api/v1/announcements/getall`).catch(() => ({ data: { announcements: [] } })),
         axios.get(`${BACKEND_URL}api/v1/library/getall`).catch(() => ({ data: { books: [] } })),
         axios.get(`${BACKEND_URL}api/v1/library/assigned`).catch(() => ({ data: { assignedBooks: [] } })),
+        axios.get(`${BACKEND_URL}api/v1/attendance/records`).catch(() => ({ data: { stats: { present: 0 } } })),
       ]);
 
       const stList = studentsRes.data?.students || [];
@@ -308,10 +309,11 @@ const TeacherDashboard = () => {
       const anList = announcementsRes.data?.announcements || [];
       const bkList = booksRes.data?.books || [];
       const isList = issuedRes.data?.assignedBooks || [];
+      const realPresentCount = attendanceRes.data?.stats?.present ?? 0;
 
       setStudentCount(stList.length);
       setAssignmentCount(asList.length);
-      setAttendanceCount(stList.length > 0 ? Math.floor(stList.length * 0.92) : 0);
+      setAttendanceCount(realPresentCount);
       setEvents(evList.slice(0, 4));
       setAnnouncements(anList.slice(0, 4));
       setBookCount(bkList.length);

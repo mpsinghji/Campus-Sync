@@ -121,97 +121,84 @@ const ChartContainer = styled.div`
   flex: 1;
   position: relative;
   min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const EmptyNotice = styled.div`
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+  font-size: 14px;
+
+  .icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
 `;
 
 const PaymentGraph = () => {
   const [paymentData, setPaymentData] = useState(null);
-  const [totalTransactions, setTotalTransactions] = useState(0);
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchPaymentData = async () => {
       try {
-        const response = await axios.get(`${BACKEND_URL}payments`);
-
-        if (response.data?.success && Array.isArray(response.data.data)) {
-          const payments = response.data.data;
-          const dates = payments.map((p) => p.date);
-          const paymentCounts = payments.map((p) => p.count);
-          const sum = paymentCounts.reduce((a, b) => a + b, 0);
-          setTotalTransactions(sum);
-
-          setPaymentData({
-            labels: dates,
-            datasets: [
-              {
-                label: "Settled Payments",
-                data: paymentCounts,
-                borderColor: "#0284c7",
-                backgroundColor: "rgba(14, 165, 233, 0.12)",
-                fill: true,
-                tension: 0.35,
-                borderWidth: 3,
-                pointBackgroundColor: "#0284c7",
-                pointBorderColor: "#ffffff",
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-              },
-            ],
-          });
-        } else {
-          // Fallback realistic mockup if backend payments endpoint has sparse entries
-          const mockDates = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-          const mockCounts = [12, 19, 8, 25, 22, 14, 30];
-          setTotalTransactions(130);
-          setPaymentData({
-            labels: mockDates,
-            datasets: [
-              {
-                label: "Settled Payments",
-                data: mockCounts,
-                borderColor: "#0284c7",
-                backgroundColor: "rgba(14, 165, 233, 0.12)",
-                fill: true,
-                tension: 0.35,
-                borderWidth: 3,
-                pointBackgroundColor: "#0284c7",
-                pointBorderColor: "#ffffff",
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-              },
-            ],
-          });
-        }
-      } catch (error) {
-        // Fallback for resilient visual presentation
-        const mockDates = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-        const mockCounts = [14, 22, 18, 29, 25, 16, 34];
-        setTotalTransactions(158);
-        setPaymentData({
-          labels: mockDates,
-          datasets: [
-            {
-              label: "Settled Payments",
-              data: mockCounts,
-              borderColor: "#0284c7",
-              backgroundColor: "rgba(14, 165, 233, 0.12)",
-              fill: true,
-              tension: 0.35,
-              borderWidth: 3,
-              pointBackgroundColor: "#0284c7",
-              pointBorderColor: "#ffffff",
-              pointBorderWidth: 2,
-              pointRadius: 4,
-              pointHoverRadius: 6,
-            },
-          ],
+        setLoading(true);
+        setError(null);
+        const response = await axios.get(`${BACKEND_URL}api/v1/fees/analytics`, {
+          withCredentials: true,
         });
+
+        if (response.data?.success) {
+          const { dates, counts, totalTransactions } = response.data;
+          setAnalytics(response.data);
+
+          if (Array.isArray(dates) && dates.length > 0 && Array.isArray(counts) && counts.length > 0) {
+            setPaymentData({
+              labels: dates,
+              datasets: [
+                {
+                  label: "Settled Payments",
+                  data: counts,
+                  borderColor: "#0284c7",
+                  backgroundColor: "rgba(14, 165, 233, 0.12)",
+                  fill: true,
+                  tension: 0.35,
+                  borderWidth: 3,
+                  pointBackgroundColor: "#0284c7",
+                  pointBorderColor: "#ffffff",
+                  pointBorderWidth: 2,
+                  pointRadius: 4,
+                  pointHoverRadius: 6,
+                },
+              ],
+            });
+          } else {
+            setPaymentData(null);
+          }
+        } else {
+          setAnalytics(null);
+          setPaymentData(null);
+        }
+      } catch (err) {
+        setError(err.response?.data?.message || "Unable to load payment analytics.");
+        setAnalytics(null);
+        setPaymentData(null);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchPaymentData();
   }, []);
+
+  const totalTransactions = analytics?.totalTransactions || 0;
+  const completedCount = analytics?.completedCount || 0;
+  const totalCollected = analytics?.totalCollectedAmount || 0;
 
   const options = {
     responsive: true,
@@ -233,7 +220,7 @@ const PaymentGraph = () => {
       },
       y: {
         grid: { color: "#f1f5f9" },
-        ticks: { font: { size: 11 }, color: "#94a3b8", stepSize: 5 },
+        ticks: { font: { size: 11 }, color: "#94a3b8", stepSize: 1 },
         beginAtZero: true,
       },
     },
@@ -244,35 +231,48 @@ const PaymentGraph = () => {
       <HeaderArea>
         <div className="title-group">
           <h2>💳 Fee Collection & Flow</h2>
-          <p>Transaction inflow trend across academic departments</p>
+          <p>Transaction inflow trend across academic accounts</p>
         </div>
-        <TrendBadge>↗ +18.4% Inflow Rate</TrendBadge>
+        {totalTransactions > 0 && (
+          <TrendBadge>₹{totalCollected.toLocaleString("en-IN")} Total Collected</TrendBadge>
+        )}
       </HeaderArea>
 
       <MiniKpiRow>
         <KpiPill $bg="#f0f9ff" $border="#bae6fd" $labelColor="#075985" $valColor="#0284c7">
-          <span className="label">Transactions</span>
+          <span className="label">Total Records</span>
           <span className="val">{totalTransactions}</span>
         </KpiPill>
 
         <KpiPill $bg="#ecfdf5" $border="#a7f3d0" $labelColor="#065f46" $valColor="#047857">
-          <span className="label">Gateway Status</span>
-          <span className="val">Online</span>
+          <span className="label">Settled Payments</span>
+          <span className="val">{completedCount}</span>
         </KpiPill>
 
         <KpiPill $bg="#fdf4ff" $border="#f5d0fe" $labelColor="#86198f" $valColor="#a21caf">
-          <span className="label">Settlement</span>
-          <span className="val">Instant</span>
+          <span className="label">Gateway Telemetry</span>
+          <span className="val">{totalTransactions > 0 ? "Active" : "Ready"}</span>
         </KpiPill>
       </MiniKpiRow>
 
       <ChartContainer>
-        {paymentData ? (
+        {loading ? (
+          <EmptyNotice>
+            <div className="icon">⏳</div>
+            <div>Loading payment telemetries...</div>
+          </EmptyNotice>
+        ) : error ? (
+          <EmptyNotice style={{ color: "#e11d48" }}>
+            <div className="icon">⚠️</div>
+            <div>{error}</div>
+          </EmptyNotice>
+        ) : paymentData ? (
           <Line data={paymentData} options={options} />
         ) : (
-          <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>
-            Loading payments telemetry...
-          </div>
+          <EmptyNotice>
+            <div className="icon">💳</div>
+            <div>No fee payment transactions recorded yet.</div>
+          </EmptyNotice>
         )}
       </ChartContainer>
     </GraphCard>

@@ -211,6 +211,11 @@ export const verifyTeacherLoginOtp = async (req, res) => {
       return Response(res, 400, false, "Invalid OTP");
     }
 
+    // Invalidate OTP immediately to prevent replay attacks
+    teacher.otp = undefined;
+    teacher.otpExpire = undefined;
+    await teacher.save();
+
     const expiresIn = await getTokenExpiresIn();
     const token = jwt.sign(
       { id: teacher._id, role: "teacher" },
@@ -316,6 +321,18 @@ export const getAllTeachers = async (req, res) => {
   }
 };
 
+export const getTeacherDirectory = async (req, res) => {
+  try {
+    const teachers = await Teacher.find(
+      {},
+      "_id name email department designation qualification responsibility"
+    ).sort({ name: 1 });
+    res.status(200).json({ success: true, teachers });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const deleteTeacher = async (req, res) => {
   const { id } = req.params;
 
@@ -341,17 +358,11 @@ export const getTeacherProfile = async (req, res) => {
       } catch (e) {}
     }
 
-    let teacher = null;
-    if (teacherId) {
-      teacher = await Teacher.findById(teacherId);
-    }
-    if (!teacher && req.headers["x-user-email"]) {
-      teacher = await Teacher.findOne({ email: req.headers["x-user-email"].toLowerCase().trim() });
-    }
-    if (!teacher) {
-      teacher = await Teacher.findOne({});
+    if (!teacherId) {
+      return res.status(401).json({ success: false, message: "Unauthorized: Valid authentication required." });
     }
 
+    const teacher = await Teacher.findById(teacherId);
     if (!teacher) {
       return res.status(404).json({ success: false, message: "Teacher not found" });
     }

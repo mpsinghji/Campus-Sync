@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import styled from "styled-components";
+import axios from "axios";
+import { BACKEND_URL } from "../../constants/url";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Cookies from "js-cookie";
@@ -8,11 +10,10 @@ import {
   BsAward,
   BsGraphUp,
   BsCheckCircleFill,
+  BsXCircleFill,
   BsPrinter,
   BsStarFill,
   BsBook,
-  BsMortarboard,
-  BsHourglassSplit,
 } from "react-icons/bs";
 
 const Container = styled.div`
@@ -98,18 +99,18 @@ const OverviewCard = styled.div`
       font-size: 24px;
       font-weight: 800;
       color: #0f172a;
-      line-height: 1.2;
+      line-height: 1.1;
+      margin-bottom: 4px;
     }
     .lbl {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
+      color: #475569;
     }
     .sub {
       font-size: 11px;
       color: #94a3b8;
+      margin-top: 2px;
     }
   }
 `;
@@ -117,10 +118,9 @@ const OverviewCard = styled.div`
 const MainGrid = styled.div`
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 24px;
-  margin-bottom: 24px;
+  gap: 20px;
 
-  @media screen and (max-width: 1100px) {
+  @media screen and (max-width: 1024px) {
     grid-template-columns: 1fr;
   }
 `;
@@ -130,17 +130,17 @@ const Card = styled.div`
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
 
   .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
 
     h3 {
       font-size: 16px;
-      font-weight: 800;
+      font-weight: 700;
       color: #0f172a;
       margin: 0;
       display: flex;
@@ -149,12 +149,12 @@ const Card = styled.div`
     }
 
     .badge {
+      font-size: 12px;
+      font-weight: 600;
       background: #eff6ff;
-      color: #1e40af;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 3px 8px;
-      border-radius: 6px;
+      color: #2563eb;
+      padding: 4px 10px;
+      border-radius: 20px;
     }
   }
 `;
@@ -165,38 +165,42 @@ const ResultsTable = styled.table`
   font-size: 13px;
 
   th {
+    text-align: left;
+    padding: 10px 12px;
     background: #f8fafc;
     color: #475569;
     font-weight: 700;
-    text-align: left;
-    padding: 10px 14px;
-    border-bottom: 2px solid #e2e8f0;
-    font-size: 12px;
+    border-bottom: 1px solid #e2e8f0;
   }
 
   td {
-    padding: 12px 14px;
+    padding: 12px;
     border-bottom: 1px solid #f1f5f9;
     color: #334155;
   }
 
-  tr:hover td {
-    background: #f8fafc;
+  tr:last-child td {
+    border-bottom: none;
   }
 
   .grade-badge {
     display: inline-block;
     padding: 2px 8px;
     border-radius: 4px;
-    font-weight: 800;
-    font-size: 11px;
-    background: #ecfdf5;
-    color: #065f46;
-  }
+    font-weight: 700;
+    font-size: 12px;
+    background: #f1f5f9;
+    color: #334155;
 
-  .grade-badge.a-plus {
-    background: #dbeafe;
-    color: #1e40af;
+    &.a-plus,
+    &.a {
+      background: #ecfdf5;
+      color: #059669;
+    }
+    &.f {
+      background: #fee2e2;
+      color: #dc2626;
+    }
   }
 `;
 
@@ -211,7 +215,7 @@ const TrendBar = styled.div`
     gap: 12px;
 
     .sem-label {
-      width: 60px;
+      width: 70px;
       font-size: 12px;
       font-weight: 700;
       color: #475569;
@@ -241,12 +245,40 @@ const TrendBar = styled.div`
   }
 `;
 
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+
+  .icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
+
+  h3 {
+    font-size: 18px;
+    color: #1e293b;
+    margin: 0 0 6px 0;
+  }
+
+  p {
+    font-size: 14px;
+    margin: 0;
+  }
+`;
+
 const StudentPerformanceSection = () => {
   const [studentInfo, setStudentInfo] = useState({
     name: "Student",
     department: "Computer Science",
-    batch: "Batch 2023",
+    batch: "General",
   });
+  const [results, setResults] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const cookie = Cookies.get("studentData");
@@ -256,82 +288,30 @@ const StudentPerformanceSection = () => {
         setStudentInfo({
           name: parsed.name || "Student",
           department: parsed.department || "Computer Science",
-          batch: parsed.batch || "Batch 2023",
+          batch: parsed.batch || "General",
         });
       } catch (e) {}
     }
+
+    const fetchPerformance = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.get(`${BACKEND_URL}api/v1/results/my-results`, {
+          withCredentials: true,
+        });
+        if (res.data?.success) {
+          setResults(res.data.results || []);
+          setSummary(res.data.summary || null);
+        }
+      } catch (err) {
+        console.error("Error loading student results:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPerformance();
   }, []);
-
-  const semesterResults = [
-    {
-      code: "CS301",
-      subject: "Data Structures & Algorithms",
-      credits: 4,
-      internal: 28,
-      external: 64,
-      total: 92,
-      grade: "A+",
-      point: 10,
-    },
-    {
-      code: "CS302",
-      subject: "Operating Systems",
-      credits: 4,
-      internal: 26,
-      external: 61,
-      total: 87,
-      grade: "A",
-      point: 9,
-    },
-    {
-      code: "CS303",
-      subject: "Database Management Systems",
-      credits: 4,
-      internal: 29,
-      external: 63,
-      total: 92,
-      grade: "A+",
-      point: 10,
-    },
-    {
-      code: "CS304",
-      subject: "Computer Networks",
-      credits: 3,
-      internal: 25,
-      external: 58,
-      total: 83,
-      grade: "A",
-      point: 9,
-    },
-    {
-      code: "CS305",
-      subject: "Web Technologies Lab",
-      credits: 2,
-      internal: 48,
-      external: 47,
-      total: 95,
-      grade: "O",
-      point: 10,
-    },
-    {
-      code: "CS306",
-      subject: "Discrete Mathematics",
-      credits: 3,
-      internal: 24,
-      external: 55,
-      total: 79,
-      grade: "B+",
-      point: 8,
-    },
-  ];
-
-  const trends = [
-    { sem: "Sem 1", gpa: 8.2 },
-    { sem: "Sem 2", gpa: 8.4 },
-    { sem: "Sem 3", gpa: 8.75 },
-    { sem: "Sem 4", gpa: 8.9 },
-    { sem: "Sem 5", gpa: 9.15 },
-  ];
 
   const handlePrint = () => {
     window.print();
@@ -351,163 +331,214 @@ const StudentPerformanceSection = () => {
             </p>
           </div>
 
-          <button
-            onClick={handlePrint}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              background: "#ffffff",
-              border: "1px solid #cbd5e1",
-              padding: "8px 14px",
-              borderRadius: "8px",
-              fontSize: "13px",
-              fontWeight: "600",
-              cursor: "pointer",
-              color: "#334155",
-            }}
-          >
-            <BsPrinter /> Download Grade Sheet
-          </button>
-        </Header>
-
-        {/* Overview Tiles */}
-        <OverviewGrid>
-          <OverviewCard $bg="#ecfdf5" $color="#059669">
-            <div className="icon-wrap">
-              <BsAward />
-            </div>
-            <div className="details">
-              <div className="val">8.84</div>
-              <div className="lbl">Cumulative CGPA</div>
-              <div className="sub">First Class with Distinction</div>
-            </div>
-          </OverviewCard>
-
-          <OverviewCard $bg="#eff6ff" $color="#2563eb">
-            <div className="icon-wrap">
-              <BsGraphUp />
-            </div>
-            <div className="details">
-              <div className="val">9.15</div>
-              <div className="lbl">Current Semester SGPA</div>
-              <div className="sub">Semester 5 Examination</div>
-            </div>
-          </OverviewCard>
-
-          <OverviewCard $bg="#fef3c7" $color="#d97706">
-            <div className="icon-wrap">
-              <BsStarFill />
-            </div>
-            <div className="details">
-              <div className="val">Rank #4</div>
-              <div className="lbl">Department Standing</div>
-              <div className="sub">Top 5% of cohort</div>
-            </div>
-          </OverviewCard>
-
-          <OverviewCard $bg="#f5f3ff" $color="#7c3aed">
-            <div className="icon-wrap">
-              <BsBook />
-            </div>
-            <div className="details">
-              <div className="val">102 / 140</div>
-              <div className="lbl">Credits Completed</div>
-              <div className="sub">73% Degree Progress</div>
-            </div>
-          </OverviewCard>
-        </OverviewGrid>
-
-        <MainGrid>
-          {/* Left: Detailed Grade Ledger */}
-          <Card>
-            <div className="card-header">
-              <h3>
-                <BsBook /> Semester 5 Course Grades Ledger
-              </h3>
-              <span className="badge">Verified by Exam Cell</span>
-            </div>
-
-            <ResultsTable>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Course Title</th>
-                  <th>Credits</th>
-                  <th>Internal</th>
-                  <th>External</th>
-                  <th>Total</th>
-                  <th>Grade</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {semesterResults.map((r, i) => (
-                  <tr key={i}>
-                    <td>
-                      <code>{r.code}</code>
-                    </td>
-                    <td>
-                      <strong>{r.subject}</strong>
-                    </td>
-                    <td>{r.credits}</td>
-                    <td>{r.internal}/30</td>
-                    <td>{r.external}/70</td>
-                    <td>{r.total}/100</td>
-                    <td>
-                      <span className={`grade-badge ${r.grade === "A+" ? "a-plus" : ""}`}>
-                        {r.grade}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ color: "#059669", fontWeight: 700, fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                        <BsCheckCircleFill /> PASS
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </ResultsTable>
-          </Card>
-
-          {/* Right: Semester Progress Trend */}
-          <Card>
-            <div className="card-header">
-              <h3>
-                <BsGraphUp /> GPA Progression
-              </h3>
-            </div>
-
-            <TrendBar>
-              {trends.map((t, idx) => (
-                <div key={idx} className="sem-row">
-                  <span className="sem-label">{t.sem}</span>
-                  <div className="progress-bar-wrap">
-                    <div
-                      className="fill"
-                      style={{ width: `${(t.gpa / 10) * 100}%` }}
-                    />
-                  </div>
-                  <span className="gpa-val">{t.gpa}</span>
-                </div>
-              ))}
-            </TrendBar>
-
-            <div
+          {results.length > 0 && (
+            <button
+              onClick={handlePrint}
               style={{
-                background: "#f8fafc",
-                padding: "16px",
-                borderRadius: "10px",
-                border: "1px solid #e2e8f0",
-                marginTop: "20px",
-                fontSize: "12px",
-                color: "#64748b",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                background: "#ffffff",
+                border: "1px solid #cbd5e1",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: "600",
+                cursor: "pointer",
+                color: "#334155",
               }}
             >
-              🎯 <strong>Academic Advisory:</strong> Consistent upward trend in GPA from Semester 1 through 5. Eligible for placement honors and master’s fast-track.
-            </div>
-          </Card>
-        </MainGrid>
+              <BsPrinter /> Download Grade Sheet
+            </button>
+          )}
+        </Header>
+
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+            Loading academic performance records...
+          </div>
+        ) : results.length === 0 ? (
+          <EmptyState>
+            <div className="icon">📊</div>
+            <h3>No academic performance records are available yet.</h3>
+            <p>
+              Official examination marks and grade transcripts will be published here once evaluated by the examination cell.
+            </p>
+          </EmptyState>
+        ) : (
+          <>
+            {/* Overview Tiles with Genuine Aggregations */}
+            <OverviewGrid>
+              <OverviewCard $bg="#ecfdf5" $color="#059669">
+                <div className="icon-wrap">
+                  <BsAward />
+                </div>
+                <div className="details">
+                  <div className="val">{summary?.gpa || 0}</div>
+                  <div className="lbl">Cumulative CGPA</div>
+                  <div className="sub">
+                    {summary?.gpa >= 8.5
+                      ? "First Class with Distinction"
+                      : summary?.gpa >= 6.5
+                      ? "First Class"
+                      : "Satisfactory Standing"}
+                  </div>
+                </div>
+              </OverviewCard>
+
+              <OverviewCard $bg="#eff6ff" $color="#2563eb">
+                <div className="icon-wrap">
+                  <BsGraphUp />
+                </div>
+                <div className="details">
+                  <div className="val">{summary?.percentage || 0}%</div>
+                  <div className="lbl">Overall Percentage</div>
+                  <div className="sub">Aggregated Marks Average</div>
+                </div>
+              </OverviewCard>
+
+              <OverviewCard $bg="#fef3c7" $color="#d97706">
+                <div className="icon-wrap">
+                  <BsStarFill />
+                </div>
+                <div className="details">
+                  <div className="val">{summary?.totalSubjects || 0}</div>
+                  <div className="lbl">Subjects Evaluated</div>
+                  <div className="sub">Examination Records</div>
+                </div>
+              </OverviewCard>
+
+              <OverviewCard $bg="#f5f3ff" $color="#7c3aed">
+                <div className="icon-wrap">
+                  <BsBook />
+                </div>
+                <div className="details">
+                  <div className="val">{summary?.totalCredits || 0}</div>
+                  <div className="lbl">Total Credits Earned</div>
+                  <div className="sub">Academic Credit Ledger</div>
+                </div>
+              </OverviewCard>
+            </OverviewGrid>
+
+            <MainGrid>
+              {/* Detailed Genuine Grade Ledger */}
+              <Card>
+                <div className="card-header">
+                  <h3>
+                    <BsBook /> Course Grades Ledger
+                  </h3>
+                  <span className="badge">Verified Records ({results.length})</span>
+                </div>
+
+                <ResultsTable>
+                  <thead>
+                    <tr>
+                      <th>Subject Code</th>
+                      <th>Course Title</th>
+                      <th>Semester</th>
+                      <th>Credits</th>
+                      <th>Marks</th>
+                      <th>Grade</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.map((r) => {
+                      const isPassed = r.grade !== "F";
+                      return (
+                        <tr key={r._id || r.subjectCode}>
+                          <td>
+                            <code>{r.subjectCode}</code>
+                          </td>
+                          <td>
+                            <strong>{r.subjectName}</strong>
+                          </td>
+                          <td>{r.semester || "Semester 1"}</td>
+                          <td>{r.credits || 3}</td>
+                          <td>
+                            {r.marksObtained} / {r.totalMarks || 100}
+                          </td>
+                          <td>
+                            <span
+                              className={`grade-badge ${
+                                r.grade === "A+" || r.grade === "A"
+                                  ? "a-plus"
+                                  : r.grade === "F"
+                                  ? "f"
+                                  : ""
+                              }`}
+                            >
+                              {r.grade || "N/A"}
+                            </span>
+                          </td>
+                          <td>
+                            {isPassed ? (
+                              <span
+                                style={{
+                                  color: "#059669",
+                                  fontWeight: 700,
+                                  fontSize: "12px",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
+                              >
+                                <BsCheckCircleFill /> PASS
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  color: "#dc2626",
+                                  fontWeight: 700,
+                                  fontSize: "12px",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
+                              >
+                                <BsXCircleFill /> ARREAR
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </ResultsTable>
+              </Card>
+
+              {/* Semester Breakdown / Trend */}
+              <Card>
+                <div className="card-header">
+                  <h3>
+                    <BsGraphUp /> Semester SGPA Breakdown
+                  </h3>
+                </div>
+
+                {summary?.semesterBreakdown && summary.semesterBreakdown.length > 0 ? (
+                  <TrendBar>
+                    {summary.semesterBreakdown.map((s, idx) => (
+                      <div key={idx} className="sem-row">
+                        <span className="sem-label">{s.semester}</span>
+                        <div className="progress-bar-wrap">
+                          <div
+                            className="fill"
+                            style={{ width: `${Math.min(100, (s.sgpa / 10) * 100)}%` }}
+                          />
+                        </div>
+                        <span className="gpa-val">{s.sgpa}</span>
+                      </div>
+                    ))}
+                  </TrendBar>
+                ) : (
+                  <div style={{ color: "#94a3b8", fontSize: "13px", padding: "20px 0" }}>
+                    No semester trend data available.
+                  </div>
+                )}
+              </Card>
+            </MainGrid>
+          </>
+        )}
       </Content>
       <ToastContainer />
     </Container>

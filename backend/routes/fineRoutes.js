@@ -6,13 +6,14 @@ import {
   payFine,
   waiveFine,
 } from "../controllers/fineController.js";
+import { isAuthenticated, requireAdmin, requireStaffOrAdmin } from "../middlewares/auth.js";
 
 const router = express.Router();
 
-router.post("/create", createFine);
-router.get("/all", getAllFines);
-router.get("/student/:studentId", getStudentFines);
-router.post("/pay/:fineId", payFine);
-router.post("/waive/:fineId", waiveFine);
+router.post("/create", isAuthenticated, requireStaffOrAdmin, createFine);
+router.get("/all", isAuthenticated, requireStaffOrAdmin, getAllFines);
+router.get("/student/:studentId", isAuthenticated, getStudentFines);
+router.post("/pay/:fineId", isAuthenticated, payFine);
+router.post("/waive/:fineId", isAuthenticated, requireAdmin, waiveFine);
 
 export default router;

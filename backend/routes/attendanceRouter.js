@@ -7,60 +7,28 @@ import {
   getStudentsForAttendance,
   getAttendanceBatches,
 } from "../controllers/attendanceController.js";
-import jwt from "jsonwebtoken";
+import { isAuthenticated, authorizeRoles } from "../middlewares/auth.js";
 
 const router = express.Router();
 
-// JWT token verification middleware
-const verifyToken = (req, res, next) => {
-  const token =
-    req.headers.authorization?.split(" ")[1] ||
-    req.headers.studenttoken ||
-    req.headers["x-access-token"] ||
-    req.cookies?.studentToken ||
-    req.cookies?.token;
-
-  if (token) {
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.student = decoded;
-      return next();
-    } catch (err) {
-      if (req.query?.studentId) {
-        req.student = { id: req.query.studentId, role: "student" };
-        return next();
-      }
-      return res.status(403).json({ error: "Invalid token" });
-    }
-  }
-
-  // Fallback: If no token header/cookie provided, allow studentId query param if present
-  if (req.query?.studentId) {
-    req.student = { id: req.query.studentId, role: "student" };
-    return next();
-  }
-
-  return res.status(403).json({ error: "Token is required" });
-};
-
 // Fetch student list (supports ?batch= query param)
-router.get("/students", getStudentsForAttendance);
+router.get("/students", isAuthenticated, authorizeRoles("admin", "teacher"), getStudentsForAttendance);
 
 // Fetch all distinct batches
-router.get("/batches", getAttendanceBatches);
+router.get("/batches", isAuthenticated, getAttendanceBatches);
 
 // Aggregated attendance summary per student (Large Scale View)
-router.get("/aggregated", getAggregatedAttendance);
+router.get("/aggregated", isAuthenticated, authorizeRoles("admin", "teacher"), getAggregatedAttendance);
 
 // Fetch all attendance records (supports ?date=&batch=&status=&search= query params)
-router.get("/records", getAllAttendance);
-router.get("/getall", getAllAttendance);
-router.get("/", getAllAttendance);
+router.get("/records", isAuthenticated, authorizeRoles("admin", "teacher"), getAllAttendance);
+router.get("/getall", isAuthenticated, authorizeRoles("admin", "teacher"), getAllAttendance);
+router.get("/", isAuthenticated, authorizeRoles("admin", "teacher"), getAllAttendance);
 
-// Student self attendance
-router.get("/my-attendance", verifyToken, getStudentAttendance);
+// Student self attendance (or authorized admin/teacher lookup)
+router.get("/my-attendance", isAuthenticated, getStudentAttendance);
 
 // Mark / Submit attendance
-router.post("/attendance", submitAttendance);
+router.post("/attendance", isAuthenticated, authorizeRoles("admin", "teacher"), submitAttendance);
 
 export default router;

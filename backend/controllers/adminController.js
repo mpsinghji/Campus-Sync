@@ -13,6 +13,7 @@ import { Book } from "../models/librarySchema.js";
 import Fee from "../models/feeModel.js";
 import { Response } from "../utils/response.js";
 import { getTokenExpiresIn } from "../utils/tokenConfig.js";
+import { resetRateLimitForIp, resetAllRateLimits } from "../middlewares/rateLimiter.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,16 +21,25 @@ const __dirname = path.dirname(__filename);
 const SUPER_ADMIN_EMAIL = "admin@campus-sync.com";
 
 export const adminRegister = async (req, res) => {
-  const { email, password, name, phone, designation, department, officeRoom, address, adminRequesterEmail } = req.body;
+  const { email, password, name, phone, designation, department, officeRoom, address } = req.body;
 
   try {
     const cleanEmail = email?.toLowerCase().trim();
     console.log("Admin Register Request:", { email: cleanEmail, name, designation, department });
 
-    // Hierarchy rule: Normal admin cannot touch or register upper hierarchy like superadmin
+    // Authentication and authorization: Only an authenticated Admin/Superadmin can register an Admin
+    if (!req.user || req.role !== "admin") {
+      return Response(
+        res,
+        401,
+        false,
+        "Unauthorized: Authentication as Administrator is required to create Admin accounts."
+      );
+    }
+
+    // Hierarchy rule: Only verified Super Admin can create Super Admin accounts
     if (cleanEmail === SUPER_ADMIN_EMAIL || designation === "Super Admin") {
-      const requester = (req.headers["x-admin-email"] || adminRequesterEmail || "").toLowerCase().trim();
-      if (requester !== SUPER_ADMIN_EMAIL) {
+      if (!req.isSuperAdmin) {
         return Response(
           res,
           403,
@@ -500,8 +510,7 @@ export const adminLogout = async (req, res) => {
 // Master Admin: Fetch all users across all roles
 export const getAllUsersMaster = async (req, res) => {
   try {
-    const requesterEmail = (req.headers["x-admin-email"] || req.query.adminEmail || "").toLowerCase().trim();
-    const isSuperAdmin = requesterEmail === SUPER_ADMIN_EMAIL;
+    const isSuperAdmin = Boolean(req.isSuperAdmin);
 
     const admins = await Admin.find().sort({ createdAt: -1 });
     const teachers = await Teacher.find().sort({ createdAt: -1 });
@@ -557,8 +566,7 @@ export const updateUserMaster = async (req, res) => {
   } = req.body;
 
   try {
-    const requester = (req.headers["x-admin-email"] || adminRequesterEmail || "").toLowerCase().trim();
-    const isSuper = requester === SUPER_ADMIN_EMAIL;
+    const isSuper = Boolean(req.isSuperAdmin);
 
     let userModel = null;
     if (role === "admin") userModel = Admin;
@@ -622,11 +630,9 @@ export const updateUserMaster = async (req, res) => {
 // Master Admin: Delete any user
 export const deleteUserMaster = async (req, res) => {
   const { role, id } = req.params;
-  const { adminRequesterEmail } = req.body;
 
   try {
-    const requester = (req.headers["x-admin-email"] || adminRequesterEmail || "").toLowerCase().trim();
-    const isSuper = requester === SUPER_ADMIN_EMAIL;
+    const isSuper = Boolean(req.isSuperAdmin);
 
     let userModel = null;
     if (role === "admin") userModel = Admin;
@@ -729,11 +735,10 @@ export const getRolePermissionsMaster = async (req, res) => {
 
 // Master Admin: Update role permissions matrix
 export const updateRolePermissionsMaster = async (req, res) => {
-  const { adminEmail, rolePermissions, fieldVisibility } = req.body;
+  const { rolePermissions, fieldVisibility } = req.body;
 
   try {
-    const requester = (req.headers["x-admin-email"] || adminEmail || "").toLowerCase().trim();
-    if (requester !== SUPER_ADMIN_EMAIL) {
+    if (!req.isSuperAdmin) {
       return res.status(403).json({
         success: false,
         message: "Forbidden: Only Super Admin (admin@campus-sync.com) can configure role permissions and field visibility.",
@@ -768,10 +773,9 @@ export const updateRolePermissionsMaster = async (req, res) => {
 
 // Master Admin: Reset / Override user password directly
 export const resetPasswordMaster = async (req, res) => {
-  const { role, id, newPassword, adminRequesterEmail } = req.body;
+  const { role, id, newPassword } = req.body;
   try {
-    const requester = (req.headers["x-admin-email"] || adminRequesterEmail || "").toLowerCase().trim();
-    if (requester !== SUPER_ADMIN_EMAIL) {
+    if (!req.isSuperAdmin) {
       return res.status(403).json({
         success: false,
         message: "Forbidden: Only Super Admin (admin@campus-sync.com) can reset user passwords.",
@@ -807,10 +811,8 @@ export const resetPasswordMaster = async (req, res) => {
 
 // Master Admin: Seed realistic, professional demo campus data
 export const seedCampusDataMaster = async (req, res) => {
-  const { adminRequesterEmail } = req.body;
   try {
-    const requester = (req.headers["x-admin-email"] || adminRequesterEmail || "").toLowerCase().trim();
-    if (requester !== SUPER_ADMIN_EMAIL) {
+    if (!req.isSuperAdmin) {
       return res.status(403).json({
         success: false,
         message: "Forbidden: Only Super Admin (admin@campus-sync.com) can execute campus data seeding.",
@@ -1313,5 +1315,43 @@ export const updateFeeRatesMaster = async (req, res) => {
     return Response(res, 500, false, "Failed to update fee rates", error.message);
   }
 };
+
+// Master Admin: Reset Rate Limits for Superadmin IP or all rate limits
+export const resetRateLimitMaster = async (req, res) => {
+  try {
+    // Strict authentication and superadmin check
+    if (!req.user || req.role !== "admin" || !req.isSuperAdmin) {
+      return Response(res, 403, false, "Forbidden: Only Super Administrator has authorization.");
+    }
+
+    // Derive client IP strictly from server request (not trusting arbitrary body input for IP)
+    const clientIp = req.ip || req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress;
+    const shouldResetAll = Boolean(req.body?.resetAll);
+
+    if (shouldResetAll) {
+      await resetAllRateLimits();
+      return Response(res, 200, true, "All authentication and OTP rate limit locks cleared successfully across the server.", {
+        scope: "all",
+        requestedBy: req.user.email,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (!clientIp) {
+      return Response(res, 400, false, "Could not determine client network IP from request.");
+    }
+
+    await resetRateLimitForIp(clientIp);
+    return Response(res, 200, true, `Rate limit successfully cleared for network IP: ${clientIp}`, {
+      scope: "ip",
+      ip: clientIp,
+      requestedBy: req.user.email,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    return Response(res, 500, false, "Failed to reset rate limits", error.message);
+  }
+};
+
 
 

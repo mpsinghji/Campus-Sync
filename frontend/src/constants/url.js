@@ -2,13 +2,14 @@
 const LOCAL_URL = 'http://localhost:5000/';
 const PRODUCTION_URL = 'https://campus-sync-ez7y.onrender.com/';
 
-// Use local URL only when running on localhost
-export const BACKEND_URL = window.location.hostname === 'localhost' 
-  ? LOCAL_URL 
-  : PRODUCTION_URL;
+// Prioritize environment variable, then dynamic origin detection
+export const BACKEND_URL =
+  import.meta.env.VITE_BACKEND_URL ||
+  (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ? LOCAL_URL
+    : PRODUCTION_URL);
 
-// export const BACKEND_URL = PRODUCTION_URL;
-
-// Log which URL is being used
-console.log('Current hostname:', window.location.hostname);
-console.log('Using backend URL:', BACKEND_URL);
+if (import.meta.env.DEV) {
+  console.log('Current hostname:', typeof window !== "undefined" ? window.location.hostname : "ssr");
+  console.log('Using backend URL:', BACKEND_URL);
+}

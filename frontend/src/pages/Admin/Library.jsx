@@ -389,6 +389,35 @@ const Library = () => {
   // Library Fines & Overdue state
   const [libraryFines, setLibraryFines] = useState([]);
   const [loadingFines, setLoadingFines] = useState(false);
+  const [lateFeePerDay, setLateFeePerDay] = useState(10);
+  const [savingFineRate, setSavingFineRate] = useState(false);
+
+  const fetchLibraryFineSettings = async () => {
+    try {
+      const res = await axios.get(`${BACKEND_URL}api/v1/security/otp-settings`);
+      if (res.data?.settings?.lateFeePerDay !== undefined) {
+        setLateFeePerDay(res.data.settings.lateFeePerDay);
+      }
+    } catch (e) {
+      console.warn("Could not load library fine settings:", e.message);
+    }
+  };
+
+  const handleSaveFineRate = async (e) => {
+    e.preventDefault();
+    setSavingFineRate(true);
+    try {
+      await axios.put(`${BACKEND_URL}api/v1/security/otp-settings`, {
+        lateFeePerDay: Math.max(0, parseInt(lateFeePerDay, 10) || 0),
+      });
+      toast.success("Per-day overdue fine rate updated successfully!");
+      fetchAssignedBooks();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to save fine rate.");
+    } finally {
+      setSavingFineRate(false);
+    }
+  };
 
   // Reminder Modal state
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
@@ -604,6 +633,7 @@ const Library = () => {
     fetchStudents();
     fetchBorrowRequests();
     fetchLibraryFines();
+    fetchLibraryFineSettings();
   }, []);
 
   useEffect(() => {
@@ -881,13 +911,13 @@ const Library = () => {
               active={activeTab === "catalog"}
               onClick={() => setActiveTab("catalog")}
             >
-              📚 Books Catalog & Stock
+              Books Catalog & Stock
             </TabButton>
             <TabButton
               active={activeTab === "assigned"}
               onClick={() => setActiveTab("assigned")}
             >
-              📋 Assigned Books & Loans
+              Assigned Books & Loans
             </TabButton>
             <TabButton
               active={activeTab === "requests"}
@@ -896,7 +926,7 @@ const Library = () => {
                 fetchBorrowRequests();
               }}
             >
-              📥 Borrow Requests {pendingRequestsCount > 0 && `(${pendingRequestsCount})`}
+              Borrow Requests {pendingRequestsCount > 0 && `(${pendingRequestsCount})`}
             </TabButton>
             <TabButton
               active={activeTab === "fines"}
@@ -905,7 +935,7 @@ const Library = () => {
                 fetchLibraryFines();
               }}
             >
-              💰 Library Fines & Overdue ({overdueBooks.length})
+              Library Fines & Overdue ({overdueBooks.length})
             </TabButton>
             <button
               type="button"
@@ -926,7 +956,7 @@ const Library = () => {
                 boxShadow: "0 2px 6px rgba(79, 70, 229, 0.25)",
               }}
             >
-              📢 Notice to Student
+              Notice to Student
             </button>
           </TabContainer>
 
@@ -942,7 +972,7 @@ const Library = () => {
                 {potentialDuplicate && (
                   <DuplicateNotice>
                     <div>
-                      <strong>⚠️ Book already listed:</strong> "{potentialDuplicate.bookname}" by {potentialDuplicate.author} is already in the library with <strong>{potentialDuplicate.totalQuantity} copies</strong> ({potentialDuplicate.availableQuantity} available).
+                      <strong>Book already listed:</strong> "{potentialDuplicate.bookname}" by {potentialDuplicate.author} is already in the library with <strong>{potentialDuplicate.totalQuantity} copies</strong> ({potentialDuplicate.availableQuantity} available).
                     </div>
                     <ActionBtn
                       type="button"
@@ -1016,7 +1046,7 @@ const Library = () => {
               >
                 <SearchInput
                   type="text"
-                  placeholder="🔍 Search title or author..."
+                  placeholder="Search title or author..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -1115,7 +1145,7 @@ const Library = () => {
               >
                 <SearchInput
                   type="text"
-                  placeholder="🔍 Search book, student, roll no..."
+                  placeholder="Search book, student, roll no..."
                   value={assignedSearch}
                   onChange={(e) => setAssignedSearch(e.target.value)}
                 />
@@ -1124,7 +1154,7 @@ const Library = () => {
                   value={assignedBatchFilter}
                   onChange={(e) => setAssignedBatchFilter(e.target.value)}
                 >
-                  <option value="all">🎓 All Batches</option>
+                  <option value="all">All Batches</option>
                   {availableBatches.map((b) => (
                     <option key={b} value={b}>
                       Batch: {b}
@@ -1198,7 +1228,7 @@ const Library = () => {
                               </span>
                               {isOverdue && (
                                 <Badge type="out" style={{ marginLeft: "6px" }}>
-                                  ⚠️ Overdue ({item.overdueDays || Math.max(1, Math.ceil((Date.now() - dueDateObj.getTime()) / (1000 * 60 * 60 * 24)))}d) • ₹{item.calculatedLateFee || (Math.max(1, Math.ceil((Date.now() - dueDateObj.getTime()) / (1000 * 60 * 60 * 24))) * 10)} Late Fee
+                                  Overdue ({item.overdueDays || Math.max(1, Math.ceil((Date.now() - dueDateObj.getTime()) / (1000 * 60 * 60 * 24)))}d) • ₹{item.calculatedLateFee || (Math.max(1, Math.ceil((Date.now() - dueDateObj.getTime()) / (1000 * 60 * 60 * 24))) * 10)} Late Fee
                                 </Badge>
                               )}
                             </TableCell>
@@ -1236,12 +1266,12 @@ const Library = () => {
                                         gap: "4px",
                                       }}
                                     >
-                                      🔔 Remind
+                                      Remind
                                     </button>
                                   </>
                                 ) : (
                                   <span style={{ color: "#15803d", fontSize: "13px", fontWeight: 600 }}>
-                                    ✓ Returned
+                                    Returned
                                   </span>
                                 )}
                               </div>
@@ -1268,14 +1298,14 @@ const Library = () => {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
                 <div>
                   <h3 style={{ margin: 0, color: "#1e293b", fontWeight: 700, fontSize: "16px" }}>
-                    📥 Student Borrow Applications ({borrowRequests.length})
+                    Student Borrow Applications ({borrowRequests.length})
                   </h3>
                   <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#64748b" }}>
                     Review student loan applications. Approving will assign the book and decrement current library stock.
                   </p>
                 </div>
                 <ActionBtn type="button" variant="secondary" onClick={fetchBorrowRequests}>
-                  🔄 Refresh Requests
+                  Refresh Requests
                 </ActionBtn>
               </div>
 
@@ -1311,7 +1341,7 @@ const Library = () => {
                             <TableCell>{formatDateDDMMYYYY(req.requestDate || req.createdAt)}</TableCell>
                             <TableCell>
                               <span style={{ fontWeight: 600, color: bookAvailable > 0 ? "#059669" : "#dc2626" }}>
-                                {bookAvailable > 0 ? `✓ ${bookAvailable} in stock` : "Out of stock"}
+                                {bookAvailable > 0 ? `${bookAvailable} in stock` : "Out of stock"}
                               </span>
                             </TableCell>
                             <TableCell>
@@ -1323,7 +1353,7 @@ const Library = () => {
                                   onClick={() => handleApproveRequest(req._id)}
                                   title="Approve borrow request and issue book"
                                 >
-                                  ✓ Approve
+                                  Approve
                                 </ActionBtn>
                                 <ActionBtn
                                   type="button"
@@ -1331,7 +1361,7 @@ const Library = () => {
                                   onClick={() => handleRejectRequest(req._id)}
                                   title="Decline request"
                                 >
-                                  ✕ Reject
+                                  Close Reject
                                 </ActionBtn>
                               </div>
                             </TableCell>
@@ -1366,7 +1396,7 @@ const Library = () => {
               >
                 <div>
                   <h3 style={{ margin: 0, color: "#1e293b", fontWeight: 700, fontSize: "18px" }}>
-                    💰 Library Overdue Students & Fines Registry
+                    Library Overdue Students & Fines Registry
                   </h3>
                   <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#64748b" }}>
                     Monitor late book returns, dispatch direct reminder notices to students, and manage institutional library fines.
@@ -1374,7 +1404,7 @@ const Library = () => {
                 </div>
                 <div style={{ display: "flex", gap: "10px" }}>
                   <ActionBtn type="button" variant="secondary" onClick={() => { fetchAssignedBooks(); fetchLibraryFines(); }}>
-                    🔄 Refresh Fine Data
+                    Refresh Fine Data
                   </ActionBtn>
                   <button
                     type="button"
@@ -1393,7 +1423,7 @@ const Library = () => {
                       gap: "6px",
                     }}
                   >
-                    📢 Notice to Student
+                    Notice to Student
                   </button>
                 </div>
               </div>
@@ -1427,11 +1457,50 @@ const Library = () => {
                 </StatCard>
               </div>
 
+              {/* Overdue Fine Policy Configuration Card */}
+              <Card style={{ padding: "20px", marginBottom: "25px" }}>
+                <div style={{ marginBottom: "14px" }}>
+                  <h4 style={{ margin: 0, color: "#1e293b", fontSize: "15px", fontWeight: 700 }}>
+                    Library Overdue Fine Policy Configuration
+                  </h4>
+                  <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#64748b" }}>
+                    Configure the per-day fine automatically calculated for student book loans returned after due date.
+                  </p>
+                </div>
+                <form onSubmit={handleSaveFineRate} style={{ display: "flex", alignItems: "flex-end", gap: "14px", flexWrap: "wrap" }}>
+                  <div>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "#475569", display: "block", marginBottom: "6px" }}>
+                      Per-Day Overdue Fine (INR / Day)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={500}
+                      value={lateFeePerDay}
+                      onChange={(e) => setLateFeePerDay(e.target.value)}
+                      style={{
+                        padding: "9px 14px",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                        fontWeight: 700,
+                        width: "160px",
+                        outline: "none",
+                      }}
+                      required
+                    />
+                  </div>
+                  <ActionBtn type="submit" disabled={savingFineRate} style={{ padding: "10px 18px" }}>
+                    {savingFineRate ? "Saving..." : "Save Fine Rate"}
+                  </ActionBtn>
+                </form>
+              </Card>
+
               {/* Section 1: Active Overdue Borrowers */}
               <Card style={{ padding: "20px", marginBottom: "25px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
                   <h4 style={{ margin: 0, color: "#991b1b", fontSize: "15px", fontWeight: 700 }}>
-                    ⚠️ Active Overdue Book Borrowers ({overdueBooks.length})
+                    Active Overdue Book Borrowers ({overdueBooks.length})
                   </h4>
                   <span style={{ fontSize: "12px", color: "#64748b" }}>
                     Late fee accumulates daily per institutional policy
@@ -1496,7 +1565,7 @@ const Library = () => {
                                     cursor: "pointer",
                                   }}
                                 >
-                                  🔔 Send Reminder
+                                  Send Reminder
                                 </button>
                                 <button
                                   type="button"
@@ -1513,7 +1582,7 @@ const Library = () => {
                                     cursor: "pointer",
                                   }}
                                 >
-                                  ⚖️ Invoice Fine
+                                  Invoice Fine
                                 </button>
                                 <ActionBtn
                                   variant="danger"
@@ -1529,7 +1598,7 @@ const Library = () => {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={7} style={{ textAlign: "center", padding: "30px", color: "#16a34a", fontWeight: 600 }}>
-                            🎉 Great news! There are currently no overdue book borrowers in the system.
+                            Great news! There are currently no overdue book borrowers in the system.
                           </TableCell>
                         </TableRow>
                       )}
@@ -1542,7 +1611,7 @@ const Library = () => {
               <Card style={{ padding: "20px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
                   <h4 style={{ margin: 0, color: "#1e293b", fontSize: "15px", fontWeight: 700 }}>
-                    📋 Recorded Institutional Library Fines ({libraryFines.length})
+                    Recorded Institutional Library Fines ({libraryFines.length})
                   </h4>
                   <span style={{ fontSize: "12px", color: "#64748b" }}>
                     Recorded in Financial Billing Portal
@@ -1614,7 +1683,7 @@ const Library = () => {
               <ModalBox onClick={(e) => e.stopPropagation()}>
                 <ModalHeader>
                   <h3>Edit Book & Stock Quantity</h3>
-                  <button onClick={() => setIsEditModalOpen(false)}>✕</button>
+                  <button onClick={() => setIsEditModalOpen(false)}>Close</button>
                 </ModalHeader>
 
                 <form onSubmit={handleSaveEdit}>
@@ -1682,7 +1751,7 @@ const Library = () => {
               <ModalBox onClick={(e) => e.stopPropagation()}>
                 <ModalHeader>
                   <h3>Assign Book to Student</h3>
-                  <button onClick={() => setIsAssignModalOpen(false)}>✕</button>
+                  <button onClick={() => setIsAssignModalOpen(false)}>Close</button>
                 </ModalHeader>
 
                 <form onSubmit={handleAssignBook}>
@@ -1692,7 +1761,7 @@ const Library = () => {
                     {selectedBook ? (
                       <SelectedChip>
                         <span>
-                          📖 <strong>{selectedBook.bookname}</strong> by {selectedBook.author} ({selectedBook.availableQuantity} available)
+                          <strong>{selectedBook.bookname}</strong> by {selectedBook.author} ({selectedBook.availableQuantity} available)
                         </span>
                         <button
                           type="button"
@@ -1701,7 +1770,7 @@ const Library = () => {
                             setBookSearchInput("");
                           }}
                         >
-                          ✕
+                          Close
                         </button>
                       </SelectedChip>
                     ) : (
@@ -1760,7 +1829,7 @@ const Library = () => {
                         setSelectedStudent(null);
                       }}
                     >
-                      <option value="all">🎓 All Batches ({students.length} students)</option>
+                      <option value="all">All Batches ({students.length} students)</option>
                       {availableBatches.map((b) => {
                         const count = students.filter((s) => s.batch === b).length;
                         return (
@@ -1778,7 +1847,7 @@ const Library = () => {
                     {selectedStudent ? (
                       <SelectedChip>
                         <span>
-                          👤 <strong>{selectedStudent.name}</strong> (Roll: {selectedStudent.rollno}) — {selectedStudent.batch || "General"}
+                          <strong>{selectedStudent.name}</strong> (Roll: {selectedStudent.rollno}) — {selectedStudent.batch || "General"}
                         </span>
                         <button
                           type="button"
@@ -1787,7 +1856,7 @@ const Library = () => {
                             setStudentSearchInput("");
                           }}
                         >
-                          ✕
+                          Close
                         </button>
                       </SelectedChip>
                     ) : (
@@ -1887,8 +1956,8 @@ const Library = () => {
             <ModalOverlay onClick={() => setIsReminderModalOpen(false)}>
               <ModalBox onClick={(e) => e.stopPropagation()} style={{ maxWidth: "560px" }}>
                 <ModalHeader>
-                  <h3>🔔 Send Book Return Reminder to Student</h3>
-                  <button onClick={() => setIsReminderModalOpen(false)}>✕</button>
+                  <h3>Send Book Return Reminder to Student</h3>
+                  <button onClick={() => setIsReminderModalOpen(false)}>Close</button>
                 </ModalHeader>
 
                 <form onSubmit={submitReminder}>
@@ -1900,7 +1969,7 @@ const Library = () => {
                       <div><strong>Due Date:</strong> {formatDateDDMMYYYY(reminderTargetBook.dueDate)}</div>
                       {reminderTargetBook.isOverdue && (
                         <div style={{ gridColumn: "1 / -1", color: "#dc2626", fontWeight: 700 }}>
-                          ⚠️ Overdue: {reminderTargetBook.overdueDays || 1} days • Late Penalty: ₹{reminderTargetBook.calculatedLateFee || 0}
+                          Overdue: {reminderTargetBook.overdueDays || 1} days • Late Penalty: ₹{reminderTargetBook.calculatedLateFee || 0}
                         </div>
                       )}
                     </div>
@@ -1964,7 +2033,7 @@ const Library = () => {
                         fontWeight: 700,
                       }}
                     >
-                      {sendingReminder ? "Sending..." : "🚀 Dispatch Reminder Notice"}
+                      {sendingReminder ? "Sending..." : "Dispatch Reminder Notice"}
                     </button>
                   </div>
                 </form>
@@ -1977,8 +2046,8 @@ const Library = () => {
             <ModalOverlay onClick={() => setIsDirectAnnounceModalOpen(false)}>
               <ModalBox onClick={(e) => e.stopPropagation()} style={{ maxWidth: "560px" }}>
                 <ModalHeader>
-                  <h3>📢 Send Targeted Library Notice to Student</h3>
-                  <button onClick={() => setIsDirectAnnounceModalOpen(false)}>✕</button>
+                  <h3>Send Targeted Library Notice to Student</h3>
+                  <button onClick={() => setIsDirectAnnounceModalOpen(false)}>Close</button>
                 </ModalHeader>
 
                 <form onSubmit={submitDirectNotice}>
@@ -2063,7 +2132,7 @@ const Library = () => {
                         fontWeight: 700,
                       }}
                     >
-                      {sendingDirectNotice ? "Publishing..." : "✓ Send Notice to Student"}
+                      {sendingDirectNotice ? "Publishing..." : "Send Notice to Student"}
                     </button>
                   </div>
                 </form>

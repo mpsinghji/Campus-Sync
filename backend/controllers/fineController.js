@@ -97,6 +97,22 @@ export const getAllFines = async (req, res) => {
 export const getStudentFines = async (req, res) => {
   try {
     const { studentId } = req.params;
+
+    if (req.role === "student") {
+      const authenticatedStudentId = req.user?._id?.toString() || req.user?.id?.toString();
+      if (authenticatedStudentId !== studentId.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden: You are only authorized to view your own fine records.",
+        });
+      }
+    } else if (req.role !== "admin" && req.role !== "teacher") {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: Unauthorized to access student fines.",
+      });
+    }
+
     const fines = await Fine.find({ student: studentId }).sort({ createdAt: -1 });
 
     const totalLevied = fines.reduce((sum, f) => sum + (Number(f.amount) || 0), 0);

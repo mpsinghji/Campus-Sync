@@ -1057,7 +1057,7 @@ const StudentFees = () => {
 
       // 2. Razorpay Checkout options
       const options = {
-        key: "rzp_test_RJjIrWx8F7ZuO8", // Official Test Gateway Key
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_RJjIrWx8F7ZuO8", // Official Test Gateway Key
         amount: totalAmount * 100,
         currency: "INR",
         name: "CampusSync University Portal",
@@ -1208,7 +1208,7 @@ const StudentFees = () => {
       }
 
       const options = {
-        key: "rzp_test_RJjIrWx8F7ZuO8",
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_RJjIrWx8F7ZuO8",
         amount: fine.amount * 100,
         currency: "INR",
         name: "CampusSync University Portal",

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import AdminSidebar from "./Sidebar";
 import styled from "styled-components";
+import axios from "axios";
+import { BACKEND_URL } from "../../constants/url";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -548,186 +550,9 @@ const PREDEFINED_SUBJECTS = [
   "Computer Organization & Architecture",
 ];
 
-const INITIAL_SCHEDULES = [
-  {
-    id: "slot_1",
-    day: "Monday",
-    timeSlot: "09:00 - 10:00 AM",
-    subject: "Data Structures & Algorithms",
-    type: "Lecture",
-    faculty: "Dr. Rajesh Sharma",
-    room: "LH-101",
-    section: "Section A",
-    group: "All",
-    department: "Computer Science",
-  },
-  {
-    id: "slot_2",
-    day: "Monday",
-    timeSlot: "10:00 - 11:00 AM",
-    subject: "Database Management Systems",
-    type: "Lecture",
-    faculty: "Prof. Meenakshi Sundaram",
-    room: "LH-101",
-    section: "Section A",
-    group: "All",
-    department: "Computer Science",
-  },
-  {
-    id: "slot_3",
-    day: "Monday",
-    timeSlot: "11:15 - 12:15 PM",
-    subject: "Web Technologies & Full Stack Lab",
-    type: "Practical Lab",
-    faculty: "Er. Amit Roy",
-    room: "CS-Lab 2",
-    section: "Section A",
-    group: "Group 1",
-    department: "Computer Science",
-  },
-  {
-    id: "slot_4",
-    day: "Monday",
-    timeSlot: "02:00 - 03:00 PM",
-    subject: "Computer Networks",
-    type: "Lecture",
-    faculty: "Dr. Vandana Rao",
-    room: "LH-102",
-    section: "Section A",
-    group: "All",
-    department: "Computer Science",
-  },
-  {
-    id: "slot_5",
-    day: "Tuesday",
-    timeSlot: "09:00 - 10:00 AM",
-    subject: "Operating Systems",
-    type: "Lecture",
-    faculty: "Dr. Harish Chandra",
-    room: "LH-101",
-    section: "Section A",
-    group: "All",
-    department: "Computer Science",
-  },
-  {
-    id: "slot_6",
-    day: "Tuesday",
-    timeSlot: "10:00 - 11:00 AM",
-    subject: "Data Structures & Algorithms",
-    type: "Tutorial",
-    faculty: "Dr. Rajesh Sharma",
-    room: "Room 204",
-    section: "Section A",
-    group: "Group 2",
-    department: "Computer Science",
-  },
-  {
-    id: "slot_7",
-    day: "Tuesday",
-    timeSlot: "11:15 - 12:15 PM",
-    subject: "Object Oriented Programming (Java)",
-    type: "Lecture",
-    faculty: "Prof. Anita Deshmukh",
-    room: "LH-103",
-    section: "Section B",
-    group: "All",
-    department: "Computer Science",
-  },
-  {
-    id: "slot_8",
-    day: "Wednesday",
-    timeSlot: "09:00 - 10:00 AM",
-    subject: "Theory of Computation",
-    type: "Lecture",
-    faculty: "Dr. Arvind Gupta",
-    room: "LH-101",
-    section: "Section A",
-    group: "All",
-    department: "Computer Science",
-  },
-  {
-    id: "slot_9",
-    day: "Wednesday",
-    timeSlot: "11:15 - 12:15 PM",
-    subject: "Software Engineering & Architecture",
-    type: "Lecture",
-    faculty: "Prof. Meenakshi Sundaram",
-    room: "LH-102",
-    section: "Section A",
-    group: "All",
-    department: "Computer Science",
-  },
-  {
-    id: "slot_10",
-    day: "Wednesday",
-    timeSlot: "02:00 - 03:00 PM",
-    subject: "Artificial Intelligence & Machine Learning",
-    type: "Lecture",
-    faculty: "Dr. Vikram Seth",
-    room: "LH-104",
-    section: "Section A",
-    group: "All",
-    department: "Computer Science",
-  },
-  {
-    id: "slot_11",
-    day: "Thursday",
-    timeSlot: "10:00 - 11:00 AM",
-    subject: "Computer Organization & Architecture",
-    type: "Lecture",
-    faculty: "Dr. Vandana Rao",
-    room: "LH-101",
-    section: "Section A",
-    group: "All",
-    department: "Computer Science",
-  },
-  {
-    id: "slot_12",
-    day: "Thursday",
-    timeSlot: "02:00 - 03:00 PM",
-    subject: "Operating Systems Lab",
-    type: "Practical Lab",
-    faculty: "Dr. Harish Chandra",
-    room: "CS-Lab 1",
-    section: "Section A",
-    group: "Group 1",
-    department: "Computer Science",
-  },
-  {
-    id: "slot_13",
-    day: "Friday",
-    timeSlot: "09:00 - 10:00 AM",
-    subject: "Artificial Intelligence & Machine Learning",
-    type: "Seminar",
-    faculty: "Dr. Vikram Seth",
-    room: "Audi-2",
-    section: "Section A",
-    group: "All",
-    department: "Computer Science",
-  },
-  {
-    id: "slot_14",
-    day: "Friday",
-    timeSlot: "11:15 - 12:15 PM",
-    subject: "Database Management Systems",
-    type: "Practical Lab",
-    faculty: "Prof. Meenakshi Sundaram",
-    room: "CS-Lab 3",
-    section: "Section A",
-    group: "Group 2",
-    department: "Computer Science",
-  },
-];
-
 const AdminClasses = () => {
-  const [schedules, setSchedules] = useState(() => {
-    try {
-      const saved = localStorage.getItem("campus_sync_timetables_v2");
-      return saved ? JSON.parse(saved) : INITIAL_SCHEDULES;
-    } catch {
-      return INITIAL_SCHEDULES;
-    }
-  });
+  const [schedules, setSchedules] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [viewMode, setViewMode] = useState("matrix"); // "matrix" | "cards"
   const [filterDay, setFilterDay] = useState("all");
@@ -744,7 +569,7 @@ const AdminClasses = () => {
     subject: PREDEFINED_SUBJECTS[0],
     customSubject: "",
     type: "Lecture",
-    faculty: "Dr. Rajesh Sharma",
+    faculty: "",
     room: "LH-101",
     section: "Section A",
     group: "All",
@@ -752,12 +577,31 @@ const AdminClasses = () => {
   });
   const [isCustomSubject, setIsCustomSubject] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem("campus_sync_timetables_v2", JSON.stringify(schedules));
-  }, [schedules]);
+  const fetchSchedules = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`${BACKEND_URL}api/v1/timetable`, {
+        withCredentials: true,
+      });
+      if (res.data?.success && Array.isArray(res.data.schedules)) {
+        setSchedules(res.data.schedules);
+      } else {
+        setSchedules([]);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to load timetable records");
+      setSchedules([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Handle Form Submission (CRITICAL: e.preventDefault() prevents page redirect!)
-  const handleAddSchedule = (e) => {
+  useEffect(() => {
+    fetchSchedules();
+  }, []);
+
+  // Handle Form Submission
+  const handleAddSchedule = async (e) => {
     e.preventDefault();
 
     const finalSubject = isCustomSubject ? formData.customSubject.trim() : formData.subject;
@@ -772,50 +616,59 @@ const AdminClasses = () => {
       return;
     }
 
-    const newSlot = {
-      id: `slot_${Date.now()}`,
-      day: formData.day,
-      timeSlot: formData.timeSlot,
-      subject: finalSubject,
-      type: formData.type,
-      faculty: formData.faculty.trim(),
-      room: formData.room.trim(),
-      section: formData.section,
-      group: formData.group,
-      department: formData.department,
-    };
+    try {
+      const payload = {
+        day: formData.day,
+        timeSlot: formData.timeSlot,
+        subject: finalSubject,
+        type: formData.type,
+        faculty: formData.faculty.trim(),
+        room: formData.room.trim(),
+        section: formData.section,
+        group: formData.group,
+        department: formData.department,
+      };
 
-    setSchedules((prev) => [newSlot, ...prev]);
-    setIsModalOpen(false);
-    toast.success(`Schedule period added: ${finalSubject} (${formData.day} ${formData.timeSlot})`);
+      const res = await axios.post(`${BACKEND_URL}api/v1/timetable`, payload, {
+        withCredentials: true,
+      });
 
-    // Reset form
-    setFormData({
-      day: "Monday",
-      timeSlot: TIME_SLOTS[0],
-      subject: PREDEFINED_SUBJECTS[0],
-      customSubject: "",
-      type: "Lecture",
-      faculty: "Dr. Rajesh Sharma",
-      room: "LH-101",
-      section: "Section A",
-      group: "All",
-      department: "Computer Science",
-    });
-    setIsCustomSubject(false);
-  };
+      if (res.data?.success) {
+        toast.success(`Schedule period added: ${finalSubject} (${formData.day} ${formData.timeSlot})`);
+        fetchSchedules();
+        setIsModalOpen(false);
 
-  const handleDeleteSlot = (id, subName) => {
-    if (window.confirm(`Are you sure you want to remove "${subName}" from the schedule?`)) {
-      setSchedules((prev) => prev.filter((s) => s.id !== id));
-      toast.info(`Removed "${subName}" from timetable.`);
+        // Reset form
+        setFormData({
+          day: "Monday",
+          timeSlot: TIME_SLOTS[0],
+          subject: PREDEFINED_SUBJECTS[0],
+          customSubject: "",
+          type: "Lecture",
+          faculty: "",
+          room: "LH-101",
+          section: "Section A",
+          group: "All",
+          department: "Computer Science",
+        });
+        setIsCustomSubject(false);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to create timetable slot");
     }
   };
 
-  const handleResetSchedule = () => {
-    if (window.confirm("Reset timetable back to official University standard template?")) {
-      setSchedules(INITIAL_SCHEDULES);
-      toast.success("Timetable restored to institutional standard.");
+  const handleDeleteSlot = async (id, subName) => {
+    if (window.confirm(`Are you sure you want to remove "${subName}" from the schedule?`)) {
+      try {
+        await axios.delete(`${BACKEND_URL}api/v1/timetable/${id}`, {
+          withCredentials: true,
+        });
+        setSchedules((prev) => prev.filter((s) => (s._id || s.id) !== id));
+        toast.info(`Removed "${subName}" from timetable.`);
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Failed to delete timetable slot");
+      }
     }
   };
 
@@ -829,9 +682,9 @@ const AdminClasses = () => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const match =
-          s.subject.toLowerCase().includes(q) ||
-          s.faculty.toLowerCase().includes(q) ||
-          s.room.toLowerCase().includes(q);
+          (s.subject || "").toLowerCase().includes(q) ||
+          (s.faculty || "").toLowerCase().includes(q) ||
+          (s.room || "").toLowerCase().includes(q);
         if (!match) return false;
       }
       return true;
@@ -856,10 +709,6 @@ const AdminClasses = () => {
               </p>
             </div>
             <div className="action-buttons">
-              <SecondaryButton onClick={handleResetSchedule}>
-                🔄 Reset Default
-              </SecondaryButton>
-              
               <PrimaryButton onClick={() => setIsModalOpen(true)}>
                 ➕ Add Schedule Slot
               </PrimaryButton>
@@ -1004,12 +853,12 @@ const AdminClasses = () => {
                             <td key={time}>
                               {matchingPeriods.length > 0 ? (
                                 matchingPeriods.map((slot) => (
-                                  <SlotPill key={slot.id} $type={slot.type}>
+                                  <SlotPill key={slot._id || slot.id} $type={slot.type}>
                                     <button
                                       type="button"
                                       className="delete-btn"
                                       title="Remove slot"
-                                      onClick={() => handleDeleteSlot(slot.id, slot.subject)}
+                                      onClick={() => handleDeleteSlot(slot._id || slot.id, slot.subject)}
                                     >
                                       ✕
                                     </button>
@@ -1051,41 +900,47 @@ const AdminClasses = () => {
             </TableWrapper>
           ) : (
             /* VIEW MODE 2: CARDS GRID */
-            <CardsGrid>
-              {filteredSchedules.map((slot) => (
-                <ClassCard key={slot.id} $type={slot.type}>
-                  <div className="card-header">
-                    <span className="day-badge">{slot.day}</span>
-                    <span className="time-badge">⏰ {slot.timeSlot}</span>
-                  </div>
-                  <div className="subject">{slot.subject}</div>
-                  <div className="details">
-                    <div>
-                      <strong>👨‍🏫 Instructor:</strong> {slot.faculty}
+            filteredSchedules.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "50px", background: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", color: "#64748b" }}>
+                No timetable schedules found. Click "Add Schedule Slot" above to create course lecture periods.
+              </div>
+            ) : (
+              <CardsGrid>
+                {filteredSchedules.map((slot) => (
+                  <ClassCard key={slot._id || slot.id} $type={slot.type}>
+                    <div className="card-header">
+                      <span className="day-badge">{slot.day}</span>
+                      <span className="time-badge">⏰ {slot.timeSlot}</span>
                     </div>
-                    <div>
-                      <strong>🏫 Room / Hall:</strong> {slot.room}
+                    <div className="subject">{slot.subject}</div>
+                    <div className="details">
+                      <div>
+                        <strong>👨‍🏫 Instructor:</strong> {slot.faculty}
+                      </div>
+                      <div>
+                        <strong>🏫 Room / Hall:</strong> {slot.room}
+                      </div>
+                      <div>
+                        <strong>🏛️ Dept:</strong> {slot.department}
+                      </div>
                     </div>
-                    <div>
-                      <strong>🏛️ Dept:</strong> {slot.department}
+                    <div className="footer-tags">
+                      <div className="badges">
+                        <span>{slot.type}</span>
+                        <span>{slot.section}</span>
+                        {slot.group !== "All" && <span>{slot.group}</span>}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSlot(slot._id || slot.id, slot.subject)}
+                      >
+                        Remove
+                      </button>
                     </div>
-                  </div>
-                  <div className="footer-tags">
-                    <div className="badges">
-                      <span>{slot.type}</span>
-                      <span>{slot.section}</span>
-                      {slot.group !== "All" && <span>{slot.group}</span>}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSlot(slot.id, slot.subject)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </ClassCard>
-              ))}
-            </CardsGrid>
+                  </ClassCard>
+                ))}
+              </CardsGrid>
+            )
           )}
 
           {/* ADD SCHEDULE MODAL */}

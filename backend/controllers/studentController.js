@@ -328,6 +328,11 @@ export const verifyStudentLoginOtp = async (req, res) => {
       return Response(res, 400, false, "Invalid OTP");
     }
 
+    // Invalidate OTP immediately to prevent replay attacks
+    student.otp = undefined;
+    student.otpExpire = undefined;
+    await student.save();
+
     const expiresIn = await getTokenExpiresIn();
     const token = jwt.sign(
       { id: student._id, role: "student" },
@@ -456,6 +461,18 @@ export const getAllStudents = async (req, res) => {
   }
 };
 
+export const getStudentDirectory = async (req, res) => {
+  try {
+    const students = await Student.find(
+      {},
+      "_id name rollno department batch email semester section"
+    ).sort({ name: 1 });
+    res.status(200).json({ success: true, students });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const getAllBatches = async (req, res) => {
   try {
     const batches = await Student.distinct("batch");
@@ -490,14 +507,11 @@ export const getStudentProfile = async (req, res) => {
       } catch (e) {}
     }
 
-    let student = null;
-    if (studentId) {
-      student = await Student.findById(studentId);
-    }
-    if (!student && req.headers["x-user-email"]) {
-      student = await Student.findOne({ email: req.headers["x-user-email"].toLowerCase().trim() });
+    if (!studentId) {
+      return res.status(401).json({ success: false, message: "Unauthorized: Valid authentication required." });
     }
 
+    const student = await Student.findById(studentId);
     if (!student) {
       return res.status(404).json({ success: false, message: "Student not found" });
     }
@@ -538,18 +552,21 @@ export const getStudentCount = async (req, res) => {
 export const updateStudentProfile = async (req, res) => {
   try {
     const { name, email, mobileno, gender } = req.body;
-    // Extract token from header
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ message: "No token provided" });
+    let studentId = req.user?.id || req.user?._id;
+    if (!studentId && req.headers.authorization) {
+      try {
+        const token = req.headers.authorization.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        studentId = decoded?.id;
+      } catch (e) {}
     }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const studentId = decoded.id;
+    if (!studentId) {
+      return res.status(401).json({ success: false, message: "No token or authentication provided" });
+    }
 
     const student = await Student.findById(studentId);
     if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(404).json({ success: false, message: "Student not found" });
     }
 
     if (name) student.name = name;

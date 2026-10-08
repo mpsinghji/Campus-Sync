@@ -153,10 +153,34 @@ export const getAllAttendance = async (req, res, next) => {
   }
 };
 
-// Student's own attendance
+// Student's own attendance (or authorized admin/teacher lookup)
 export const getStudentAttendance = async (req, res, next) => {
   try {
-    const studentId = req.student?.id || req.student?._id || req.query?.studentId;
+    let studentId;
+
+    if (req.role === "student") {
+      studentId = req.user?._id?.toString() || req.user?.id?.toString();
+      if (req.query?.studentId && req.query.studentId.toString() !== studentId) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden: Students are only authorized to view their own attendance records.",
+        });
+      }
+    } else if (req.role === "admin" || req.role === "teacher") {
+      studentId = req.query?.studentId;
+      if (!studentId) {
+        return res.status(400).json({
+          success: false,
+          message: "Student ID query parameter is required for staff lookup.",
+        });
+      }
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: Insufficient privileges to view attendance.",
+      });
+    }
+
     if (!studentId) {
       return res.status(400).json({ success: false, message: "Student ID is required" });
     }

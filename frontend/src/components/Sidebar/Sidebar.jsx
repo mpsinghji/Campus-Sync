@@ -242,7 +242,7 @@ const getSavedDropdowns = () => {
 const saveDropdowns = (state) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {}
+  } catch { }
 };
 
 const UnifiedSidebar = ({ role: propRole }) => {
@@ -269,7 +269,7 @@ const UnifiedSidebar = ({ role: propRole }) => {
       try {
         const saved = localStorage.getItem("role_sidebar_permissions");
         if (saved) setMatrixPermissions(JSON.parse(saved));
-      } catch {}
+      } catch { }
     };
     window.addEventListener("campus_sync_permissions_updated", handlePermUpdate);
     return () => window.removeEventListener("campus_sync_permissions_updated", handlePermUpdate);
@@ -310,7 +310,7 @@ const UnifiedSidebar = ({ role: propRole }) => {
         const parsed = JSON.parse(data);
         return parsed.email?.toLowerCase().trim() === "admin@campus-sync.com";
       }
-    } catch {}
+    } catch { }
     return false;
   }, [location.pathname]);
 
@@ -324,9 +324,17 @@ const UnifiedSidebar = ({ role: propRole }) => {
         const insertIdx = settingsIdx >= 0 ? settingsIdx : list.length;
         list.splice(insertIdx, 0, {
           id: "master-control",
-          label: "👑 Master Control",
-          icon: BsPersonBadge,
-          path: "/master-control",
+          label: "Master Control",
+          icon: BsShieldLock,
+          isDropdown: true,
+          children: [
+            { label: "Overview & Dashboard", path: "/master-control?tab=overview" },
+            { label: "Universal Users & Directory", path: "/master-control?tab=users" },
+            { label: "IP Security & Firewall (SOC)", path: "/master-control?tab=ipSecurity" },
+            { label: "Role Sidebar Matrix (RBAC)", path: "/master-control?tab=matrix" },
+            { label: "Security & System Parameters", path: "/master-control?tab=security" },
+            { label: "Tuition & Fee Structures", path: "/master-control?tab=feeRates" },
+          ],
         });
       }
     }
@@ -351,7 +359,7 @@ const UnifiedSidebar = ({ role: propRole }) => {
             list = list.filter((i) => i.id !== "library");
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // Dynamic filtering according to Super Admin Matrix Permissions
@@ -393,7 +401,7 @@ const UnifiedSidebar = ({ role: propRole }) => {
             return list.filter((i) => !blocked.includes(i.id));
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     return list;
@@ -401,13 +409,49 @@ const UnifiedSidebar = ({ role: propRole }) => {
 
   const isPathActive = (path) => {
     if (!path) return false;
-    const curr = location.pathname.toLowerCase();
+    const currPath = location.pathname.toLowerCase();
+    const currSearch = location.search.toLowerCase();
     const p = path.toLowerCase();
-    if (curr === p) return true;
-    if (p === "/master-control" && (curr === "/admin/master-control" || curr === "/super-admin")) return true;
-    if (p === "/admin/master-control" && (curr === "/master-control" || curr === "/super-admin")) return true;
+
+    // Query-specific path match (e.g. /master-control?tab=users)
+    if (p.includes("?")) {
+      const [pBase, pQuery] = p.split("?");
+      if (currPath === pBase) {
+        if (pQuery === "tab=overview") {
+          return !currSearch || currSearch.includes("tab=overview");
+        }
+        return currSearch.includes(pQuery);
+      }
+      return false;
+    }
+
+    if (currPath === p) {
+      if (p === "/master-control" && currSearch && !currSearch.includes("tab=overview")) return false;
+      return true;
+    }
+    if (p === "/master-control" && (currPath === "/admin/master-control" || currPath === "/super-admin")) return true;
+    if (p === "/admin/master-control" && (currPath === "/master-control" || currPath === "/super-admin")) return true;
     return false;
   };
+
+  // Auto-expand dropdown containing the active route
+  useEffect(() => {
+    itemsToRender.forEach((item) => {
+      if (item.isDropdown && item.children) {
+        const hasActiveChild = item.children.some((child) => isPathActive(child.path));
+        if (hasActiveChild) {
+          setOpenDropdowns((prev) => {
+            if (!prev[item.id]) {
+              const updated = { ...prev, [item.id]: true };
+              saveDropdowns(updated);
+              return updated;
+            }
+            return prev;
+          });
+        }
+      }
+    });
+  }, [location.pathname, location.search, itemsToRender]);
 
   const handleNavigation = (path) => {
     navigate(path);

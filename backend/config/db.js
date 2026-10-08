@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Admin from "../models/adminModel.js";
 import { SystemSettings } from "../models/systemSettingsModel.js";
+import { reloadIpBlockCache } from "../middlewares/ipSecurityMiddleware.js";
 
 const initializeSystem = async () => {
   try {
@@ -43,6 +44,9 @@ const initializeSystem = async () => {
       settings.bypassedEmails.push(superAdminEmail);
       await settings.save();
     }
+
+    // Warm up active IP block cache from MongoDB
+    await reloadIpBlockCache();
   } catch (initErr) {
     console.error("System initialization warning:", initErr.message);
   }

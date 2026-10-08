@@ -18,32 +18,39 @@ import {
   toggleRestrictUserMaster,
   getFeeRatesMaster,
   updateFeeRatesMaster,
+  resetRateLimitMaster,
 } from "../controllers/adminController.js";
-import { isAuthenticated } from "../middlewares/auth.js";
+import { isAuthenticated, requireAdmin, requireSuperAdmin } from "../middlewares/auth.js";
 import { validateUserRegistration } from "../middlewares/userValidator.js";
 import { validateOtp } from "../middlewares/otpValidator.js";
+import { authLimiter, otpLimiter } from "../middlewares/rateLimiter.js";
 
 const adminRoute = express.Router();
 
-adminRoute.post("/register", validateUserRegistration, adminRegister);
-adminRoute.post("/login", adminLogin);
-adminRoute.get("/dashboard", getDashboardData);
-adminRoute.get("/profile", isAuthenticated, getAdminProfile);
-adminRoute.post("/change-password", isAuthenticated, changeAdminPassword);
-adminRoute.post("/login/verify/:id", validateOtp, verifyAdminLoginOtp);
-adminRoute.get("/login/resend/:id", resendAdminLoginOtp);
+// Public auth endpoints
+adminRoute.post("/login", authLimiter, adminLogin);
+adminRoute.post("/login/verify/:id", otpLimiter, validateOtp, verifyAdminLoginOtp);
+adminRoute.get("/login/resend/:id", otpLimiter, resendAdminLoginOtp);
+adminRoute.get("/resend-otp/:id", otpLimiter, resendAdminLoginOtp);
 adminRoute.post("/logout", adminLogout);
 
-// Master Admin Endpoints
-adminRoute.get("/master/all-users", getAllUsersMaster);
-adminRoute.put("/master/user/:role/:id", updateUserMaster);
-adminRoute.delete("/master/user/:role/:id", deleteUserMaster);
-adminRoute.post("/master/reset-password", resetPasswordMaster);
-adminRoute.put("/master/toggle-restrict-user", toggleRestrictUserMaster);
-adminRoute.get("/master/fee-rates", getFeeRatesMaster);
-adminRoute.put("/master/fee-rates", updateFeeRatesMaster);
-adminRoute.get("/master/role-permissions", getRolePermissionsMaster);
-adminRoute.put("/master/role-permissions", updateRolePermissionsMaster);
-adminRoute.post("/master/seed-campus-data", seedCampusDataMaster);
+// Protected Admin Endpoints (Admins & Superadmin)
+adminRoute.post("/register", isAuthenticated, requireAdmin, validateUserRegistration, adminRegister);
+adminRoute.get("/dashboard", isAuthenticated, requireAdmin, getDashboardData);
+adminRoute.get("/profile", isAuthenticated, requireAdmin, getAdminProfile);
+adminRoute.post("/change-password", isAuthenticated, requireAdmin, changeAdminPassword);
+
+// Protected Master Admin Endpoints (Strictly Superadmin Only)
+adminRoute.get("/master/all-users", isAuthenticated, requireSuperAdmin, getAllUsersMaster);
+adminRoute.put("/master/user/:role/:id", isAuthenticated, requireSuperAdmin, updateUserMaster);
+adminRoute.delete("/master/user/:role/:id", isAuthenticated, requireSuperAdmin, deleteUserMaster);
+adminRoute.post("/master/reset-password", isAuthenticated, requireSuperAdmin, resetPasswordMaster);
+adminRoute.put("/master/toggle-restrict-user", isAuthenticated, requireSuperAdmin, toggleRestrictUserMaster);
+adminRoute.get("/master/fee-rates", isAuthenticated, requireSuperAdmin, getFeeRatesMaster);
+adminRoute.put("/master/fee-rates", isAuthenticated, requireSuperAdmin, updateFeeRatesMaster);
+adminRoute.get("/master/role-permissions", isAuthenticated, requireSuperAdmin, getRolePermissionsMaster);
+adminRoute.put("/master/role-permissions", isAuthenticated, requireSuperAdmin, updateRolePermissionsMaster);
+adminRoute.post("/master/seed-campus-data", isAuthenticated, requireSuperAdmin, seedCampusDataMaster);
+adminRoute.post("/master/rate-limit/reset", isAuthenticated, requireSuperAdmin, resetRateLimitMaster);
 
 export default adminRoute;

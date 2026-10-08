@@ -3,6 +3,7 @@ import {
   teacherLogin,
   teacherRegister,
   getAllTeachers,
+  getTeacherDirectory,
   deleteTeacher,
   getTeacherProfile,
   verifyTeacherLoginOtp,
@@ -13,25 +14,30 @@ import {
 } from "../controllers/teacherController.js";
 import { validateUserRegistration } from "../middlewares/userValidator.js";
 import { validateOtp } from "../middlewares/otpValidator.js";
-import { isAuthenticated } from "../middlewares/auth.js"; // Assuming you have an auth middleware
+import { isAuthenticated, requireAdmin } from "../middlewares/auth.js";
+import { authLimiter, otpLimiter } from "../middlewares/rateLimiter.js";
 
 const teacherRoute = express.Router();
 
-teacherRoute.post("/register", validateUserRegistration, teacherRegister);
+teacherRoute.post("/register", isAuthenticated, requireAdmin, validateUserRegistration, teacherRegister);
 
-teacherRoute.post("/login", teacherLogin);
+teacherRoute.post("/login", authLimiter, teacherLogin);
 
-teacherRoute.get("/getall", getAllTeachers);
+teacherRoute.get("/directory", isAuthenticated, getTeacherDirectory);
+teacherRoute.get("/getall", isAuthenticated, getAllTeachers);
 
-teacherRoute.delete("/:id", deleteTeacher);
-teacherRoute.put("/:id", updateTeacher);
-
-teacherRoute.get("/profile", getTeacherProfile);
+// Profile endpoints (literal paths BEFORE parametric /:id paths)
+teacherRoute.get("/profile", isAuthenticated, getTeacherProfile);
 teacherRoute.put("/profile", isAuthenticated, updateTeacherProfile);
 teacherRoute.post("/change-password", isAuthenticated, changeTeacherPassword);
 
-teacherRoute.post("/login/verify/:id", validateOtp, verifyTeacherLoginOtp);
+// Parametric routes
+teacherRoute.delete("/:id", isAuthenticated, requireAdmin, deleteTeacher);
+teacherRoute.put("/:id", isAuthenticated, requireAdmin, updateTeacher);
 
-teacherRoute.get("/login/resend/:id", resendTeacherLoginOtp);
+teacherRoute.post("/login/verify/:id", otpLimiter, validateOtp, verifyTeacherLoginOtp);
+
+teacherRoute.get("/login/resend/:id", otpLimiter, resendTeacherLoginOtp);
+teacherRoute.get("/resend-otp/:id", otpLimiter, resendTeacherLoginOtp);
 
 export default teacherRoute;

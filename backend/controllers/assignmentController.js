@@ -1,4 +1,6 @@
 import Assignment from '../models/assignmentSchema.js';
+import { Submission } from '../models/submissionModel.js';
+import Student from '../models/studentModel.js';
 
 export const getAllAssignments = async (req, res) => {
     try {
@@ -148,6 +150,100 @@ export const countAssignments = async (req, res) => {
     try {
         const count = await Assignment.countDocuments();
         res.status(200).json({ success: true, count });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const getAllSubmissions = async (req, res) => {
+    try {
+        const { assignmentId } = req.query;
+        const filter = {};
+        if (assignmentId) filter.assignmentId = assignmentId;
+
+        // Role-based scoping: students only see their own submissions
+        if (req.user?.role === "student") {
+            filter.studentId = req.user._id;
+        }
+
+        const submissions = await Submission.find(filter)
+            .populate("studentId", "name rollno email department batch")
+            .populate("assignmentId", "title subject dueDate")
+            .sort({ submittedAt: -1 });
+
+        res.status(200).json({ success: true, count: submissions.length, submissions });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const submitAssignment = async (req, res) => {
+    try {
+        const { assignmentId, fileUrl, remarks } = req.body;
+        if (!assignmentId || !fileUrl) {
+            return res.status(400).json({ success: false, message: "assignmentId and fileUrl are required" });
+        }
+
+        const assignment = await Assignment.findById(assignmentId);
+        if (!assignment) {
+            return res.status(404).json({ success: false, message: "Assignment not found" });
+        }
+
+        let studentId = req.user?._id;
+        let studentName = req.user?.name;
+        let studentRollno = req.user?.rollno;
+
+        if (req.user?.role === "student") {
+            const student = await Student.findById(studentId);
+            if (student) {
+                studentName = student.name;
+                studentRollno = student.rollno;
+            }
+        } else if (req.body.studentRollno) {
+            const student = await Student.findOne({ rollno: req.body.studentRollno.trim() });
+            if (student) {
+                studentId = student._id;
+                studentName = student.name;
+                studentRollno = student.rollno;
+            }
+        }
+
+        const submission = new Submission({
+            assignmentId,
+            assignmentTitle: assignment.title,
+            studentId,
+            studentRollno: studentRollno || "N/A",
+            studentName: studentName || "Student",
+            subject: assignment.subject || "General",
+            fileUrl: fileUrl.trim(),
+            status: "Submitted",
+            remarks: remarks || "",
+        });
+
+        await submission.save();
+
+        res.status(201).json({ success: true, message: "Assignment submitted successfully", submission });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const gradeSubmission = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { score, status, remarks } = req.body;
+
+        const updated = await Submission.findByIdAndUpdate(
+            id,
+            { score: Number(score), status: status || "Graded", remarks: remarks || "" },
+            { new: true }
+        );
+
+        if (!updated) {
+            return res.status(404).json({ success: false, message: "Submission not found" });
+        }
+
+        res.status(200).json({ success: true, message: "Submission graded successfully", submission: updated });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

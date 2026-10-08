@@ -441,57 +441,6 @@ const FormGroup = styled.div`
   }
 `;
 
-const INITIAL_SUBMISSIONS = [
-  {
-    id: "sub_1",
-    rollno: "CS2024001",
-    studentName: "Aarav Sharma",
-    assignmentTitle: "Lab Assignment 3: Red-Black Balanced Trees",
-    subject: "Data Structures & Algorithms",
-    submittedAt: "Yesterday at 4:30 PM",
-    fileUrl: "assignment_aarav.pdf",
-    score: 95,
-    status: "Graded",
-    remarks: "Clean implementation of tree rotations with edge case handling.",
-  },
-  {
-    id: "sub_2",
-    rollno: "CS2024002",
-    studentName: "Diya Patel",
-    assignmentTitle: "Lab Assignment 3: Red-Black Balanced Trees",
-    subject: "Data Structures & Algorithms",
-    submittedAt: "2 days ago",
-    fileUrl: "diya_trees_v2.cpp",
-    score: 98,
-    status: "Graded",
-    remarks: "Exceptional code quality and performance benchmarks.",
-  },
-  {
-    id: "sub_3",
-    rollno: "CS2024003",
-    studentName: "Rohan Verma",
-    assignmentTitle: "ER-Modeling & Normalization Case Study",
-    subject: "Database Management Systems",
-    submittedAt: "Today at 10:15 AM",
-    fileUrl: "rohan_dbms.pdf",
-    score: 82,
-    status: "Graded",
-    remarks: "Well structured schemas, minor redundancy in 3NF decomposition.",
-  },
-  {
-    id: "sub_4",
-    rollno: "CS2024004",
-    studentName: "Ananya Iyer",
-    assignmentTitle: "Process Synchronization & Semaphore Simulation",
-    subject: "Operating Systems",
-    submittedAt: "Today at 11:45 AM",
-    fileUrl: "ananya_semaphore.c",
-    score: 90,
-    status: "Graded",
-    remarks: "Mutex and deadlocks successfully simulated with POSIX threads.",
-  },
-];
-
 const AdminAssignments = () => {
   const [activeTab, setActiveTab] = useState("courseworks"); // "courseworks" | "submissions"
   const [assignments, setAssignments] = useState([]);
@@ -519,24 +468,27 @@ const AdminAssignments = () => {
   const [submitting, setSubmitting] = useState(false);
 
   // Submissions State
-  const [submissionsList, setSubmissionsList] = useState(() => {
-    try {
-      const saved = localStorage.getItem("campus_sync_assignment_submissions_v2");
-      return saved ? JSON.parse(saved) : INITIAL_SUBMISSIONS;
-    } catch {
-      return INITIAL_SUBMISSIONS;
-    }
-  });
+  const [submissionsList, setSubmissionsList] = useState([]);
 
-  useEffect(() => {
-    localStorage.setItem(
-      "campus_sync_assignment_submissions_v2",
-      JSON.stringify(submissionsList)
-    );
-  }, [submissionsList]);
+  const fetchSubmissions = async () => {
+    try {
+      const response = await axios.get(`${BACKEND_URL}api/v1/assignments/submissions`, {
+        withCredentials: true,
+      });
+      if (response.data?.success && Array.isArray(response.data.submissions)) {
+        setSubmissionsList(response.data.submissions);
+      } else {
+        setSubmissionsList([]);
+      }
+    } catch (error) {
+      console.error("Error fetching submissions:", error);
+      setSubmissionsList([]);
+    }
+  };
 
   useEffect(() => {
     fetchAssignments();
+    fetchSubmissions();
   }, []);
 
   const fetchAssignments = async () => {
@@ -612,12 +564,11 @@ const AdminAssignments = () => {
     return submissionsList.filter((s) => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const match =
-          s.rollno?.toLowerCase().includes(q) ||
-          s.studentName?.toLowerCase().includes(q) ||
-          s.assignmentTitle?.toLowerCase().includes(q) ||
-          s.subject?.toLowerCase().includes(q);
-        if (!match) return false;
+        const roll = (s.studentRollno || s.rollno || "").toLowerCase();
+        const name = (s.studentName || "").toLowerCase();
+        const title = (s.assignmentTitle || "").toLowerCase();
+        const sub = (s.subject || "").toLowerCase();
+        if (!roll.includes(q) && !name.includes(q) && !title.includes(q) && !sub.includes(q)) return false;
       }
       return true;
     });
@@ -818,33 +769,36 @@ const AdminAssignments = () => {
                 </thead>
                 <tbody>
                   {filteredSubmissions.length > 0 ? (
-                    filteredSubmissions.map((s) => (
-                      <tr key={s.id}>
-                        <td style={{ fontWeight: 800, color: "#0f766e" }}>{s.rollno}</td>
-                        <td style={{ fontWeight: 700 }}>{s.studentName}</td>
-                        <td style={{ fontWeight: 600 }}>{s.assignmentTitle}</td>
-                        <td>{s.subject}</td>
-                        <td style={{ fontSize: "12px", color: "#64748b" }}>{s.submittedAt}</td>
-                        <td>
-                          <ScoreBadge $score={s.score}>{s.score}/100</ScoreBadge>
-                        </td>
-                        <td>
-                          <span
-                            style={{
-                              background: "#dcfce7",
-                              color: "#15803d",
-                              padding: "2px 8px",
-                              borderRadius: "4px",
-                              fontSize: "11px",
-                              fontWeight: 700,
-                            }}
-                          >
-                            ✓ {s.status}
-                          </span>
-                        </td>
-                        <td style={{ fontSize: "12px", color: "#475569" }}>{s.remarks}</td>
-                      </tr>
-                    ))
+                    filteredSubmissions.map((s) => {
+                      const dateStr = s.submittedAt ? new Date(s.submittedAt).toLocaleDateString() : "Recently";
+                      return (
+                        <tr key={s._id || s.id}>
+                          <td style={{ fontWeight: 800, color: "#0f766e" }}>{s.studentRollno || s.rollno || "—"}</td>
+                          <td style={{ fontWeight: 700 }}>{s.studentName}</td>
+                          <td style={{ fontWeight: 600 }}>{s.assignmentTitle}</td>
+                          <td>{s.subject}</td>
+                          <td style={{ fontSize: "12px", color: "#64748b" }}>{dateStr}</td>
+                          <td>
+                            <ScoreBadge $score={s.score || 0}>{s.score !== undefined ? `${s.score}/100` : "Pending"}</ScoreBadge>
+                          </td>
+                          <td>
+                            <span
+                              style={{
+                                background: s.status === "Graded" ? "#dcfce7" : "#eff6ff",
+                                color: s.status === "Graded" ? "#15803d" : "#1d4ed8",
+                                padding: "2px 8px",
+                                borderRadius: "4px",
+                                fontSize: "11px",
+                                fontWeight: 700,
+                              }}
+                            >
+                              ✓ {s.status || "Submitted"}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: "12px", color: "#475569" }}>{s.remarks || "—"}</td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td colSpan="8" style={{ textAlign: "center", padding: "36px", color: "#64748b" }}>

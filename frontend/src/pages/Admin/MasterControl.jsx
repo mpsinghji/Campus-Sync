@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import axios from "axios";
 import Cookies from "js-cookie";
 import { ToastContainer, toast } from "react-toastify";
 import { BACKEND_URL } from "../../constants/url";
 import QuickVaultNotes from "../../components/Admin/QuickVaultNotes";
+import IpSecurityCenter from "../../components/Admin/IpSecurityCenter";
 import {
   BsShieldLock,
   BsShieldCheck,
@@ -26,6 +27,9 @@ import {
   BsBook,
   BsCalendarEvent,
   BsCashCoin,
+  BsGrid3X3GapFill,
+  BsArrowRightShort,
+  BsShieldShaded,
 } from "react-icons/bs";
 
 const SUPER_ADMIN_EMAIL = "admin@campus-sync.com";
@@ -240,36 +244,6 @@ const MetricCard = styled.div`
   }
 `;
 
-const TabBar = styled.div`
-  display: flex;
-  gap: 8px;
-  background: #e2e8f0;
-  padding: 4px;
-  border-radius: 10px;
-  margin-bottom: 22px;
-  width: fit-content;
-  flex-wrap: wrap;
-`;
-
-const TabButton = styled.button`
-  padding: 10px 20px;
-  font-size: 13px;
-  font-weight: 700;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: ${(props) => (props.$active ? "#ffffff" : "transparent")};
-  color: ${(props) => (props.$active ? "#0f172a" : "#64748b")};
-  box-shadow: ${(props) => (props.$active ? "0 2px 6px rgba(0,0,0,0.06)" : "none")};
-
-  &:hover {
-    color: #0f172a;
-  }
-`;
 
 const FilterSection = styled.div`
   display: flex;
@@ -444,17 +418,17 @@ const RoleBadge = styled.span`
   }};
   border: 1px solid
     ${(props) => {
-      switch (props.$category) {
-        case "admin":
-          return "#a7f3d0";
-        case "teacher":
-          return "#bfdbfe";
-        case "student":
-          return "#ddd6fe";
-        default:
-          return "#cbd5e1";
-      }
-    }};
+    switch (props.$category) {
+      case "admin":
+        return "#a7f3d0";
+      case "teacher":
+        return "#bfdbfe";
+      case "student":
+        return "#ddd6fe";
+      default:
+        return "#cbd5e1";
+    }
+  }};
 `;
 
 const ResponsibilityTag = styled.span`
@@ -551,11 +525,11 @@ const ActionBtn = styled.button`
 
   &:hover {
     background: ${(props) => {
-      if (props.$danger) return "#fecaca";
-      if (props.$restrict) return "#fde68a";
-      if (props.$unrestrict) return "#bbf7d0";
-      return "#e2e8f0";
-    }};
+    if (props.$danger) return "#fecaca";
+    if (props.$restrict) return "#fde68a";
+    if (props.$unrestrict) return "#bbf7d0";
+    return "#e2e8f0";
+  }};
   }
 `;
 
@@ -712,7 +686,11 @@ const FormGroup = styled.div`
 `;
 
 const MasterControl = () => {
-  const [activeTab, setActiveTab] = useState("users"); // "users" | "matrix" | "security"
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Active workspace dynamically synced with URL search param (?tab=overview|users|ipSecurity|matrix|security|feeRates)
+  const activeTab = searchParams.get("tab") || "overview";
   const [loading, setLoading] = useState(true);
   const [usersData, setUsersData] = useState({
     admins: [],
@@ -727,16 +705,22 @@ const MasterControl = () => {
   const [sessionTimeoutDays, setSessionTimeoutDays] = useState(7);
   const [sessionTimeoutUnit, setSessionTimeoutUnit] = useState("days"); // "hours" | "days"
   const [sessionTimeoutValue, setSessionTimeoutValue] = useState(7);
-  const [lateFeeFlatAfterDue, setLateFeeFlatAfterDue] = useState(500);
-  const [lateFeeGraceDays, setLateFeeGraceDays] = useState(7);
-  const [lateFeePerDay, setLateFeePerDay] = useState(10);
   const [updatingOtpSwitch, setUpdatingOtpSwitch] = useState(false);
+  const [resettingRateLimit, setResettingRateLimit] = useState(false);
 
   // Filters
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState(() => searchParams.get("cat") || "all");
   const [searchQuery, setSearchQuery] = useState("");
   const [userPage, setUserPage] = useState(1);
   const userPageSize = 10;
+
+  // Sync category if URL parameter specifies ?cat=
+  useEffect(() => {
+    const cat = searchParams.get("cat");
+    if (cat) {
+      setSelectedCategory(cat);
+    }
+  }, [searchParams]);
 
   // Direct Password Reset Modal State
   const [resetModalUser, setResetModalUser] = useState(null);
@@ -768,6 +752,16 @@ const MasterControl = () => {
   const [newDeptKey, setNewDeptKey] = useState("");
   const [newDeptRate, setNewDeptRate] = useState(45000);
   const [newDeptYears, setNewDeptYears] = useState(4);
+  const jumpTo = (tab, category = null) => {
+    const params = new URLSearchParams();
+    params.set("tab", tab);
+    if (category) {
+      params.set("cat", category);
+      setSelectedCategory(category);
+    }
+    setSearchParams(params);
+  };
+
 
   useEffect(() => {
     fetchMasterUsers();
@@ -863,9 +857,6 @@ const MasterControl = () => {
         setSessionTimeoutDays(s.sessionTimeoutDays || 7);
         setSessionTimeoutUnit(s.sessionTimeoutUnit || "days");
         setSessionTimeoutValue(s.sessionTimeoutValue || s.sessionTimeoutDays || 7);
-        setLateFeeFlatAfterDue(s.lateFeeFlatAfterDue || 500);
-        setLateFeeGraceDays(s.lateFeeGraceDays || 7);
-        setLateFeePerDay(s.lateFeePerDay || 10);
       }
     } catch (e) {
       console.error("Error loading security settings:", e);
@@ -888,7 +879,7 @@ const MasterControl = () => {
         setRoleMatrix(merged);
         localStorage.setItem("role_sidebar_permissions", JSON.stringify(merged));
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   // Toggle Global OTP Bypass with simple ON/OFF switch
@@ -902,9 +893,9 @@ const MasterControl = () => {
       });
       setOtpBypassActive(nextState);
       if (nextState) {
-        toast.success("⚡ OTP Bypass turned ON! All users can login directly without OTP.");
+        toast.success("OTP Bypass turned ON! All users can login directly without OTP.");
       } else {
-        toast.info("🛡️ OTP Bypass turned OFF! 6-digit OTP verification is now enforced.");
+        toast.info("OTP Bypass turned OFF! 6-digit OTP verification is now enforced.");
       }
     } catch (err) {
       console.error("Failed to toggle OTP switch:", err);
@@ -1117,8 +1108,7 @@ const MasterControl = () => {
             <span className="super-badge">
               <BsShieldCheck /> Super Administrator Authority
             </span>
-            <h1>👑 Super Admin Master Control</h1>
-            <p>Direct user management, real password inspection & sidebar access matrix.</p>
+            <h1>Super Admin Master Control</h1>
           </TitleSection>
 
           <ControlsGroup>
@@ -1151,63 +1141,71 @@ const MasterControl = () => {
           </ControlsGroup>
         </TopHeaderBar>
 
-        {/* SuperAdmin Quick Notes & Universal Passwords Vault with Role Slices */}
-        <QuickVaultNotes />
+        {/* TAB 0: Executive Overview & Cockpit */}
+        {activeTab === "overview" && (
+          <>
+            <MetricsGrid>
+              <MetricCard
+                $color="#10b981"
+                onClick={() => jumpTo("users", "all")}
+                style={{ cursor: "pointer" }}
+                title="Click to view all accounts in directory"
+              >
+                <div className="label">Total System Users</div>
+                <div className="value">{usersData.counts.totalUsers}</div>
+                <div className="sub">Accounts across all roles</div>
+                <div style={{ fontSize: "11px", fontWeight: "700", color: "#10b981", marginTop: "10px", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <BsArrowRightShort style={{ fontSize: "16px" }} /> View all accounts
+                </div>
+              </MetricCard>
 
-        {/* Metric Summary Cards */}
-        <MetricsGrid>
-          <MetricCard $color="#10b981">
-            <div className="label">Total System Users</div>
-            <div className="value">{usersData.counts.totalUsers}</div>
-            <div className="sub">Accounts across all roles</div>
-          </MetricCard>
+              <MetricCard
+                $color="#6366f1"
+                onClick={() => jumpTo("users", "admins")}
+                style={{ cursor: "pointer" }}
+                title="Click to view administrators"
+              >
+                <div className="label">Administrators</div>
+                <div className="value">{usersData.counts.totalAdmins}</div>
+                <div className="sub">System & Department Admins</div>
+                <div style={{ fontSize: "11px", fontWeight: "700", color: "#6366f1", marginTop: "10px", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <BsArrowRightShort style={{ fontSize: "16px" }} /> View administrators
+                </div>
+              </MetricCard>
 
-          <MetricCard $color="#6366f1">
-            <div className="label">Administrators</div>
-            <div className="value">{usersData.counts.totalAdmins}</div>
-            <div className="sub">System & Department Admins</div>
-          </MetricCard>
+              <MetricCard
+                $color="#0ea5e9"
+                onClick={() => jumpTo("users", "teachers")}
+                style={{ cursor: "pointer" }}
+                title="Click to view faculty and teachers"
+              >
+                <div className="label">Faculty & Staff</div>
+                <div className="value">{usersData.counts.totalTeachers}</div>
+                <div className="sub">Teachers, Librarians, Controllers</div>
+                <div style={{ fontSize: "11px", fontWeight: "700", color: "#0ea5e9", marginTop: "10px", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <BsArrowRightShort style={{ fontSize: "16px" }} /> View faculty
+                </div>
+              </MetricCard>
 
-          <MetricCard $color="#0ea5e9">
-            <div className="label">Faculty & Staff</div>
-            <div className="value">{usersData.counts.totalTeachers}</div>
-            <div className="sub">Teachers, Librarians, Controllers</div>
-          </MetricCard>
+              <MetricCard
+                $color="#8b5cf6"
+                onClick={() => jumpTo("users", "students")}
+                style={{ cursor: "pointer" }}
+                title="Click to view registered students"
+              >
+                <div className="label">Registered Students</div>
+                <div className="value">{usersData.counts.totalStudents}</div>
+                <div className="sub">Active enrolled students</div>
+                <div style={{ fontSize: "11px", fontWeight: "700", color: "#8b5cf6", marginTop: "10px", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <BsArrowRightShort style={{ fontSize: "16px" }} /> View students
+                </div>
+              </MetricCard>
+            </MetricsGrid>
 
-          <MetricCard $color="#8b5cf6">
-            <div className="label">Registered Students</div>
-            <div className="value">{usersData.counts.totalStudents}</div>
-            <div className="sub">Active enrolled students</div>
-          </MetricCard>
-        </MetricsGrid>
-
-        {/* Tab Selection */}
-        <TabBar>
-          <TabButton
-            $active={activeTab === "users"}
-            onClick={() => setActiveTab("users")}
-          >
-            <BsPeople /> Universal Users & Passwords
-          </TabButton>
-          <TabButton
-            $active={activeTab === "matrix"}
-            onClick={() => setActiveTab("matrix")}
-          >
-            <BsSliders /> Role Sidebar Access Matrix
-          </TabButton>
-          <TabButton
-            $active={activeTab === "security"}
-            onClick={() => setActiveTab("security")}
-          >
-            <BsShieldLock /> Security & System Parameters
-          </TabButton>
-          <TabButton
-            $active={activeTab === "feeRates"}
-            onClick={() => setActiveTab("feeRates")}
-          >
-            <BsCashCoin /> Degree & Batch Fee Structures
-          </TabButton>
-        </TabBar>
+            {/* SuperAdmin Quick Notes & Universal Passwords Vault */}
+            <QuickVaultNotes />
+          </>
+        )}
 
         {/* TAB 1: Universal Users & Real Passwords */}
         {activeTab === "users" && (
@@ -1386,7 +1384,7 @@ const MasterControl = () => {
                                   }}
                                   title={user.restrictionReason || "Login suspended"}
                                 >
-                                  🚫 Restricted
+                                  Restricted
                                 </span>
                               )}
                             </div>
@@ -1413,7 +1411,7 @@ const MasterControl = () => {
                                 onClick={() => handleOpenResetPassword(user)}
                                 title="Override / Reset Password for this user"
                               >
-                                🔑 Reset
+                                <BsKey /> Reset
                               </ActionBtn>
                               {user.email !== SUPER_ADMIN_EMAIL && (
                                 user.isRestricted ? (
@@ -1422,7 +1420,7 @@ const MasterControl = () => {
                                     onClick={() => handleToggleRestrictUser(user)}
                                     title="Restore user login access"
                                   >
-                                    🟢 Unrestrict
+                                    Unrestrict
                                   </ActionBtn>
                                 ) : (
                                   <ActionBtn
@@ -1430,7 +1428,7 @@ const MasterControl = () => {
                                     onClick={() => handleToggleRestrictUser(user)}
                                     title="Block / Restrict user login access"
                                   >
-                                    🚫 Restrict
+                                    Restrict
                                   </ActionBtn>
                                 )
                               )}
@@ -1502,10 +1500,11 @@ const MasterControl = () => {
 
         {/* TAB 2: Role Sidebar Access Matrix */}
         {activeTab === "matrix" && (
-          <MatrixCard>
+          <>
+            <MatrixCard>
             <MatrixHeader>
               <div>
-                <h3>🛡️ Role Sidebar Access & Visibility Matrix</h3>
+                <h3>Role Sidebar Access & Visibility Matrix</h3>
                 <p>
                   Configure precisely which sections and links appear on each role's sidebar. Changes reflect in real-time.
                 </p>
@@ -1584,15 +1583,17 @@ const MasterControl = () => {
               </MatrixTable>
             </TableCard>
           </MatrixCard>
+          </>
         )}
 
         {/* TAB 3: System Rules & Parameters */}
         {activeTab === "security" && (
-          <MatrixCard>
+          <>
+            <MatrixCard>
             <MatrixHeader>
               <div>
-                <h3>⚡ System Security Parameters & Global Overrides</h3>
-                <p>Configure session lifespans, late fee calculations, and master bypass settings.</p>
+                <h3>System Security Parameters & Emergency Recovery</h3>
+                <p>Configure universal master verification code, session lifespans, and emergency recovery controls.</p>
               </div>
             </MatrixHeader>
 
@@ -1609,11 +1610,8 @@ const MasterControl = () => {
                     sessionTimeoutUnit,
                     sessionTimeoutValue: val,
                     sessionTimeoutDays: equivDays,
-                    lateFeeFlatAfterDue: parseInt(lateFeeFlatAfterDue, 10) || 0,
-                    lateFeeGraceDays: parseInt(lateFeeGraceDays, 10) || 0,
-                    lateFeePerDay: parseInt(lateFeePerDay, 10) || 0,
                   });
-                  toast.success("Security & policy parameters successfully saved!");
+                  toast.success("Security & system parameters successfully saved!");
                 } catch (err) {
                   toast.error("Failed to save security settings.");
                 }
@@ -1667,51 +1665,6 @@ const MasterControl = () => {
                     Duration logins remain authenticated before expiring (e.g. 1 hour or 7 days).
                   </small>
                 </FormGroup>
-
-                <FormGroup>
-                  <label>Late Fee Flat Penalty After Due Date (₹)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={10000}
-                    value={lateFeeFlatAfterDue}
-                    onChange={(e) => setLateFeeFlatAfterDue(e.target.value)}
-                    required
-                  />
-                  <small style={{ color: "#64748b", fontSize: "11px" }}>
-                    Flat surcharge applied to student tuition once the term due date passes.
-                  </small>
-                </FormGroup>
-
-                <FormGroup>
-                  <label>Late Fee Grace Period (Days)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={60}
-                    value={lateFeeGraceDays}
-                    onChange={(e) => setLateFeeGraceDays(e.target.value)}
-                    required
-                  />
-                  <small style={{ color: "#64748b", fontSize: "11px" }}>
-                    Days of leeway after term due date before late fees are triggered.
-                  </small>
-                </FormGroup>
-
-                <FormGroup>
-                  <label>Per-Day Overdue Fine (₹ / Day)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={500}
-                    value={lateFeePerDay}
-                    onChange={(e) => setLateFeePerDay(e.target.value)}
-                    required
-                  />
-                  <small style={{ color: "#64748b", fontSize: "11px" }}>
-                    Daily fine calculated on overdue library book loans.
-                  </small>
-                </FormGroup>
               </div>
 
               <div style={{ marginTop: "24px" }}>
@@ -1720,15 +1673,77 @@ const MasterControl = () => {
                 </PrimarySaveButton>
               </div>
             </form>
+
+            <div style={{ marginTop: "32px", borderTop: "1px solid #e2e8f0", paddingTop: "24px" }}>
+              <h4 style={{ fontSize: "15px", fontWeight: "700", color: "#0f172a", marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <BsShieldLock /> Rate Limit & Authentication Lockout Emergency Controls
+              </h4>
+              <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "16px", lineHeight: "1.5" }}>
+                To protect authentication and OTP endpoints against credential stuffing and brute-force attempts, traffic from an IP address is automatically rate-limited (HTTP 429).
+                As Super Administrator, you can clear rate-limit locks for your current network IP or flush all server rate-limit counters below without weakening underlying security rules.
+              </p>
+
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+                <ActionBtn
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      setResettingRateLimit(true);
+                      const res = await axios.post(
+                        `${BACKEND_URL}api/v1/admin/master/rate-limit/reset`,
+                        {},
+                        { withCredentials: true }
+                      );
+                      toast.success(res.data?.message || "Rate limit cleared for your current IP.");
+                    } catch (err) {
+                      toast.error(err.response?.data?.message || "Failed to reset rate limit.");
+                    } finally {
+                      setResettingRateLimit(false);
+                    }
+                  }}
+                  disabled={resettingRateLimit}
+                  style={{ padding: "10px 18px", fontSize: "13px", background: "#f8fafc", borderColor: "#cbd5e1" }}
+                >
+                  {resettingRateLimit ? "Resetting..." : "Reset Current Network IP Rate Limits"}
+                </ActionBtn>
+
+                <ActionBtn
+                  type="button"
+                  $danger
+                  onClick={async () => {
+                    if (!window.confirm("Flush all active authentication and OTP rate limit locks across the server?")) return;
+                    try {
+                      setResettingRateLimit(true);
+                      const res = await axios.post(
+                        `${BACKEND_URL}api/v1/admin/master/rate-limit/reset`,
+                        { resetAll: true },
+                        { withCredentials: true }
+                      );
+                      toast.success(res.data?.message || "All server rate limit locks flushed.");
+                    } catch (err) {
+                      toast.error(err.response?.data?.message || "Failed to reset all rate limits.");
+                    } finally {
+                      setResettingRateLimit(false);
+                    }
+                  }}
+                  disabled={resettingRateLimit}
+                  style={{ padding: "10px 18px", fontSize: "13px" }}
+                >
+                  Flush All Rate Limit Stores
+                </ActionBtn>
+              </div>
+            </div>
           </MatrixCard>
+          </>
         )}
 
         {/* TAB 4: Degree & Batch Fee Structures */}
         {activeTab === "feeRates" && (
-          <MatrixCard>
+          <>
+            <MatrixCard>
             <MatrixHeader>
               <div>
-                <h3>🎓 Degree & Batch Fee Rates & Structure Configuration</h3>
+                <h3>Degree & Batch Fee Rates & Structure Configuration</h3>
                 <p>
                   Configure official fee rates per semester, degree duration (years), and start month for departments and batches.
                 </p>
@@ -1881,7 +1896,7 @@ const MasterControl = () => {
               }}
             >
               <h4 style={{ margin: "0 0 12px", fontSize: "15px", fontWeight: 700, color: "#0f172a" }}>
-                ➕ Add New Program / Batch Fee Structure
+                Add New Program / Batch Fee Structure
               </h4>
               <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "flex-end" }}>
                 <div style={{ flex: 1, minWidth: "180px" }}>
@@ -1958,6 +1973,12 @@ const MasterControl = () => {
               </div>
             </div>
           </MatrixCard>
+          </>
+        )}
+
+        {/* TAB 5: Production IP Security & Firewall Operations */}
+        {activeTab === "ipSecurity" && (
+          <IpSecurityCenter />
         )}
       </Content>
 
@@ -1966,7 +1987,7 @@ const MasterControl = () => {
         <ModalOverlay onClick={() => setResetModalUser(null)}>
           <ModalBox onClick={(e) => e.stopPropagation()}>
             <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: "0 0 6px" }}>
-              🔑 Reset Real Password
+              Reset Real Password
             </h2>
             <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 18px" }}>
               Setting real password for: <strong>{resetModalUser.name}</strong> ({resetModalUser.email})
@@ -1998,7 +2019,7 @@ const MasterControl = () => {
                     cursor: "pointer",
                   }}
                 >
-                  ⚡ Generate Quick Password
+                  Generate Quick Password
                 </button>
               </div>
 
@@ -2020,7 +2041,7 @@ const MasterControl = () => {
         <ModalOverlay onClick={() => setEditingUser(null)}>
           <ModalBox onClick={(e) => e.stopPropagation()}>
             <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: "0 0 6px" }}>
-              ✏️ Edit User Profile
+              Edit User Profile
             </h2>
             <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 18px" }}>
               Category: <strong>{editingUser.userCategory}</strong> ({editingUser.email})

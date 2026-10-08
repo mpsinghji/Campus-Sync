@@ -4,6 +4,7 @@ import {
   studentLogin,
   studentRegister,
   getAllStudents,
+  getStudentDirectory,
   deleteStudent,
   getStudentProfile,
   getStudentCount,
@@ -18,23 +19,22 @@ import {
 } from "../controllers/studentController.js";
 import { validateUserRegistration } from "../middlewares/userValidator.js";
 import { validateOtp } from "../middlewares/otpValidator.js";
-import { isAuthenticated } from "../middlewares/auth.js";
+import { isAuthenticated, authorizeRoles, requireAdmin } from "../middlewares/auth.js";
+import { authLimiter, otpLimiter } from "../middlewares/rateLimiter.js";
 
 const studentRoute = express.Router();
 
 studentRoute.post("/register", validateUserRegistration, studentRegister);
-studentRoute.post("/bulk-register", bulkRegisterStudents);
+studentRoute.post("/bulk-register", isAuthenticated, requireAdmin, bulkRegisterStudents);
 
-studentRoute.post("/login", studentLogin);
+studentRoute.post("/login", authLimiter, studentLogin);
 
 studentRoute.get("/batches", getAllBatches);
 
-studentRoute.get("/getall", getAllStudents);
+studentRoute.get("/directory", isAuthenticated, getStudentDirectory);
+studentRoute.get("/getall", isAuthenticated, authorizeRoles("admin", "teacher"), getAllStudents);
 
-studentRoute.delete("/:id", deleteStudent);
-studentRoute.put("/:id", updateStudent);
-
-studentRoute.get("/", async (req, res) => {
+studentRoute.get("/", isAuthenticated, authorizeRoles("admin", "teacher"), async (req, res) => {
   try {
     const students = await Student.find({}, "rollno email mobileno name batch");
     res.status(200).json(students);
@@ -44,14 +44,20 @@ studentRoute.get("/", async (req, res) => {
   }
 });
 
-studentRoute.get("/profile", getStudentProfile);
-studentRoute.put("/profile", updateStudentProfile);
+// Profile endpoints (literal paths BEFORE parametric /:id paths)
+studentRoute.get("/profile", isAuthenticated, getStudentProfile);
+studentRoute.put("/profile", isAuthenticated, updateStudentProfile);
 studentRoute.post("/change-password", isAuthenticated, changeStudentPassword);
 
-studentRoute.get("/count", getStudentCount);
+// Parametric student administration routes
+studentRoute.delete("/:id", isAuthenticated, requireAdmin, deleteStudent);
+studentRoute.put("/:id", isAuthenticated, requireAdmin, updateStudent);
 
-studentRoute.post("/login/verify/:id", validateOtp, verifyStudentLoginOtp);
+studentRoute.get("/count", isAuthenticated, authorizeRoles("admin", "teacher"), getStudentCount);
 
-studentRoute.get("/login/resend/:id", resendStudentLoginOtp);
+studentRoute.post("/login/verify/:id", otpLimiter, validateOtp, verifyStudentLoginOtp);
+
+studentRoute.get("/login/resend/:id", otpLimiter, resendStudentLoginOtp);
+studentRoute.get("/resend-otp/:id", otpLimiter, resendStudentLoginOtp);
 
 export default studentRoute;

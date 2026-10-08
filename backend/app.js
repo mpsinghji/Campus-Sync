@@ -14,28 +14,85 @@ import attendanceRouter from "./routes/attendanceRouter.js";
 import feeRouter from "./routes/feeRoutes.js";
 import securityRouter from "./routes/securityRoute.js";
 import fineRouter from "./routes/fineRoutes.js";
+import timetableRoute from "./routes/timetableRoute.js";
+import resultRoute from "./routes/resultRoute.js";
+import ipSecurityRoute from "./routes/ipSecurityRoute.js";
+import { ipSecurityMiddleware, reloadIpBlockCache } from "./middlewares/ipSecurityMiddleware.js";
+import { ipLoggingMiddleware } from "./middlewares/ipLoggingMiddleware.js";
 
 import Razorpay from "razorpay";
 import Fee from "./models/feeModel.js";
 import Fine from "./models/fineModel.js";
 import Student from "./models/studentModel.js";
 import mongoose from "mongoose";
+import { isAuthenticated, requireAdmin } from "./middlewares/auth.js";
+import { handleRazorpayWebhook } from "./controllers/webhookController.js";
 
 dotenv.config({ path: "./config/config.env" });
 
 const app = express();
 
+// Trust reverse proxy for client IP detection (rate limiter & secure cookies behind Render/Vercel/ALB)
+app.set("trust proxy", 1);
+
+// Hide Express fingerprinting
+app.disable("x-powered-by");
+
+// Production-safe security headers middleware
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("X-XSS-Protection", "0");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  next();
+});
+
 app.use(cookieParser());
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
+
+const allowedOrigins = [
+  process.env.LOCAL_URL,
+  process.env.FRONTEND_URL,
+  process.env.WEB_URL,
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://mpji-campus-sync.vercel.app",
+  "https://campus-sync-ez7y.onrender.com",
+].filter(Boolean);
 
 app.use(
   cors({
-    origin: [process.env.LOCAL_URL, process.env.WEB_URL, "https://mpji-campus-sync.vercel.app", "https://campus-sync-ez7y.onrender.com"],
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, or Razorpay webhooks)
+      if (!origin || allowedOrigins.includes(origin) || (process.env.NODE_ENV !== "production" && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
 
+// Centralized IP Security Firewall & Request Activity Audit Logging
+app.use(ipSecurityMiddleware);
+app.use(ipLoggingMiddleware);
+
+// Public Razorpay Webhook Reconciliation (Signature-verified)
+app.post("/api/v1/payments/razorpay/webhook", handleRazorpayWebhook);
+app.post("/api/v1/payment/webhook", handleRazorpayWebhook);
+
+app.use("/api/v1/admin/master/ip-security", ipSecurityRoute);
 app.use("/api/v1/admin", adminRoute);
 app.use("/api/v1/student", studentRoute);
 app.use("/api/v1/teacher", teacherRoute);
@@ -50,9 +107,14 @@ app.use("/api/v1/fees", feeRouter);
 app.use("/api/v1/fee", feeRouter);
 app.use("/api/v1/security", securityRouter);
 app.use("/api/v1/fine", fineRouter);
+app.use("/api/v1/timetable", timetableRoute);
+app.use("/api/v1/timetables", timetableRoute);
+app.use("/api/v1/results", resultRoute);
+app.use("/api/v1/result", resultRoute);
 
-app.post('/Fees', async (req, res) => {
-  const { amount, currency, studentId, academicYear, semester } = req.body;
+app.post('/Fees', isAuthenticated, async (req, res) => {
+  const { amount, currency, academicYear, semester } = req.body;
+  const studentId = req.role === "student" ? req.user._id : (req.body.studentId || req.user._id);
   const numAmount = Number(amount) || 4500000;
 
   try {
@@ -101,53 +163,157 @@ app.post('/Fees', async (req, res) => {
   }
 });
 
-app.get("/payment/:paymentId", async (req, res) => {
+app.get("/payment/:paymentId", isAuthenticated, async (req, res) => {
   const { paymentId } = req.params;
 
   try {
-    let payment = null;
-    let newStatus = 'completed';
+    if (!paymentId) {
+      return res.status(400).json({ success: false, message: "Payment ID parameter is required." });
+    }
 
+    // Lookup fee record by paymentId or orderId or _id
+    let feeRecord = await Fee.findOne({
+      $or: [
+        { paymentId: paymentId },
+        { paymentId: req.query.orderId || "" },
+        { _id: mongoose.isValidObjectId(paymentId) ? paymentId : null },
+        { _id: mongoose.isValidObjectId(req.query.feeId) ? req.query.feeId : null }
+      ]
+    });
+
+    if (!feeRecord) {
+      return res.status(404).json({
+        success: false,
+        message: "Fee record not found for the provided payment or order identifier."
+      });
+    }
+
+    // Role-based authorization: Students can ONLY access their own fee records
+    if (req.role === "student") {
+      const studentIdStr = req.user?._id?.toString();
+      if (!studentIdStr || feeRecord.studentId.toString() !== studentIdStr) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden: You are only authorized to access your own payment records."
+        });
+      }
+    } else if (req.role !== "admin" && req.role !== "superadmin" && req.role !== "teacher") {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: Unauthorized to access payment records."
+      });
+    }
+
+    // If already completed, return status idempotently without state modification
+    if (feeRecord.paymentStatus === 'completed') {
+      return res.status(200).json({
+        success: true,
+        message: "Payment is already marked as completed.",
+        status: "captured",
+        amount: feeRecord.amount * 100,
+        feeRecord
+      });
+    }
+
+    // Only accept genuine Razorpay payment IDs (starting with pay_)
+    if (!paymentId.startsWith("pay_")) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment ID: A captured Razorpay payment ID (starting with 'pay_') is required to mark payment as completed.",
+        status: feeRecord.paymentStatus
+      });
+    }
+
+    // Query Razorpay gateway to verify payment status
+    let payment = null;
     try {
       const razorpay = new Razorpay({
         key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_RJjIrWx8F7ZuO8",
         key_secret: process.env.RAZORPAY_KEY_SECRET || "dummy_secret",
       });
       payment = await razorpay.payments.fetch(paymentId);
-      if (payment && (payment.status === 'captured' || payment.status === 'authorized')) {
-        newStatus = 'completed';
-      }
-    } catch (e) {
-      newStatus = 'completed';
+    } catch (rzpErr) {
+      // CRITICAL: Failed Razorpay API request MUST NOT result in a successful payment!
+      return res.status(400).json({
+        success: false,
+        message: "Razorpay payment verification failed: " + (rzpErr.error?.description || rzpErr.message || "Payment not found on gateway"),
+        status: feeRecord.paymentStatus
+      });
     }
 
-    const updateResult = await Fee.findOneAndUpdate(
-      { paymentId: paymentId },
-      {
-        paymentStatus: newStatus,
-        PaidAt: new Date()
-      },
-      { new: true }
-    );
+    // Require Razorpay payment status to be captured or authorized
+    if (!payment || (payment.status !== 'captured' && payment.status !== 'authorized')) {
+      return res.status(400).json({
+        success: false,
+        message: `Payment verification failed: Gateway status is '${payment?.status || 'unpaid'}', expected 'captured'.`,
+        status: payment?.status || 'unpaid'
+      });
+    }
 
-    res.json({
+    // Update fee record only after verified capture
+    feeRecord.paymentStatus = 'completed';
+    feeRecord.PaidAt = new Date();
+    feeRecord.paymentId = payment.id;
+    feeRecord.paymentMode = payment.method || "Razorpay Gateway";
+    await feeRecord.save();
+
+    return res.status(200).json({
       success: true,
-      status: payment?.status || "captured",
-      amount: payment?.amount || (updateResult ? updateResult.amount * 100 : 4500000),
-      method: payment?.method || "UPI",
-      currency: "INR",
-      feeRecord: updateResult,
+      message: "Payment verified and recorded successfully.",
+      status: payment.status,
+      amount: payment.amount,
+      method: payment.method || "Online",
+      currency: payment.currency || "INR",
+      feeRecord,
     });
   } catch (error) {
-    res.json({ success: true, status: "captured" });
+    console.error("Error in /payment/:paymentId endpoint:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error during payment verification.",
+      error: error.message
+    });
   }
 });
 
 // Direct student fee payment completion (simulated & verified)
-app.post("/complete-fee-payment", async (req, res) => {
+app.post("/complete-fee-payment", isAuthenticated, async (req, res) => {
   try {
-    const { studentId, amount, semester, academicYear, paymentMode, paymentId, orderId, lateFee, includeLateFee } = req.body;
+    let { studentId, amount, semester, academicYear, paymentMode, paymentId, orderId, lateFee, includeLateFee } = req.body;
+    if (req.role === "student") {
+      studentId = req.user._id.toString();
+    } else if (req.role !== "admin" && req.role !== "teacher" && req.role !== "superadmin") {
+      return res.status(403).json({ success: false, message: "Forbidden: Unauthorized to record payments." });
+    }
     if (!studentId) return res.status(400).json({ success: false, message: "Student ID required" });
+
+    // If Razorpay gateway mode or paymentId starts with pay_, verify with Razorpay
+    if (paymentMode === "Razorpay Payment Gateway" || (paymentId && paymentId.startsWith("pay_"))) {
+      if (!paymentId || !paymentId.startsWith("pay_")) {
+        return res.status(400).json({
+          success: false,
+          message: "A valid Razorpay payment ID starting with 'pay_' is required for Razorpay payments."
+        });
+      }
+      try {
+        const razorpay = new Razorpay({
+          key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_RJjIrWx8F7ZuO8",
+          key_secret: process.env.RAZORPAY_KEY_SECRET || "dummy_secret",
+        });
+        const rzpPayment = await razorpay.payments.fetch(paymentId);
+        if (!rzpPayment || (rzpPayment.status !== 'captured' && rzpPayment.status !== 'authorized')) {
+          return res.status(400).json({
+            success: false,
+            message: `Razorpay payment is not captured. Gateway status: ${rzpPayment?.status || 'unpaid'}`
+          });
+        }
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message: "Razorpay payment verification failed: " + (err.error?.description || err.message || "Invalid payment ID")
+        });
+      }
+    }
 
     const txnId = paymentId || `TXN_RZP_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
     const numLateFee = Number(lateFee) || 0;
@@ -208,9 +374,12 @@ app.post("/complete-fee-payment", async (req, res) => {
 });
 
 // Get student fee payment status
-app.get("/student-fees/:studentId", async (req, res) => {
+app.get("/student-fees/:studentId", isAuthenticated, async (req, res) => {
   try {
     const { studentId } = req.params;
+    if (req.role === "student" && req.user._id.toString() !== studentId.toString()) {
+      return res.status(403).json({ success: false, message: "Forbidden: You may only view your own fees." });
+    }
     const { academicYear } = req.query;
 
     const query = { studentId };
@@ -254,7 +423,7 @@ app.get("/student-fees/:studentId", async (req, res) => {
   }
 })
 
-app.get("/payments", async (req, res) => {
+app.get("/payments", isAuthenticated, requireAdmin, async (req, res) => {
   const { fromDate, toDate } = req.query;
   const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
@@ -299,7 +468,7 @@ app.get("/payments", async (req, res) => {
 });
 
 // Manual payment status update endpoint for testing
-app.post('/update-payment-status', async (req, res) => {
+app.post('/update-payment-status', isAuthenticated, requireAdmin, async (req, res) => {
   try {
     const { paymentId, status } = req.body;
 
@@ -369,6 +538,25 @@ app.head("/api/health", async (req, res) => {
     console.error("Health check failed:", error.message);
     return res.sendStatus(503);
   }
+});
+
+// Production-safe centralized error handler
+app.use((err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  const isProduction = process.env.NODE_ENV === "production";
+  const message = isProduction && statusCode === 500
+    ? "Internal Server Error"
+    : (err.message || "Internal Server Error");
+
+  if (!isProduction) {
+    console.error("Express Error:", err);
+  }
+
+  res.status(statusCode).json({
+    success: false,
+    message,
+    ...(isProduction ? {} : { stack: err.stack }),
+  });
 });
 
 export default app;

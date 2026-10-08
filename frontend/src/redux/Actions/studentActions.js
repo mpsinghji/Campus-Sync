@@ -78,9 +78,16 @@ export const studentLogin = (email, password) => async (dispatch) => {
     return data;
   } catch (error) {
     console.error("Student Login Error:", error);
+    let payloadMsg = error.response?.data?.message || "Server Error";
+    if (error.response?.status === 429) {
+      const retryAfter = error.response?.data?.retryAfter || error.response?.headers?.['retry-after'];
+      const secs = Number(retryAfter);
+      const timeMsg = secs ? ` (approx. ${secs >= 60 ? Math.ceil(secs / 60) + ' min' : secs + 's'} remaining)` : '';
+      payloadMsg = `Too many login attempts from this network. Please wait before trying again.${timeMsg}`;
+    }
     dispatch({
       type: "STUDENT_LOGIN_FAILURE",
-      payload: error.response?.data?.message || "Server Error",
+      payload: payloadMsg,
     });
     throw error;
   }
@@ -146,9 +153,16 @@ export const verifyStudentOtp = (id, otp) => async (dispatch) => {
     // Clear any partial data
     Cookies.remove('studentData', { path: '/' });
     Cookies.remove('studentToken', { path: '/' });
+    let payloadMsg = error.response?.data?.message || "OTP Verification Failed";
+    if (error.response?.status === 429) {
+      const retryAfter = error.response?.data?.retryAfter || error.response?.headers?.['retry-after'];
+      const secs = Number(retryAfter);
+      const timeMsg = secs ? ` (approx. ${secs >= 60 ? Math.ceil(secs / 60) + ' min' : secs + 's'} remaining)` : '';
+      payloadMsg = `Too many OTP attempts from this network. Please wait before trying again.${timeMsg}`;
+    }
     dispatch({
       type: "VERIFY_STUDENT_OTP_FAILURE",
-      payload: error.response?.data?.message || "OTP Verification Failed",
+      payload: payloadMsg,
     });
     throw error;
   }
@@ -170,9 +184,16 @@ export const resendStudentOtp = (id) => async (dispatch) => {
       payload: data.message,
     });
   } catch (error) {
+    let payloadMsg = error.response?.data?.message || "Error Resending OTP";
+    if (error.response?.status === 429) {
+      const retryAfter = error.response?.data?.retryAfter || error.response?.headers?.['retry-after'];
+      const secs = Number(retryAfter);
+      const timeMsg = secs ? ` (approx. ${secs >= 60 ? Math.ceil(secs / 60) + ' min' : secs + 's'} remaining)` : '';
+      payloadMsg = `Too many OTP requests from this network. Please wait before trying again.${timeMsg}`;
+    }
     dispatch({
       type: "RESEND_STUDENT_OTP_FAILURE",
-      payload: error.response?.data?.message || "Error Resending OTP",
+      payload: payloadMsg,
     });
   }
 };

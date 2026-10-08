@@ -96,17 +96,40 @@ const ChartContainer = styled.div`
   flex: 1;
   position: relative;
   min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const EmptyNotice = styled.div`
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+  font-size: 14px;
+
+  .icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
 `;
 
 const AttendanceGraph = () => {
   const [chartData, setChartData] = useState(null);
   const [totalPresent, setTotalPresent] = useState(0);
   const [totalAbsent, setTotalAbsent] = useState(0);
+  const [hasRecords, setHasRecords] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchAttendance = async () => {
       try {
-        const response = await axios.get(`${BACKEND_URL}api/v1/attendance/getall`);
+        setLoading(true);
+        setError(null);
+        const response = await axios.get(`${BACKEND_URL}api/v1/attendance/records`, {
+          withCredentials: true,
+        });
+
         if (response.data?.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
           const attendanceRecords = response.data.data;
           const attendanceByDate = {};
@@ -127,8 +150,9 @@ const AttendanceGraph = () => {
 
           setTotalPresent(pCount);
           setTotalAbsent(aCount);
+          setHasRecords(true);
 
-          const labels = Object.keys(attendanceByDate).slice(-7);
+          const labels = Object.keys(attendanceByDate).sort().slice(-7);
           const presentData = labels.map((d) => attendanceByDate[d].Present);
           const absentData = labels.map((d) => attendanceByDate[d].Absent);
 
@@ -152,59 +176,19 @@ const AttendanceGraph = () => {
             ],
           });
         } else {
-          // Mock data fallback
-          const mockLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-          const mockPresent = [42, 45, 41, 46, 44, 40];
-          const mockAbsent = [4, 2, 5, 2, 3, 6];
-          setTotalPresent(257);
-          setTotalAbsent(22);
-
-          setChartData({
-            labels: mockLabels,
-            datasets: [
-              {
-                label: "Present",
-                data: mockPresent,
-                backgroundColor: "rgba(16, 185, 129, 0.85)",
-                borderRadius: 6,
-                borderSkipped: false,
-              },
-              {
-                label: "Absent",
-                data: mockAbsent,
-                backgroundColor: "rgba(244, 63, 94, 0.85)",
-                borderRadius: 6,
-                borderSkipped: false,
-              },
-            ],
-          });
+          setHasRecords(false);
+          setTotalPresent(0);
+          setTotalAbsent(0);
+          setChartData(null);
         }
-      } catch (error) {
-        const mockLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-        const mockPresent = [42, 45, 41, 46, 44, 40];
-        const mockAbsent = [4, 2, 5, 2, 3, 6];
-        setTotalPresent(257);
-        setTotalAbsent(22);
-
-        setChartData({
-          labels: mockLabels,
-          datasets: [
-            {
-              label: "Present",
-              data: mockPresent,
-              backgroundColor: "rgba(16, 185, 129, 0.85)",
-              borderRadius: 6,
-              borderSkipped: false,
-            },
-            {
-              label: "Absent",
-              data: mockAbsent,
-              backgroundColor: "rgba(244, 63, 94, 0.85)",
-              borderRadius: 6,
-              borderSkipped: false,
-            },
-          ],
-        });
+      } catch (err) {
+        setError(err.response?.data?.message || "Unable to load attendance analytics records.");
+        setHasRecords(false);
+        setTotalPresent(0);
+        setTotalAbsent(0);
+        setChartData(null);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -212,7 +196,7 @@ const AttendanceGraph = () => {
   }, []);
 
   const total = totalPresent + totalAbsent;
-  const attendancePct = total > 0 ? ((totalPresent / total) * 100).toFixed(1) : "92.1";
+  const attendancePct = total > 0 ? ((totalPresent / total) * 100).toFixed(1) : "0";
 
   const options = {
     responsive: true,
@@ -249,33 +233,46 @@ const AttendanceGraph = () => {
           <h2>📊 Daily Attendance Pulse</h2>
           <p>Classroom attendance and punctuality ratios</p>
         </div>
-        <AttendanceRateBadge>{attendancePct}% Attendance Rate</AttendanceRateBadge>
+        {hasRecords && (
+          <AttendanceRateBadge>{attendancePct}% Attendance Rate</AttendanceRateBadge>
+        )}
       </HeaderArea>
 
       <MiniKpiRow>
         <KpiPill $bg="#ecfdf5" $border="#a7f3d0" $labelColor="#065f46" $valColor="#047857">
-          <span className="label">Present Days</span>
+          <span className="label">Present Count</span>
           <span className="val">{totalPresent}</span>
         </KpiPill>
 
         <KpiPill $bg="#fff1f2" $border="#fecdd3" $labelColor="#9f1239" $valColor="#e11d48">
-          <span className="label">Absences</span>
+          <span className="label">Absent Count</span>
           <span className="val">{totalAbsent}</span>
         </KpiPill>
 
         <KpiPill $bg="#f8fafc" $border="#e2e8f0" $labelColor="#475569" $valColor="#1e293b">
-          <span className="label">Avg Regularity</span>
-          <span className="val">Good</span>
+          <span className="label">Attendance Status</span>
+          <span className="val">{total > 0 ? `${attendancePct}%` : "No Records"}</span>
         </KpiPill>
       </MiniKpiRow>
 
       <ChartContainer>
-        {chartData ? (
+        {loading ? (
+          <EmptyNotice>
+            <div className="icon">⏳</div>
+            <div>Loading genuine attendance records...</div>
+          </EmptyNotice>
+        ) : error ? (
+          <EmptyNotice style={{ color: "#e11d48" }}>
+            <div className="icon">⚠️</div>
+            <div>{error}</div>
+          </EmptyNotice>
+        ) : hasRecords && chartData ? (
           <Bar data={chartData} options={options} />
         ) : (
-          <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>
-            Loading attendance records...
-          </div>
+          <EmptyNotice>
+            <div className="icon">📋</div>
+            <div>No attendance records available for this period.</div>
+          </EmptyNotice>
         )}
       </ChartContainer>
     </GraphCard>

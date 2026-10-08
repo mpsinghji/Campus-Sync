@@ -5,14 +5,17 @@ import {
   getAllStudentsFeeStatus,
   sendFeeReminder,
   recordOfflinePayment,
+  getPaymentAnalytics,
 } from "../controllers/feeController.js";
+import { isAuthenticated, requireAdmin } from "../middlewares/auth.js";
 
 const router = express.Router();
 
-router.post("/create", createFeeRecord);
-router.get("/history/:studentId", getFeeHistory);
-router.get("/all-students-status", getAllStudentsFeeStatus);
-router.post("/send-reminder", sendFeeReminder);
-router.post("/record-payment", recordOfflinePayment);
+router.get("/analytics", isAuthenticated, requireAdmin, getPaymentAnalytics);
+router.get("/history/:studentId", isAuthenticated, getFeeHistory);
+router.get("/all-students-status", isAuthenticated, requireAdmin, getAllStudentsFeeStatus);
+router.post("/create", isAuthenticated, requireAdmin, createFeeRecord);
+router.post("/send-reminder", isAuthenticated, requireAdmin, sendFeeReminder);
+router.post("/record-payment", isAuthenticated, requireAdmin, recordOfflinePayment);
 
 export default router;

@@ -183,8 +183,8 @@ const StudentDirectory = () => {
     try {
       setLoading(true);
       const [studentsRes, teachersRes] = await Promise.all([
-        axios.get(`${BACKEND_URL}api/v1/student/getall`),
-        axios.get(`${BACKEND_URL}api/v1/teacher/getall`),
+        axios.get(`${BACKEND_URL}api/v1/student/directory`, { withCredentials: true }),
+        axios.get(`${BACKEND_URL}api/v1/teacher/directory`, { withCredentials: true }),
       ]);
       setStudents(studentsRes.data?.students || []);
       setTeachers(teachersRes.data?.teachers || []);

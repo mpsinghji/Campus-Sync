@@ -428,7 +428,7 @@ const StudentDashboard = () => {
 
         // Fetch counts & lists in parallel
         const [assignRes, annRes, eventRes] = await Promise.all([
-          axios.get(`${BACKEND_URL}api/v1/assignments/count`).catch(() => ({ data: { count: 3 } })),
+          axios.get(`${BACKEND_URL}api/v1/assignments/count`).catch(() => ({ data: { count: 0 } })),
           axios.get(`${BACKEND_URL}api/v1/announcements/getall?${annQuery.toString()}`).catch(() => ({ data: { announcements: [] } })),
           axios.get(`${BACKEND_URL}api/v1/events/getall`).catch(() => ({ data: { events: [] } })),
         ]);

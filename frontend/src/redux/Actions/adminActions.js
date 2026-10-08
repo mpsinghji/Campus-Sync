@@ -161,9 +161,17 @@ export const adminLogin = (email, password) => async (dispatch) => {
             error: error
         });
 
+        let payloadMsg = error.response?.data?.message || "Server Error";
+        if (error.response?.status === 429) {
+            const retryAfter = error.response?.data?.retryAfter || error.response?.headers?.['retry-after'];
+            const secs = Number(retryAfter);
+            const timeMsg = secs ? ` (approx. ${secs >= 60 ? Math.ceil(secs / 60) + ' min' : secs + 's'} remaining)` : '';
+            payloadMsg = `Too many login attempts from this network. Please wait before trying again.${timeMsg}`;
+        }
+
         dispatch({
             type: "ADMIN_LOGIN_FAILURE",
-            payload: error.response?.data?.message || "Server Error"
+            payload: payloadMsg
         });
         throw error;
     }
@@ -235,9 +243,17 @@ export const verifyAdminOtp = (id, otp) => async (dispatch) => {
         Cookies.remove('adminToken', { path: '/' });
         Cookies.remove('adminData', { path: '/' });
 
+        let payloadMsg = error.response?.data?.message || "OTP Verification Failed";
+        if (error.response?.status === 429) {
+            const retryAfter = error.response?.data?.retryAfter || error.response?.headers?.['retry-after'];
+            const secs = Number(retryAfter);
+            const timeMsg = secs ? ` (approx. ${secs >= 60 ? Math.ceil(secs / 60) + ' min' : secs + 's'} remaining)` : '';
+            payloadMsg = `Too many OTP attempts from this network. Please wait before trying again.${timeMsg}`;
+        }
+
         dispatch({
             type: "VERIFY_ADMIN_OTP_FAILURE",
-            payload: error.response?.data?.message || "OTP Verification Failed"
+            payload: payloadMsg
         });
         throw error;
     }
@@ -261,9 +277,16 @@ export const resendAdminOtp = (id) => async (dispatch) => {
 
     } catch (error) {
         console.error("Resend OTP Error:", error);
+        let payloadMsg = error.response?.data?.message || "Error Resending OTP";
+        if (error.response?.status === 429) {
+            const retryAfter = error.response?.data?.retryAfter || error.response?.headers?.['retry-after'];
+            const secs = Number(retryAfter);
+            const timeMsg = secs ? ` (approx. ${secs >= 60 ? Math.ceil(secs / 60) + ' min' : secs + 's'} remaining)` : '';
+            payloadMsg = `Too many OTP requests from this network. Please wait before trying again.${timeMsg}`;
+        }
         dispatch({
             type: "RESEND_ADMIN_OTP_FAILURE",
-            payload: error.response?.data?.message || "Error Resending OTP"
+            payload: payloadMsg
         });
     }
 };

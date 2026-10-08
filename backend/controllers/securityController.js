@@ -3,12 +3,15 @@ import Admin from "../models/adminModel.js";
 
 const SUPER_ADMIN_EMAIL = "admin@campus-sync.com";
 
-// Verify that the acting admin is the authorized Super Admin
+// Verify that the acting user is the authorized Super Admin
 export const isAuthorizedSuperAdmin = async (req) => {
-  // Check from body/headers/cookie/req.user
-  const requesterEmail = req.headers["x-admin-email"] || req.body?.adminEmail || req.user?.email;
-  if (!requesterEmail) return false;
-  return requesterEmail.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase();
+  if (req.isSuperAdmin) return true;
+  if (req.user && req.role === "admin") {
+    if (req.user.isSuperAdmin === true || req.user.email?.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+      return true;
+    }
+  }
+  return false;
 };
 
 export const getOtpSettings = async (req, res) => {
@@ -74,8 +77,9 @@ export const updateOtpSettings = async (req, res) => {
       feeRates,
     } = req.body;
 
-    // Strict validation: Only admin@campus-sync.com can update these critical security settings
-    if (!adminEmail || adminEmail.toLowerCase().trim() !== SUPER_ADMIN_EMAIL.toLowerCase()) {
+    // Strict validation: Only authenticated Super Admin can update these critical security settings
+    const isSuper = req.isSuperAdmin || (await isAuthorizedSuperAdmin(req));
+    if (!isSuper) {
       return res.status(403).json({
         success: false,
         message: "Forbidden: Only super admin (admin@campus-sync.com) has authorization to modify system security settings.",
@@ -167,9 +171,8 @@ export const updateOtpSettings = async (req, res) => {
 
 export const addBypassedEmail = async (req, res) => {
   try {
-    const { adminEmail, emailToAdd } = req.body;
-
-    if (!adminEmail || adminEmail.toLowerCase().trim() !== SUPER_ADMIN_EMAIL.toLowerCase()) {
+    const isSuper = req.isSuperAdmin || (await isAuthorizedSuperAdmin(req));
+    if (!isSuper) {
       return res.status(403).json({
         success: false,
         message: "Only super admin (admin@campus-sync.com) can manage OTP bypass lists.",
@@ -203,9 +206,8 @@ export const addBypassedEmail = async (req, res) => {
 
 export const removeBypassedEmail = async (req, res) => {
   try {
-    const { adminEmail, emailToRemove } = req.body;
-
-    if (!adminEmail || adminEmail.toLowerCase().trim() !== SUPER_ADMIN_EMAIL.toLowerCase()) {
+    const isSuper = req.isSuperAdmin || (await isAuthorizedSuperAdmin(req));
+    if (!isSuper) {
       return res.status(403).json({
         success: false,
         message: "Only super admin (admin@campus-sync.com) can manage OTP bypass lists.",

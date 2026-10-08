@@ -179,6 +179,17 @@ const SuperAdminLogin = () => {
   const [configuredSecretCode, setConfiguredSecretCode] = useState("454545");
   const [loading, setLoading] = useState(false);
   const [pendingAdminData, setPendingAdminData] = useState(null);
+  const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (rateLimitCountdown > 0) {
+      timer = setInterval(() => {
+        setRateLimitCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [rateLimitCountdown]);
 
   // Fetch active secret code from backend on mount
   const fetchMasterCode = async () => {
@@ -202,6 +213,10 @@ const SuperAdminLogin = () => {
   // Step 1: Verify Credentials
   const handleCredentialsSubmit = async (e) => {
     e.preventDefault();
+    if (rateLimitCountdown > 0) {
+      toast.warn("Rate limit active. Please wait before retrying.", toastOptions);
+      return;
+    }
     if (!email || !password) {
       toast.error("Please enter email and password", toastOptions);
       return;
@@ -223,7 +238,18 @@ const SuperAdminLogin = () => {
         toast.error(res.data?.message || "Invalid credentials", toastOptions);
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Authentication failed", toastOptions);
+      if (err.response?.status === 429) {
+        const retryAfter = err.response?.data?.retryAfter || err.response?.headers?.["retry-after"] || 900;
+        const secs = Number(retryAfter) || 900;
+        setRateLimitCountdown(secs);
+        const timeMsg = secs >= 60 ? ` (approx. ${Math.ceil(secs / 60)} minute${Math.ceil(secs / 60) > 1 ? "s" : ""} remaining)` : ` (approx. ${secs} second${secs > 1 ? "s" : ""} remaining)`;
+        toast.error(`Too many login attempts from this network. Please wait before trying again.${timeMsg}`, {
+          ...toastOptions,
+          autoClose: 8000,
+        });
+      } else {
+        toast.error(err.response?.data?.message || "Authentication failed", toastOptions);
+      }
     } finally {
       setLoading(false);
     }
@@ -321,8 +347,31 @@ const SuperAdminLogin = () => {
                 </div>
               </FormGroup>
 
-              <SubmitButton type="submit" disabled={loading}>
-                {loading ? "Verifying..." : "Continue"}
+              {rateLimitCountdown > 0 && (
+                <div
+                  style={{
+                    background: "rgba(239, 68, 68, 0.12)",
+                    border: "1px solid rgba(239, 68, 68, 0.4)",
+                    borderRadius: "8px",
+                    padding: "10px 14px",
+                    color: "#fca5a5",
+                    fontSize: "12px",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  🔒 <strong>Too many login attempts from this network.</strong>
+                  <div style={{ marginTop: "4px", color: "#f87171" }}>
+                    Please wait before trying again ({rateLimitCountdown >= 60 ? `${Math.ceil(rateLimitCountdown / 60)}m` : `${rateLimitCountdown}s`} remaining).
+                  </div>
+                </div>
+              )}
+
+              <SubmitButton type="submit" disabled={loading || rateLimitCountdown > 0}>
+                {loading
+                  ? "Verifying..."
+                  : rateLimitCountdown > 0
+                  ? `Rate Limited (${rateLimitCountdown}s)`
+                  : "Continue"}
               </SubmitButton>
             </Form>
           </>

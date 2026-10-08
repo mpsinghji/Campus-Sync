@@ -14,6 +14,8 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { BACKEND_URL } from "../../constants/url";
 
+import axios from "axios";
+
 const StudentSection = () => {
   const [students, setStudents] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState("all");
@@ -24,16 +26,18 @@ const StudentSection = () => {
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}api/v1/student`);
-        const data = await response.json();
+        const response = await axios.get(`${BACKEND_URL}api/v1/student/getall`, {
+          withCredentials: true,
+        });
+        const data = response.data?.students || response.data;
 
         if (Array.isArray(data)) {
           setStudents(data);
         } else {
-          setError("Data fetched is not an array.");
+          setError("Failed to load student data.");
         }
       } catch (err) {
-        setError("Failed to fetch students.");
+        setError(err.response?.data?.message || "Failed to fetch students.");
       } finally {
         setLoading(false);
       }

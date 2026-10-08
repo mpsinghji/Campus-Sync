@@ -316,13 +316,26 @@ const Card = styled.div`
 
 const StudentAssignments = () => {
   const [assignments, setAssignments] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchAssignments();
+    fetchSubmissions();
   }, []);
+
+  const fetchSubmissions = async () => {
+    try {
+      const res = await axios.get(`${BACKEND_URL}api/v1/assignments/submissions`, {
+        withCredentials: true,
+      });
+      if (res.data?.success && Array.isArray(res.data.submissions)) {
+        setSubmissions(res.data.submissions);
+      }
+    } catch (e) {}
+  };
 
   const fetchAssignments = async () => {
     setLoading(true);
@@ -343,7 +356,8 @@ const StudentAssignments = () => {
         studentRollno: student.rollno || "",
       });
       const response = await axios.get(
-        `${BACKEND_URL}api/v1/assignments/getall?${queryParams.toString()}`
+        `${BACKEND_URL}api/v1/assignments/getall?${queryParams.toString()}`,
+        { withCredentials: true }
       );
       setAssignments((response.data.assignments || []).reverse());
     } catch (error) {
@@ -435,8 +449,8 @@ const StudentAssignments = () => {
               <BsCheckCircle />
             </div>
             <div className="details">
-              <div className="val">Submitted</div>
-              <div className="lbl">92% Compliance</div>
+              <div className="val">{submissions.length} Submitted</div>
+              <div className="lbl">Completed Tasks</div>
             </div>
           </StatCard>
 
@@ -445,8 +459,8 @@ const StudentAssignments = () => {
               <BsAward />
             </div>
             <div className="details">
-              <div className="val">Grade Impact</div>
-              <div className="lbl">30% Internal Marks</div>
+              <div className="val">{assignments.length} Total</div>
+              <div className="lbl">Assigned Coursework</div>
             </div>
           </StatCard>
         </StatsGrid>

@@ -48,13 +48,24 @@ const Payment = () => {
     });
   };
 
-  const updatePaymentStatus = async (paymentId) => {
+  const updatePaymentStatus = async (paymentId, orderId) => {
     try {
-      console.log('Updating payment status for:', paymentId);
-      const response = await axios.get(`${BACKEND_URL}payment/${paymentId}`);
+      console.log('Completing verified payment for:', paymentId, orderId);
+      const response = await axios.post(
+        `${BACKEND_URL}complete-fee-payment`,
+        {
+          amount: 100,
+          semester: semester,
+          academicYear: new Date().getFullYear().toString(),
+          paymentMode: "Razorpay Payment Gateway",
+          paymentId: paymentId,
+          orderId: orderId,
+        },
+        { withCredentials: true }
+      );
       console.log('Payment status update response:', response.data);
     } catch (error) {
-      console.error('Error updating payment status:', error);
+      console.error('Error recording payment status:', error);
     }
   };
 
@@ -74,6 +85,7 @@ const Payment = () => {
       headers: {
         "Content-Type": "application/json",
       },
+      withCredentials: true,
       data: data,
     };
 
@@ -81,7 +93,7 @@ const Payment = () => {
       .request(config)
       .then((response) => {
         console.log(JSON.stringify(response.data));
-        handleRazorpayScreen(response.data.amount);
+        handleRazorpayScreen(response.data.amount, response.data.order_id);
       })
       .catch((error) => {
         console.log("error at", error);
@@ -89,7 +101,7 @@ const Payment = () => {
       });
   };
 
-  const handleRazorpayScreen = async (amount) => {
+  const handleRazorpayScreen = async (amount, orderId) => {
     const res = await loadScript(
       "https://checkout.razorpay.com/v1/checkout.js"
     );
@@ -99,16 +111,17 @@ const Payment = () => {
     }
 
     const options = {
-      key: "rzp_test_RJjIrWx8F7ZuO8", // Updated to match backend key
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_RJjIrWx8F7ZuO8",
       amount: amount,
       currency: "INR",
       name: "Campus Sync",
       description: "Fee Payment",
+      order_id: orderId && orderId.startsWith("order_") ? orderId : undefined,
       image: "../assets/bg1.png",
       handler: function (response) {
         setResponseId(response.razorpay_payment_id);
-        // Update payment status in backend
-        updatePaymentStatus(response.razorpay_payment_id);
+        // Securely complete fee payment on backend via single source of truth
+        updatePaymentStatus(response.razorpay_payment_id, response.razorpay_order_id || orderId);
         navigate("/payment-success");
       },
       prefill: {
@@ -123,22 +136,6 @@ const Payment = () => {
     paymentObject.open();
   };
 
-  // const paymentFetch = (e) => {
-  //   e.preventDefault();
-
-  //   const paymentId = e.target.paymentId.value;
-
-  //   axios
-  //     .get(`${BACKEND_URL}payment/${paymentId}`)
-  //     .then((response) => {
-  //       console.log(response.data);
-  //       setResponseState(response.data);
-  //     })
-  //     .catch((error) => {
-  //       console.log("error occurred", error);
-  //     });
-  // };
-
   return (
     <Container>
       <FormContainer>
@@ -146,19 +143,6 @@ const Payment = () => {
         <Title>Fee Payment</Title>
         <Button onClick={() => createRazorpayOrder(100)}>Pay Now</Button>
         {responseId && <ResponseText>Payment ID: {responseId}</ResponseText>}
-        {/* <h3>OR</h3> */}
-        {/* <Form onSubmit={paymentFetch}> */}
-          {/* <Input type="text" name="paymentId" placeholder="Enter Payment ID" /> */}
-          {/* <Button type="submit">Fetch Payment</Button>
-          {responseState.length !== 0 && (
-            <List>
-              <li>Amount: ₹{responseState.amount / 100}</li>
-              <li>Currency: {responseState.currency}</li>
-              <li>Status: {responseState.status}</li>
-              <li>Method: {responseState.method}</li>
-            </List> */}
-          {/* )} */}
-        {/* </Form> */}
       </FormContainer>
     </Container>
   );

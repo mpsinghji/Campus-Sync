@@ -335,11 +335,17 @@ export const getAssignedBooks = async (req, res, next) => {
   }
 };
 
-// Fetch library books issued to a specific student with overdue reminder and late fee
 export const getStudentLibraryBooks = async (req, res, next) => {
   const { studentId } = req.params;
 
   try {
+    if (req.role === "student" && req.user?._id?.toString() !== studentId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: You are only authorized to view your own library books.",
+      });
+    }
+
     if (!studentId) {
       return res.status(400).json({ success: false, message: "Student ID required" });
     }

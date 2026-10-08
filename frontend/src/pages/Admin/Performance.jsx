@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import AdminSidebar from "./Sidebar";
 import styled from "styled-components";
@@ -8,14 +8,10 @@ import { BACKEND_URL } from "../../constants/url";
 import {
   BsAward,
   BsGraphUp,
-  BsSearch,
-  BsMortarboard,
   BsBuilding,
-  BsCheckCircleFill,
   BsPrinter,
   BsTrophyFill,
   BsPeople,
-  BsBarChart,
 } from "react-icons/bs";
 
 const Container = styled.div`
@@ -98,32 +94,31 @@ const MetricCard = styled.div`
 
   .details {
     .val {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 800;
       color: #0f172a;
-      line-height: 1.2;
+      line-height: 1.1;
+      margin-bottom: 3px;
     }
     .lbl {
-      font-size: 11px;
-      font-weight: 600;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
     }
     .sub {
       font-size: 11px;
       color: #94a3b8;
+      margin-top: 2px;
     }
   }
 `;
 
 const MainGrid = styled.div`
   display: grid;
-  grid-template-columns: 1.2fr 1.8fr;
-  gap: 24px;
-  margin-bottom: 24px;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
 
-  @media screen and (max-width: 1150px) {
+  @media screen and (max-width: 1024px) {
     grid-template-columns: 1fr;
   }
 `;
@@ -132,8 +127,8 @@ const Card = styled.div`
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  padding: 22px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  padding: 24px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
 
   .card-header {
     display: flex;
@@ -143,7 +138,7 @@ const Card = styled.div`
 
     h3 {
       font-size: 16px;
-      font-weight: 800;
+      font-weight: 700;
       color: #0f172a;
       margin: 0;
       display: flex;
@@ -156,16 +151,12 @@ const Card = styled.div`
 const DeptList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 
   .dept-item {
-    background: #f8fafc;
-    border: 1px solid #f1f5f9;
-    border-radius: 10px;
-    padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 
     .row-top {
       display: flex;
@@ -174,7 +165,7 @@ const DeptList = styled.div`
 
       .name {
         font-size: 14px;
-        font-weight: 700;
+        font-weight: 600;
         color: #1e293b;
       }
       .gpa-score {
@@ -256,27 +247,62 @@ const LeaderboardTable = styled.table`
   }
 `;
 
-const AdminPerformance = () => {
-  const departments = [
-    { name: "Computer Science", avgCgpa: 8.65, passRate: "98.2%", students: 31 },
-    { name: "Information Technology", avgCgpa: 8.52, passRate: "97.4%", students: 28 },
-    { name: "Electronics", avgCgpa: 8.35, passRate: "95.6%", students: 27 },
-    { name: "Mechanical", avgCgpa: 8.18, passRate: "94.2%", students: 26 },
-    { name: "Civil", avgCgpa: 8.24, passRate: "95.0%", students: 27 },
-  ];
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
 
-  const topStudents = [
-    { rank: 1, name: "Priya Sharma", roll: "CS2023001", dept: "Computer Science", cgpa: 9.85, batch: "Batch 2023" },
-    { rank: 2, name: "Arjun Verma", roll: "IT2023004", dept: "Information Technology", cgpa: 9.72, batch: "Batch 2023" },
-    { rank: 3, name: "Neha Singh", roll: "EC2022002", dept: "Electronics", cgpa: 9.64, batch: "Batch 2022" },
-    { rank: 4, name: "Vikram Nair", roll: "CS2024008", dept: "Computer Science", cgpa: 9.58, batch: "Batch 2024" },
-    { rank: 5, name: "Simran Gupta", roll: "CV2023012", dept: "Civil", cgpa: 9.52, batch: "Batch 2023" },
-    { rank: 6, name: "Rohan Joshi", roll: "ME2022015", dept: "Mechanical", cgpa: 9.46, batch: "Batch 2022" },
-  ];
+  .icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
+
+  h3 {
+    font-size: 18px;
+    color: #1e293b;
+    margin: 0 0 6px 0;
+  }
+
+  p {
+    font-size: 14px;
+    margin: 0;
+  }
+`;
+
+const AdminPerformance = () => {
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.get(`${BACKEND_URL}api/v1/results/analytics`, {
+          withCredentials: true,
+        });
+        if (res.data?.success) {
+          setAnalytics(res.data);
+        }
+      } catch (err) {
+        console.error("Error loading performance analytics:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, []);
 
   const handlePrint = () => {
     window.print();
   };
+
+  const totalResults = analytics?.totalResultsCount || 0;
+  const deptAverages = analytics?.departmentAverages || [];
+  const toppers = analytics?.toppers || [];
 
   return (
     <Container>
@@ -290,160 +316,174 @@ const AdminPerformance = () => {
             <p>Comprehensive analytics across departments, batches, CGPA distributions and toppers</p>
           </div>
 
-          <button
-            onClick={handlePrint}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              background: "#ffffff",
-              border: "1px solid #cbd5e1",
-              padding: "8px 14px",
-              borderRadius: "8px",
-              fontSize: "13px",
-              fontWeight: "600",
-              cursor: "pointer",
-              color: "#334155",
-            }}
-          >
-            <BsPrinter /> Export Analysis
-          </button>
+          {totalResults > 0 && (
+            <button
+              onClick={handlePrint}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                background: "#ffffff",
+                border: "1px solid #cbd5e1",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: "600",
+                cursor: "pointer",
+                color: "#334155",
+              }}
+            >
+              <BsPrinter /> Export Analysis
+            </button>
+          )}
         </Header>
 
-        {/* Metrics Overview */}
-        <MetricsGrid>
-          <MetricCard $bg="#ecfdf5" $color="#059669">
-            <div className="icon-wrap">
-              <BsPeople />
-            </div>
-            <div className="details">
-              <div className="val">139</div>
-              <div className="lbl">Total Students Evaluated</div>
-              <div className="sub">5 Departments • 3 Batches</div>
-            </div>
-          </MetricCard>
-
-          <MetricCard $bg="#eff6ff" $color="#2563eb">
-            <div className="icon-wrap">
-              <BsAward />
-            </div>
-            <div className="details">
-              <div className="val">8.42</div>
-              <div className="lbl">Institutional Mean CGPA</div>
-              <div className="sub">+0.18 from last semester</div>
-            </div>
-          </MetricCard>
-
-          <MetricCard $bg="#fef3c7" $color="#d97706">
-            <div className="icon-wrap">
-              <BsCheckCircleFill />
-            </div>
-            <div className="details">
-              <div className="val">96.1%</div>
-              <div className="lbl">Overall Pass Percentage</div>
-              <div className="sub">133 Passed • 6 Backlogs</div>
-            </div>
-          </MetricCard>
-
-          <MetricCard $bg="#f5f3ff" $color="#7c3aed">
-            <div className="icon-wrap">
-              <BsTrophyFill />
-            </div>
-            <div className="details">
-              <div className="val">42%</div>
-              <div className="lbl">Distinction Holders</div>
-              <div className="sub">CGPA 8.5 and above</div>
-            </div>
-          </MetricCard>
-        </MetricsGrid>
-
-        <MainGrid>
-          {/* Department Breakdown */}
-          <Card>
-            <div className="card-header">
-              <h3>
-                <BsBuilding /> Department Performance Index
-              </h3>
-            </div>
-
-            <DeptList>
-              {departments.map((dept, i) => (
-                <div key={i} className="dept-item">
-                  <div className="row-top">
-                    <span className="name">{dept.name}</span>
-                    <span className="gpa-score">{dept.avgCgpa} CGPA</span>
-                  </div>
-                  <div className="bar-bg">
-                    <div
-                      className="fill"
-                      style={{ width: `${(dept.avgCgpa / 10) * 100}%` }}
-                    />
-                  </div>
-                  <div className="row-btm">
-                    <span>{dept.students} Active Students</span>
-                    <span>Pass Rate: {dept.passRate}</span>
-                  </div>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+            Loading institutional academic performance analytics...
+          </div>
+        ) : totalResults === 0 ? (
+          <EmptyState>
+            <div className="icon">📊</div>
+            <h3>No academic performance records are available yet.</h3>
+            <p>Institutional department metrics and student leaderboards will populate once exam marks are evaluated.</p>
+          </EmptyState>
+        ) : (
+          <>
+            {/* Metrics Overview */}
+            <MetricsGrid>
+              <MetricCard $bg="#ecfdf5" $color="#059669">
+                <div className="icon-wrap">
+                  <BsPeople />
                 </div>
-              ))}
-            </DeptList>
-          </Card>
+                <div className="details">
+                  <div className="val">{totalResults}</div>
+                  <div className="lbl">Total Evaluated Records</div>
+                  <div className="sub">MongoDB Academic Results</div>
+                </div>
+              </MetricCard>
 
-          {/* Academic Toppers Leaderboard */}
-          <Card>
-            <div className="card-header">
-              <h3>
-                <BsTrophyFill style={{ color: "#d97706" }} /> Top Academic Performers Leaderboard
-              </h3>
-            </div>
+              <MetricCard $bg="#eff6ff" $color="#2563eb">
+                <div className="icon-wrap">
+                  <BsAward />
+                </div>
+                <div className="details">
+                  <div className="val">{analytics?.overallAveragePercentage || 0}%</div>
+                  <div className="lbl">Institutional Mean Score</div>
+                  <div className="sub">Aggregated Marks Average</div>
+                </div>
+              </MetricCard>
 
-            <LeaderboardTable>
-              <thead>
-                <tr>
-                  <th>Rank</th>
-                  <th>Student Name</th>
-                  <th>Roll No</th>
-                  <th>Department</th>
-                  <th>Batch</th>
-                  <th>CGPA</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topStudents.map((s) => (
-                  <tr key={s.rank}>
-                    <td>
-                      <span
-                        className={`rank-badge ${
-                          s.rank === 1
-                            ? "rank-1"
-                            : s.rank === 2
-                            ? "rank-2"
-                            : s.rank === 3
-                            ? "rank-3"
-                            : ""
-                        }`}
-                      >
-                        {s.rank}
-                      </span>
-                    </td>
-                    <td>
-                      <strong>{s.name}</strong>
-                    </td>
-                    <td>
-                      <code>{s.roll}</code>
-                    </td>
-                    <td>{s.dept}</td>
-                    <td>{s.batch}</td>
-                    <td>
-                      <span style={{ color: "#059669", fontWeight: 800 }}>
-                        {s.cgpa}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </LeaderboardTable>
-          </Card>
-        </MainGrid>
+              <MetricCard $bg="#fef3c7" $color="#d97706">
+                <div className="icon-wrap">
+                  <BsTrophyFill />
+                </div>
+                <div className="details">
+                  <div className="val">{toppers[0]?.gpa || "N/A"}</div>
+                  <div className="lbl">Top Student CGPA</div>
+                  <div className="sub">{toppers[0]?.name || "N/A"}</div>
+                </div>
+              </MetricCard>
+
+              <MetricCard $bg="#f5f3ff" $color="#7c3aed">
+                <div className="icon-wrap">
+                  <BsBuilding />
+                </div>
+                <div className="details">
+                  <div className="val">{deptAverages.length}</div>
+                  <div className="lbl">Active Departments</div>
+                  <div className="sub">Evaluated in Examinations</div>
+                </div>
+              </MetricCard>
+            </MetricsGrid>
+
+            <MainGrid>
+              {/* Genuine Department Breakdown */}
+              <Card>
+                <div className="card-header">
+                  <h3>
+                    <BsBuilding /> Department Performance Index
+                  </h3>
+                </div>
+
+                <DeptList>
+                  {deptAverages.map((dept, i) => (
+                    <div key={i} className="dept-item">
+                      <div className="row-top">
+                        <span className="name">{dept.department}</span>
+                        <span className="gpa-score">{dept.averagePercentage}% Avg</span>
+                      </div>
+                      <div className="bar-bg">
+                        <div
+                          className="fill"
+                          style={{ width: `${dept.averagePercentage}%` }}
+                        />
+                      </div>
+                      <div className="row-btm">
+                        <span>{dept.totalStudentsTested} Evaluated Records</span>
+                        <span>Mean GPA: {dept.averageGpa}</span>
+                      </div>
+                    </div>
+                  ))}
+                </DeptList>
+              </Card>
+
+              {/* Genuine Academic Toppers Leaderboard */}
+              <Card>
+                <div className="card-header">
+                  <h3>
+                    <BsTrophyFill style={{ color: "#d97706" }} /> Top Academic Performers Leaderboard
+                  </h3>
+                </div>
+
+                <LeaderboardTable>
+                  <thead>
+                    <tr>
+                      <th>Rank</th>
+                      <th>Student Name</th>
+                      <th>Roll No</th>
+                      <th>Department</th>
+                      <th>CGPA</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {toppers.map((s, idx) => (
+                      <tr key={s.rollno || idx}>
+                        <td>
+                          <span
+                            className={`rank-badge ${
+                              idx === 0
+                                ? "rank-1"
+                                : idx === 1
+                                ? "rank-2"
+                                : idx === 2
+                                ? "rank-3"
+                                : ""
+                            }`}
+                          >
+                            {idx + 1}
+                          </span>
+                        </td>
+                        <td>
+                          <strong>{s.name}</strong>
+                        </td>
+                        <td>
+                          <code>{s.rollno}</code>
+                        </td>
+                        <td>{s.department}</td>
+                        <td>
+                          <span style={{ color: "#059669", fontWeight: 800 }}>
+                            {s.gpa}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </LeaderboardTable>
+              </Card>
+            </MainGrid>
+          </>
+        )}
       </Content>
       <ToastContainer />
     </Container>

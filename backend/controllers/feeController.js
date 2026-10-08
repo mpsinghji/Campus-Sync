@@ -31,6 +31,23 @@ export const createFeeRecord = async (req, res) => {
 export const getFeeHistory = async (req, res) => {
   try {
     const { studentId } = req.params;
+
+    // Authorization check: Students can only view their own fee history
+    if (req.role === "student") {
+      const authenticatedStudentId = req.user?._id?.toString() || req.user?.id?.toString();
+      if (authenticatedStudentId !== studentId.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden: You are only authorized to view your own fee records.",
+        });
+      }
+    } else if (req.role !== "admin" && req.role !== "teacher") {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: Unauthorized to access student fee history.",
+      });
+    }
+
     const student = await Student.findById(studentId).select("-password -plainPasswordView");
     const feeHistory = await Fee.find({ studentId }).sort({ createdAt: -1 });
     const fines = await Fine.find({ student: studentId }).sort({ createdAt: -1 });
@@ -333,6 +350,49 @@ export const recordOfflinePayment = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Error recording offline payment",
+    });
+  }
+};
+
+export const getPaymentAnalytics = async (req, res) => {
+  try {
+    const fees = await Fee.find().sort({ createdAt: 1 });
+
+    const totalTransactions = fees.length;
+    const completedPayments = fees.filter((f) => f.paymentStatus === "completed");
+    const pendingPayments = fees.filter((f) => f.paymentStatus === "pending");
+    const failedPayments = fees.filter((f) => f.paymentStatus === "failed");
+
+    const totalCollectedAmount = completedPayments.reduce((sum, f) => {
+      let val = Number(f.amount) || 0;
+      if (val > 100000) val = val / 100;
+      return sum + val;
+    }, 0);
+
+    const paymentsByDate = {};
+    completedPayments.forEach((f) => {
+      const d = f.PaidAt || f.createdAt;
+      const dateStr = d ? new Date(d).toISOString().split("T")[0] : "Recent";
+      paymentsByDate[dateStr] = (paymentsByDate[dateStr] || 0) + 1;
+    });
+
+    const dates = Object.keys(paymentsByDate).sort().slice(-7);
+    const counts = dates.map((d) => paymentsByDate[d]);
+
+    res.status(200).json({
+      success: true,
+      totalTransactions,
+      completedCount: completedPayments.length,
+      pendingCount: pendingPayments.length,
+      failedCount: failedPayments.length,
+      totalCollectedAmount: Math.round(totalCollectedAmount),
+      dates,
+      counts,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching payment analytics",
     });
   }
 };

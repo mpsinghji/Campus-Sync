@@ -746,94 +746,6 @@ const STANDARD_RULES = [
   "Mobile phones, smartwatches & bags strictly prohibited",
 ];
 
-// SEEDED DEMO RESULTS REGISTRY
-const INITIAL_RESULTS = [
-  {
-    id: "res_1",
-    rollno: "CS2024001",
-    name: "Aarav Sharma",
-    subject: "Data Structures & Algorithms",
-    code: "CS-301",
-    internal: 28,
-    midTerm: 18,
-    endTerm: 45,
-    total: 91,
-    grade: "A+",
-    sgpa: 9.2,
-    status: "Pass",
-  },
-  {
-    id: "res_2",
-    rollno: "CS2024002",
-    name: "Diya Patel",
-    subject: "Data Structures & Algorithms",
-    code: "CS-301",
-    internal: 29,
-    midTerm: 20,
-    endTerm: 48,
-    total: 97,
-    grade: "O",
-    sgpa: 9.8,
-    status: "Pass",
-  },
-  {
-    id: "res_3",
-    rollno: "CS2024003",
-    name: "Rohan Verma",
-    subject: "Database Management Systems",
-    code: "CS-302",
-    internal: 24,
-    midTerm: 15,
-    endTerm: 38,
-    total: 77,
-    grade: "A",
-    sgpa: 8.0,
-    status: "Pass",
-  },
-  {
-    id: "res_4",
-    rollno: "CS2024004",
-    name: "Ananya Iyer",
-    subject: "Operating Systems",
-    code: "CS-303",
-    internal: 26,
-    midTerm: 17,
-    endTerm: 42,
-    total: 85,
-    grade: "A",
-    sgpa: 8.6,
-    status: "Pass",
-  },
-  {
-    id: "res_5",
-    rollno: "CS2024005",
-    name: "Kabir Singh",
-    subject: "Computer Networks",
-    code: "CS-304",
-    internal: 18,
-    midTerm: 11,
-    endTerm: 25,
-    total: 54,
-    grade: "B",
-    sgpa: 6.2,
-    status: "Pass",
-  },
-  {
-    id: "res_6",
-    rollno: "CS2024006",
-    name: "Ishita Nair",
-    subject: "Theory of Computation",
-    code: "CS-305",
-    internal: 15,
-    midTerm: 9,
-    endTerm: 18,
-    total: 42,
-    grade: "C",
-    sgpa: 5.4,
-    status: "Arrear",
-  },
-];
-
 const AdminExam = () => {
   const [activeTab, setActiveTab] = useState("schedules"); // "schedules" | "results"
   const [examData, setExamData] = useState([]);
@@ -882,14 +794,7 @@ const AdminExam = () => {
   const [submittingExam, setSubmittingExam] = useState(false);
 
   // Results Registry State
-  const [resultsList, setResultsList] = useState(() => {
-    try {
-      const saved = localStorage.getItem("campus_sync_results_v2");
-      return saved ? JSON.parse(saved) : INITIAL_RESULTS;
-    } catch {
-      return INITIAL_RESULTS;
-    }
-  });
+  const [resultsList, setResultsList] = useState([]);
 
   // New Result Modal state
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -903,13 +808,26 @@ const AdminExam = () => {
     endTerm: 40,
   });
 
-  useEffect(() => {
-    localStorage.setItem("campus_sync_results_v2", JSON.stringify(resultsList));
-  }, [resultsList]);
+  const fetchResults = async () => {
+    try {
+      const res = await axios.get(`${BACKEND_URL}api/v1/results`, {
+        withCredentials: true,
+      });
+      if (res.data?.success && Array.isArray(res.data.results)) {
+        setResultsList(res.data.results);
+      } else {
+        setResultsList([]);
+      }
+    } catch (err) {
+      console.error("Error fetching results:", err);
+      setResultsList([]);
+    }
+  };
 
   useEffect(() => {
     fetchExams();
     fetchBatches();
+    fetchResults();
   }, []);
 
   const fetchBatches = async () => {
@@ -1154,7 +1072,7 @@ const AdminExam = () => {
     }
   };
 
-  const handleSaveResult = (e) => {
+  const handleSaveResult = async (e) => {
     e.preventDefault();
     if (!newResult.rollno || !newResult.name) {
       toast.error("Please provide student Roll Number and Name.");
@@ -1166,54 +1084,29 @@ const AdminExam = () => {
     const endMark = Number(newResult.endTerm) || 0;
     const total = intMark + midMark + endMark;
 
-    let grade = "F";
-    let sgpa = 0.0;
-    let status = "Arrear";
+    try {
+      const payload = {
+        studentRollno: newResult.rollno.trim().toUpperCase(),
+        studentName: newResult.name.trim(),
+        subjectName: newResult.subject,
+        subjectCode: newResult.code || "EXAM",
+        marksObtained: total,
+        totalMarks: 100,
+        remarks: `Internal: ${intMark}, Mid: ${midMark}, End: ${endMark}`,
+      };
 
-    if (total >= 90) {
-      grade = "O";
-      sgpa = 9.8;
-      status = "Pass";
-    } else if (total >= 80) {
-      grade = "A+";
-      sgpa = 9.0;
-      status = "Pass";
-    } else if (total >= 70) {
-      grade = "A";
-      sgpa = 8.0;
-      status = "Pass";
-    } else if (total >= 60) {
-      grade = "B+";
-      sgpa = 7.0;
-      status = "Pass";
-    } else if (total >= 50) {
-      grade = "B";
-      sgpa = 6.0;
-      status = "Pass";
-    } else if (total >= 45) {
-      grade = "C";
-      sgpa = 5.0;
-      status = "Pass";
+      const res = await axios.post(`${BACKEND_URL}api/v1/results`, payload, {
+        withCredentials: true,
+      });
+
+      if (res.data?.success) {
+        toast.success(`Academic result logged for ${newResult.name}!`);
+        setIsResultModalOpen(false);
+        fetchResults();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to record student result");
     }
-
-    const entry = {
-      id: `res_${Date.now()}`,
-      rollno: newResult.rollno.trim().toUpperCase(),
-      name: newResult.name.trim(),
-      subject: newResult.subject,
-      code: newResult.code,
-      internal: intMark,
-      midTerm: midMark,
-      endTerm: endMark,
-      total,
-      grade,
-      sgpa,
-      status,
-    };
-
-    setResultsList((prev) => [entry, ...prev]);
-    setIsResultModalOpen(false);
-    toast.success(`Academic result logged for ${entry.name} (${entry.grade})!`);
   };
 
   // Filtered exams
@@ -1238,11 +1131,10 @@ const AdminExam = () => {
     return resultsList.filter((res) => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const match =
-          res.rollno?.toLowerCase().includes(q) ||
-          res.name?.toLowerCase().includes(q) ||
-          res.subject?.toLowerCase().includes(q);
-        if (!match) return false;
+        const roll = (res.studentRollno || res.rollno || "").toLowerCase();
+        const name = (res.studentName || res.name || "").toLowerCase();
+        const sub = (res.subjectName || res.subject || "").toLowerCase();
+        if (!roll.includes(q) && !name.includes(q) && !sub.includes(q)) return false;
       }
       return true;
     });
@@ -1525,27 +1417,32 @@ const AdminExam = () => {
                 </thead>
                 <tbody>
                   {filteredResults.length > 0 ? (
-                    filteredResults.map((r) => (
-                      <tr key={r.id}>
-                        <td style={{ fontWeight: 800, color: "#0f766e" }}>{r.rollno}</td>
-                        <td style={{ fontWeight: 700 }}>{r.name}</td>
-                        <td>
-                          <div>{r.subject}</div>
-                          <div style={{ fontSize: "11px", color: "#64748b" }}>{r.code}</div>
-                        </td>
-                        <td>{r.internal}</td>
-                        <td>{r.midTerm}</td>
-                        <td>{r.endTerm}</td>
-                        <td style={{ fontWeight: 800 }}>{r.total}</td>
-                        <td>
-                          <GradeBadge $grade={r.grade}>{r.grade}</GradeBadge>
-                        </td>
-                        <td style={{ fontWeight: 700, color: "#0f172a" }}>{r.sgpa.toFixed(1)}</td>
-                        <td>
-                          <StatusPill $pass={r.status === "Pass"}>{r.status}</StatusPill>
-                        </td>
-                      </tr>
-                    ))
+                    filteredResults.map((r) => {
+                      const totalMarks = r.marksObtained !== undefined ? r.marksObtained : r.total;
+                      const gpa = r.gradePoints !== undefined ? r.gradePoints : (r.sgpa || 0);
+                      const isPass = r.grade !== "F";
+                      return (
+                        <tr key={r._id || r.id}>
+                          <td style={{ fontWeight: 800, color: "#0f766e" }}>{r.studentRollno || r.rollno}</td>
+                          <td style={{ fontWeight: 700 }}>{r.studentName || r.name}</td>
+                          <td>
+                            <div>{r.subjectName || r.subject}</div>
+                            <div style={{ fontSize: "11px", color: "#64748b" }}>{r.subjectCode || r.code}</div>
+                          </td>
+                          <td>{r.internal ?? "—"}</td>
+                          <td>{r.midTerm ?? "—"}</td>
+                          <td>{r.endTerm ?? "—"}</td>
+                          <td style={{ fontWeight: 800 }}>{totalMarks}</td>
+                          <td>
+                            <GradeBadge $grade={r.grade}>{r.grade}</GradeBadge>
+                          </td>
+                          <td style={{ fontWeight: 700, color: "#0f172a" }}>{Number(gpa).toFixed(1)}</td>
+                          <td>
+                            <StatusPill $pass={isPass}>{isPass ? "Pass" : "Arrear"}</StatusPill>
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td colSpan="10" style={{ textAlign: "center", padding: "36px", color: "#64748b" }}>

@@ -574,6 +574,41 @@ const AccountsFees = () => {
   const [reminderMessage, setReminderMessage] = useState("");
   const [submittingReminder, setSubmittingReminder] = useState(false);
 
+  // Late Fee Policy State
+  const [lateFeeFlatAfterDue, setLateFeeFlatAfterDue] = useState(500);
+  const [lateFeeGraceDays, setLateFeeGraceDays] = useState(7);
+  const [isLateFeeModalOpen, setIsLateFeeModalOpen] = useState(false);
+  const [savingLateFeePolicy, setSavingLateFeePolicy] = useState(false);
+
+  const fetchLateFeeSettings = async () => {
+    try {
+      const res = await axios.get(`${BACKEND_URL}api/v1/security/otp-settings`);
+      if (res.data?.settings) {
+        setLateFeeFlatAfterDue(res.data.settings.lateFeeFlatAfterDue ?? 500);
+        setLateFeeGraceDays(res.data.settings.lateFeeGraceDays ?? 7);
+      }
+    } catch (e) {
+      console.warn("Could not load late fee settings:", e.message);
+    }
+  };
+
+  const handleSaveLateFeePolicy = async (e) => {
+    e.preventDefault();
+    setSavingLateFeePolicy(true);
+    try {
+      await axios.put(`${BACKEND_URL}api/v1/security/otp-settings`, {
+        lateFeeFlatAfterDue: Math.max(0, parseInt(lateFeeFlatAfterDue, 10) || 0),
+        lateFeeGraceDays: Math.max(0, parseInt(lateFeeGraceDays, 10) || 0),
+      });
+      toast.success("Late fee flat penalty and grace period updated successfully!");
+      setIsLateFeeModalOpen(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update late fee policy.");
+    } finally {
+      setSavingLateFeePolicy(false);
+    }
+  };
+
   const generateReminderMessage = (student, purpose, semester, amount, fineType, deadline) => {
     if (!student) return "";
     const sName = student.name || "Student";
@@ -789,6 +824,7 @@ const AccountsFees = () => {
   useEffect(() => {
     fetchFeeData();
     fetchFinesData();
+    fetchLateFeeSettings();
   }, [batchFilter, statusFilter]);
 
   const handleSearchSubmit = (e) => {
@@ -935,6 +971,16 @@ const AccountsFees = () => {
           <p>Supervise student tuition payments, issue gentle fee reminders, and record offline settlements.</p>
         </div>
         <div className="action-area">
+          <ActionBtn
+            type="button"
+            onClick={() => setIsLateFeeModalOpen(true)}
+            $bg="#ffffff"
+            $borderColor="#cbd5e1"
+            style={{ padding: "9px 16px", fontSize: "13px" }}
+            title="Configure Late Fee Flat Penalty and Grace Period"
+          >
+            Late Fee & Grace Policy
+          </ActionBtn>
           <PrimaryButton onClick={() => openPaymentModal(null)}>
             <span>+</span> Record Offline Payment
           </PrimaryButton>
@@ -958,7 +1004,7 @@ const AccountsFees = () => {
             transition: "all 0.2s",
           }}
         >
-          🎓 Tuition & Semester Accounts ({students.length})
+          Tuition & Semester Accounts ({students.length})
         </button>
         <button
           type="button"
@@ -978,12 +1024,56 @@ const AccountsFees = () => {
             transition: "all 0.2s",
           }}
         >
-          ⚖️ Institutional Fines & Penalties ({finesList.length})
+          Institutional Fines & Penalties ({finesList.length})
         </button>
       </div>
 
       {activeTab === "tuition" ? (
         <>
+          {/* LATE FEE POLICY SUMMARY BANNER */}
+          <div
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "10px",
+              padding: "12px 18px",
+              marginBottom: "20px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "10px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Current Tuition Late Fee Policy:
+              </span>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a" }}>
+                Flat Penalty: ₹{lateFeeFlatAfterDue.toLocaleString()}
+              </span>
+              <span style={{ color: "#cbd5e1" }}>|</span>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a" }}>
+                Grace Period: {lateFeeGraceDays} Days
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsLateFeeModalOpen(true)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#0f766e",
+                fontWeight: 700,
+                fontSize: "12px",
+                cursor: "pointer",
+                textDecoration: "underline",
+              }}
+            >
+              Edit Policy
+            </button>
+          </div>
+
           {/* KPI METRICS */}
           <MetricsGrid>
             <MetricCard $borderColor="#10b981">
@@ -1017,7 +1107,7 @@ const AccountsFees = () => {
               <form onSubmit={handleSearchSubmit} style={{ display: "inline-block" }}>
                 <input
                   type="text"
-                  placeholder="🔍 Search student by name, roll no, email..."
+                  placeholder="Search student by name, roll no, email..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -1055,7 +1145,7 @@ const AccountsFees = () => {
             </div>
 
             <ActionBtn onClick={fetchFeeData} $bg="#f8fafc" $borderColor="#cbd5e1">
-              🔄 Refresh
+              Refresh
             </ActionBtn>
           </FilterBar>
 
@@ -1114,7 +1204,7 @@ const AccountsFees = () => {
                         >
                           <span style={{ textDecoration: "underline" }}>{student.name}</span>
                           <span style={{ fontSize: "11px", background: "#ccfbf1", color: "#0f766e", padding: "1px 6px", borderRadius: "10px", fontWeight: 700 }}>
-                            Ledger 📄
+                            Ledger
                           </span>
                         </button>
                         <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
@@ -1144,7 +1234,7 @@ const AccountsFees = () => {
                       </td>
                       <td style={{ fontSize: "12px", color: "#475569" }}>
                         {student.balance === 0 ? (
-                          <span style={{ color: "#10b981", fontWeight: 700 }}>✓ All 8 Semesters</span>
+                          <span style={{ color: "#10b981", fontWeight: 700 }}>All 8 Semesters</span>
                         ) : student.semestersPaidCount > 0 ? (
                           <span>{student.semestersPaidCount} / {student.totalSemesters || 8} Semesters</span>
                         ) : (
@@ -1161,7 +1251,7 @@ const AccountsFees = () => {
                               onClick={() => handleSendReminder(student)}
                               disabled={remindedStudents[student._id]}
                             >
-                              {remindedStudents[student._id] ? "✓ Reminder Sent" : "🔔 Send Reminder"}
+                              {remindedStudents[student._id] ? "Reminder Sent" : "Send Reminder"}
                             </ActionBtn>
                             <ActionBtn
                               $bg="#ecfdf5"
@@ -1169,12 +1259,12 @@ const AccountsFees = () => {
                               $borderColor="#a7f3d0"
                               onClick={() => openPaymentModal(student)}
                             >
-                              💵 Record Payment
+                              Record Payment
                             </ActionBtn>
                           </>
                         ) : (
                           <span style={{ fontSize: "12px", color: "#10b981", fontWeight: 600 }}>
-                            ✓ Cleared
+                            Cleared
                           </span>
                         )}
                       </td>
@@ -1243,7 +1333,7 @@ const AccountsFees = () => {
               </p>
             </div>
             <PrimaryButton onClick={() => setIsCreateFineModalOpen(true)}>
-              <span>⚡</span> Issue New Fine / Penalty
+              <span></span> Issue New Fine / Penalty
             </PrimaryButton>
           </div>
 
@@ -1349,7 +1439,7 @@ const AccountsFees = () => {
                               $borderColor="#a7f3d0"
                               onClick={() => openPaymentModal(fine.student, "fine", null, fine)}
                             >
-                              💵 Record Settlement
+                              Record Settlement
                             </ActionBtn>
                             <ActionBtn
                               $bg="#f1f5f9"
@@ -1386,11 +1476,11 @@ const AccountsFees = () => {
                 setFeeHistoryData(null);
               }}
             >
-              ✕
+              Close
             </button>
             <div style={{ marginBottom: "18px" }}>
               <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a", margin: "0 0 4px 0" }}>
-                📜 Student Fee Ledger & Payment Records
+                Student Fee Ledger & Payment Records
               </h2>
               <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
                 Comprehensive financial audit trail and past tuition receipts for {selectedStudentForHistory.name}.
@@ -1494,7 +1584,7 @@ const AccountsFees = () => {
                       fontSize: "14px",
                     }}
                   >
-                    ⚠️ No previous payments have been recorded for this student yet. Pending due is ₹{(feeHistoryData?.balance || selectedStudentForHistory.balance).toLocaleString()}.
+                    No previous payments have been recorded for this student yet. Pending due is ₹{(feeHistoryData?.balance || selectedStudentForHistory.balance).toLocaleString()}.
                   </div>
                 ) : (
                   <div style={{ overflowX: "auto", border: "1px solid #e2e8f0", borderRadius: "10px" }}>
@@ -1544,7 +1634,7 @@ const AccountsFees = () => {
                                 $color="#047857"
                                 $borderColor="#a7f3d0"
                               >
-                                🧾 Receipt
+                                Receipt
                               </ActionBtn>
                             </td>
                           </tr>
@@ -1558,7 +1648,7 @@ const AccountsFees = () => {
                 <div style={{ marginTop: "24px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
                     <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#1e293b", margin: 0 }}>
-                      ⚖️ Institutional Fines & Other Campus Dues ({(feeHistoryData?.studentFines || []).length})
+                      Institutional Fines & Other Campus Dues ({(feeHistoryData?.studentFines || []).length})
                     </h3>
                     <button
                       type="button"
@@ -1589,7 +1679,7 @@ const AccountsFees = () => {
 
                   {(feeHistoryData?.studentFines || []).length === 0 ? (
                     <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", padding: "14px", color: "#166534", fontSize: "13px" }}>
-                      ✓ No library, sports, property damage, or disciplinary fines on record for this student.
+                      No library, sports, property damage, or disciplinary fines on record for this student.
                     </div>
                   ) : (
                     <div style={{ overflowX: "auto", border: "1px solid #e2e8f0", borderRadius: "10px" }}>
@@ -1621,7 +1711,7 @@ const AccountsFees = () => {
                                       $borderColor="#a7f3d0"
                                       onClick={() => openPaymentModal(selectedStudentForHistory, "fine", null, fine)}
                                     >
-                                      💵 Settle Fine
+                                      Settle Fine
                                     </ActionBtn>
                                     <ActionBtn
                                       $bg="#f1f5f9"
@@ -1663,7 +1753,7 @@ const AccountsFees = () => {
                       openPaymentModal(studentToPay);
                     }}
                   >
-                    💵 Record New Payment for Student
+                    Record New Payment for Student
                   </PrimaryButton>
                 </div>
               </>
@@ -1680,7 +1770,7 @@ const AccountsFees = () => {
               className="close-icon"
               onClick={() => setSelectedReceiptForPrint(null)}
             >
-              ✕
+              Close
             </button>
             <div className="receipt-header">
               <h3>CAMPUS-SYNC UNIVERSITY</h3>
@@ -1724,7 +1814,7 @@ const AccountsFees = () => {
             </div>
             <div className="receipt-row">
               <span className="key">Payment Status:</span>
-              <span className="val" style={{ color: "#166534", fontWeight: 700 }}>VERIFIED & SETTLED ✓</span>
+              <span className="val" style={{ color: "#166534", fontWeight: 700 }}>VERIFIED & SETTLED</span>
             </div>
 
             <div className="receipt-total">
@@ -1745,7 +1835,7 @@ const AccountsFees = () => {
                 onClick={() => window.print()}
                 style={{ flex: 1, justifyContent: "center" }}
               >
-                🖨️ Print Receipt
+                Print Receipt
               </PrimaryButton>
             </div>
           </ReceiptModalContent>
@@ -1757,7 +1847,7 @@ const AccountsFees = () => {
         <ModalBackdrop>
           <ModalContent style={{ maxWidth: "600px", maxHeight: "90vh", overflowY: "auto" }}>
             <button className="close-icon" onClick={() => setIsPaymentModalOpen(false)}>
-              ✕
+              Close
             </button>
             <h2>Record Fee Payment & Settlement</h2>
             <p>
@@ -1879,7 +1969,7 @@ const AccountsFees = () => {
                       });
                     }}
                   >
-                    🎓 Semester Tuition Fee
+                    Semester Tuition Fee
                   </button>
                   <button
                     type="button"
@@ -1918,7 +2008,7 @@ const AccountsFees = () => {
                       });
                     }}
                   >
-                    ⚖️ Institutional Fine / Penalty
+                    Institutional Fine / Penalty
                     {studentPendingFines.length > 0 && (
                       <span
                         style={{
@@ -1969,7 +2059,7 @@ const AccountsFees = () => {
                         });
                         return (
                           <option key={num} value={sTitle}>
-                            {sTitle} {isPaid ? "✓ (Cleared in records)" : "(Pending Tuition)"}
+                            {sTitle} {isPaid ? "(Cleared in records)" : "(Pending Tuition)"}
                           </option>
                         );
                       })}
@@ -2101,7 +2191,7 @@ const AccountsFees = () => {
                           }
                         />
                         <span style={{ fontWeight: "600", color: "#1e293b" }}>
-                          ✍️ Other / New Unlisted Fine Penalty
+                          Other / New Unlisted Fine Penalty
                         </span>
                       </label>
                     </div>
@@ -2134,14 +2224,14 @@ const AccountsFees = () => {
                           })
                         }
                       >
-                        <option value="Library Late Return">📚 Library Late Return</option>
-                        <option value="Lab Equipment Damage">🔬 Lab Equipment Damage / Breakage</option>
-                        <option value="Sports Equipment Penalty">🏏 Sports Equipment Damage / Loss</option>
-                        <option value="Hostel Maintenance & Mess Due">🏢 Hostel Maintenance & Mess Due</option>
+                        <option value="Library Late Return">Library Late Return</option>
+                        <option value="Lab Equipment Damage">Lab Equipment Damage / Breakage</option>
+                        <option value="Sports Equipment Penalty">Sports Equipment Damage / Loss</option>
+                        <option value="Hostel Maintenance & Mess Due">Hostel Maintenance & Mess Due</option>
                         <option value="ID Card / Certificate Re-issue">🪪 ID Card / Certificate Re-issue Fee</option>
-                        <option value="Examination Resit Fine">📝 Examination Resit / Late Form Fine</option>
-                        <option value="Disciplinary Fine">⚠️ Disciplinary / Conduct Fine</option>
-                        <option value="Other Institutional Penalty">⚖️ Other Institutional Penalty</option>
+                        <option value="Examination Resit Fine">Examination Resit / Late Form Fine</option>
+                        <option value="Disciplinary Fine">Disciplinary / Conduct Fine</option>
+                        <option value="Other Institutional Penalty">Other Institutional Penalty</option>
                       </select>
                     </div>
                   )}
@@ -2216,7 +2306,7 @@ const AccountsFees = () => {
         <ModalBackdrop>
           <ModalContent>
             <button className="close-icon" onClick={() => setIsCreateFineModalOpen(false)}>
-              ✕
+              Close
             </button>
             <h2>Issue Institutional Fine / Penalty</h2>
             <p>Levy a campus fee for library delay, sports equipment, lab damage, or disciplinary penalty.</p>
@@ -2311,9 +2401,9 @@ const AccountsFees = () => {
         <ModalBackdrop>
           <ModalContent>
             <button className="close-icon" onClick={() => setIsReminderModalOpen(false)}>
-              ✕
+              Close
             </button>
-            <h2>🔔 Send Official Accounts Notice / Reminder</h2>
+            <h2>Send Official Accounts Notice / Reminder</h2>
             <p>
               Select the specific reminder purpose, customize penalty amount and due date, and dispatch to the student's dashboard & email.
             </p>
@@ -2365,11 +2455,11 @@ const AccountsFees = () => {
                   }}
                   required
                 >
-                  <option value="pending_semester">🎓 Pending Semester Tuition Fee</option>
+                  <option value="pending_semester">Pending Semester Tuition Fee</option>
                   <option value="late_fee">⏳ Overdue Late Fee Surcharge</option>
-                  <option value="fine">⚠️ Institutional Fine / Property Penalty</option>
-                  <option value="defaulter">🚨 Urgent Defaulter Warning (Exam Hold)</option>
-                  <option value="custom">📝 Custom Administrative Notice</option>
+                  <option value="fine">Institutional Fine / Property Penalty</option>
+                  <option value="defaulter">Urgent Defaulter Warning (Exam Hold)</option>
+                  <option value="custom">Custom Administrative Notice</option>
                 </select>
               </div>
 
@@ -2511,7 +2601,58 @@ const AccountsFees = () => {
                   Cancel
                 </ActionBtn>
                 <PrimaryButton type="submit" disabled={submittingReminder}>
-                  {submittingReminder ? "Sending..." : "🚀 Dispatch Notice to Student"}
+                  {submittingReminder ? "Sending..." : "Dispatch Notice to Student"}
+                </PrimaryButton>
+              </div>
+            </form>
+          </ModalContent>
+        </ModalBackdrop>
+      )}
+
+      {/* Late Fee & Grace Period Policy Modal */}
+      {isLateFeeModalOpen && (
+        <ModalBackdrop onClick={() => setIsLateFeeModalOpen(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()} style={{ maxWidth: "480px" }}>
+            <h3>Late Fee & Grace Period Configuration</h3>
+            <p>Configure institutional surcharges and grace period applied to overdue semester fees.</p>
+
+            <form onSubmit={handleSaveLateFeePolicy}>
+              <div className="form-group">
+                <label>Late Fee Flat Penalty After Due Date (INR)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={10000}
+                  value={lateFeeFlatAfterDue}
+                  onChange={(e) => setLateFeeFlatAfterDue(e.target.value)}
+                  required
+                />
+                <small style={{ color: "#64748b", fontSize: "11px", marginTop: "4px" }}>
+                  Flat surcharge applied to student tuition once the term due date and grace period pass.
+                </small>
+              </div>
+
+              <div className="form-group">
+                <label>Late Fee Grace Period (Days)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={60}
+                  value={lateFeeGraceDays}
+                  onChange={(e) => setLateFeeGraceDays(e.target.value)}
+                  required
+                />
+                <small style={{ color: "#64748b", fontSize: "11px", marginTop: "4px" }}>
+                  Number of days of leeway after official term due date before late fee penalty triggers.
+                </small>
+              </div>
+
+              <div className="modal-actions">
+                <ActionBtn type="button" onClick={() => setIsLateFeeModalOpen(false)}>
+                  Cancel
+                </ActionBtn>
+                <PrimaryButton type="submit" disabled={savingLateFeePolicy}>
+                  {savingLateFeePolicy ? "Saving..." : "Save Policy"}
                 </PrimaryButton>
               </div>
             </form>
