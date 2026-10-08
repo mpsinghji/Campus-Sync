@@ -28,12 +28,17 @@ import mongoose from "mongoose";
 import { isAuthenticated, requireAdmin } from "./middlewares/auth.js";
 import { handleRazorpayWebhook } from "./controllers/webhookController.js";
 
+import proxyaddr from "proxy-addr";
+import { CLOUDFLARE_CIDRS, getClientIp, isLocalIp, getIpVersion } from "./utils/ipUtils.js";
+
 dotenv.config({ path: "./config/config.env" });
 
 const app = express();
 
-// Trust reverse proxy for client IP detection (rate limiter & secure cookies behind Render/Vercel/ALB)
-app.set("trust proxy", 1);
+// Trusted proxy configuration for Render & Cloudflare edge proxy architecture.
+// Strips loopback (::1), Render internal container mesh (10.0.0.0/8), and Cloudflare edge proxies.
+const TRUSTED_PROXIES = ["loopback", "linklocal", "uniquelocal", ...CLOUDFLARE_CIDRS];
+app.set("trust proxy", proxyaddr.compile(TRUSTED_PROXIES));
 
 // Hide Express fingerprinting
 app.disable("x-powered-by");
@@ -525,7 +530,9 @@ app.get("/api/health", async (req, res) => {
 });
 
 app.get("/api/v1/diagnostics/ip-debug", (req, res) => {
+  const clientIp = getClientIp(req);
   res.status(200).json({
+    clientIpDetected: clientIp,
     reqIp: req.ip,
     reqIps: req.ips,
     remoteAddress: req.socket?.remoteAddress,
@@ -533,6 +540,8 @@ app.get("/api/v1/diagnostics/ip-debug", (req, res) => {
     xRealIp: req.headers["x-real-ip"],
     cfConnectingIp: req.headers["cf-connecting-ip"],
     trueClientIp: req.headers["true-client-ip"],
+    isLocal: isLocalIp(clientIp),
+    ipVersion: getIpVersion(clientIp),
   });
 });
 

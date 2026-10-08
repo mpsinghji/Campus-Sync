@@ -648,7 +648,7 @@ const IpSecurityCenter = () => {
         <MetricCard $color="#14b8a6">
           <div className="label">Your Current IP</div>
           <div className="value" style={{ fontSize: "16px", wordBreak: "break-all" }}>
-            {overview.currentSuperAdminIp || "127.0.0.1"}
+            {overview.currentSuperAdminIp === "127.0.0.1" ? "127.0.0.1 (Localhost)" : (overview.currentSuperAdminIp || "127.0.0.1")}
           </div>
           <div className="sub">Active network connection</div>
         </MetricCard>
