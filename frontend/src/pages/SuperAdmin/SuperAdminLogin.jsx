@@ -298,7 +298,7 @@ const SuperAdminLogin = () => {
 
     toast.success("Login successful!", toastOptions);
     setTimeout(() => {
-      navigate("/master-control", { replace: true });
+      navigate("/admin/dashboard", { replace: true });
     }, 300);
   };
 

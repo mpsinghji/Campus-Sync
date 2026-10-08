@@ -204,6 +204,18 @@ const AdminDashboard = () => {
   return (
     <AdminDashboardContainer>
       <Content>
+        {isSuperAdmin && (
+          <SuperAdminBanner>
+            <SuperAdminLeft>
+              <CrownIcon>👑</CrownIcon>
+              <div>
+                <SuperAdminTitle>Super Administrator Console</SuperAdminTitle>
+                <SuperAdminDesc>Master system privilege active — Overseeing all campus operations</SuperAdminDesc>
+              </div>
+            </SuperAdminLeft>
+            <MasterBtn onClick={() => navigate("/master-control")}>Master Control ⚙️</MasterBtn>
+          </SuperAdminBanner>
+        )}
         <TopContent>
           <Section>
             <SectionTitle>Campus Operations & Category Overview</SectionTitle>

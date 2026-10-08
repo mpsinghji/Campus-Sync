@@ -132,12 +132,7 @@ const ChooseUser = () => {
       if (res && res.bypassOtp) {
         toast.success(res.message || "Login successful!", toastOptions);
         if (role === "admin") {
-          const isSuperAdmin = email.toLowerCase().trim() === "admin@campus-sync.com";
-          if (isSuperAdmin) {
-            navigate("/master-control", { replace: true });
-          } else {
-            navigate("/admin/dashboard", { replace: true });
-          }
+          navigate("/admin/dashboard", { replace: true });
         } else if (role === "teacher") {
           navigate("/teacher/dashboard", { replace: true });
         } else if (role === "student") {

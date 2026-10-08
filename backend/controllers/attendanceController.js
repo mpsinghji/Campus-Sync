@@ -101,10 +101,10 @@ export const submitAttendance = async (req, res, next) => {
   }
 };
 
-// Fetch attendance records with rich filters (by date, batch, student, status)
+// Fetch attendance records with rich filters (by date, batch, student, status, limit)
 export const getAllAttendance = async (req, res, next) => {
   try {
-    const { date, batch, status, search } = req.query;
+    const { date, batch, status, search, limit } = req.query;
 
     const filter = {};
     if (date) {
@@ -117,9 +117,15 @@ export const getAllAttendance = async (req, res, next) => {
       filter.status = status;
     }
 
-    let records = await Attendance.find(filter)
+    let query = Attendance.find(filter)
       .populate("student", "name rollno email batch mobileno")
-      .sort({ date: -1 });
+      .sort({ date: -1, createdAt: -1 });
+
+    if (limit && Number(limit) > 0) {
+      query = query.limit(Number(limit));
+    }
+
+    let records = await query;
 
     // Optional student search filter by name or rollno
     if (search) {
@@ -141,6 +147,7 @@ export const getAllAttendance = async (req, res, next) => {
     res.status(200).json({
       success: true,
       attendanceRecords: records,
+      data: records,
       stats: {
         total: totalCount,
         present: presentCount,

@@ -524,6 +524,18 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
+app.get("/api/v1/diagnostics/ip-debug", (req, res) => {
+  res.status(200).json({
+    reqIp: req.ip,
+    reqIps: req.ips,
+    remoteAddress: req.socket?.remoteAddress,
+    xForwardedFor: req.headers["x-forwarded-for"],
+    xRealIp: req.headers["x-real-ip"],
+    cfConnectingIp: req.headers["cf-connecting-ip"],
+    trueClientIp: req.headers["true-client-ip"],
+  });
+});
+
 
 app.head("/api/health", async (req, res) => {
   try {

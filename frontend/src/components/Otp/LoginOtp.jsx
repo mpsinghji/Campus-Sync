@@ -77,11 +77,7 @@ const LoginOtpPage = () => {
           } catch {}
         }
 
-        if (isSuperAdmin) {
-          navigate("/master-control", { replace: true });
-        } else {
-          navigate(`/${role}/dashboard`, { replace: true });
-        }
+        navigate(`/${role}/dashboard`, { replace: true });
       }
     };
 
@@ -131,21 +127,7 @@ const LoginOtpPage = () => {
       // Add a small delay before navigation
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Force navigation if not already navigated
-      const userData = Cookies.get(`${role}Data`);
-      let isSuper = false;
-      if (role === "admin" && userData) {
-        try {
-          const parsed = JSON.parse(userData);
-          isSuper = parsed.isSuperAdmin || parsed.email?.toLowerCase().trim() === "admin@campus-sync.com";
-        } catch {}
-      }
-
-      if (isSuper) {
-        navigate("/master-control", { replace: true });
-      } else {
-        navigate(`/${role}/dashboard`, { replace: true });
-      }
+      navigate(`/${role}/dashboard`, { replace: true });
     } catch (error) {
       console.error("Error verifying OTP:", error);
       setMessage(error?.message || "Invalid OTP. Please try again.");

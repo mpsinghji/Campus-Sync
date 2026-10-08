@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import Home from "./components/Home.jsx";
 import ChooseUser from "./components/ChooseUser.jsx";
 import ErrorPage from "./components/Error/errorPage.jsx";
@@ -74,6 +74,8 @@ function App() {
         {/* Admin Portal with persistent sidebar layout & auth */}
         <Route element={<AuthGuard role="admin"><DashboardLayout role="admin" /></AuthGuard>}>
           <Route exact path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route exact path="/superadmin/dashboard" element={<AdminDashboard />} />
+          <Route exact path="/superadmin" element={<Navigate to="/admin/dashboard" replace />} />
           <Route exact path="/admin/user-graph" element={<UserAnalysis />} />
           <Route exact path="/admin/attendance-graph" element={<AttendanceGraph />} />
           <Route exact path="/admin/payment-graph" element={<PaymentGraph />} />

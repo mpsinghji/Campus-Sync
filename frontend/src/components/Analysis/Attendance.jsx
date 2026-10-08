@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Bar } from "react-chartjs-2";
 import axios from "axios";
 import styled from "styled-components";
+import Cookies from "js-cookie";
 import { BACKEND_URL } from "../../constants/url";
 
 const GraphCard = styled.div`
@@ -126,17 +127,28 @@ const AttendanceGraph = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await axios.get(`${BACKEND_URL}api/v1/attendance/records`, {
+        const token =
+          Cookies.get("adminToken") ||
+          localStorage.getItem("adminToken") ||
+          Cookies.get("teacherToken") ||
+          localStorage.getItem("teacherToken");
+
+        const response = await axios.get(`${BACKEND_URL}api/v1/attendance/records?limit=1500`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
           withCredentials: true,
         });
 
-        if (response.data?.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
-          const attendanceRecords = response.data.data;
+        const rawList =
+          response.data?.attendanceRecords ||
+          response.data?.data ||
+          (Array.isArray(response.data) ? response.data : []);
+
+        if (response.data?.success && Array.isArray(rawList) && rawList.length > 0) {
           const attendanceByDate = {};
           let pCount = 0;
           let aCount = 0;
 
-          attendanceRecords.forEach(({ date, status }) => {
+          rawList.forEach(({ date, status }) => {
             const dateStr = date ? String(date).split("T")[0] : "Recent";
             if (!attendanceByDate[dateStr]) attendanceByDate[dateStr] = { Present: 0, Absent: 0 };
             if (status === "Present") {
@@ -148,13 +160,21 @@ const AttendanceGraph = () => {
             }
           });
 
-          setTotalPresent(pCount);
-          setTotalAbsent(aCount);
-          setHasRecords(true);
-
-          const labels = Object.keys(attendanceByDate).sort().slice(-7);
+          const sortedDates = Object.keys(attendanceByDate).sort();
+          const labels = sortedDates.slice(-7);
           const presentData = labels.map((d) => attendanceByDate[d].Present);
           const absentData = labels.map((d) => attendanceByDate[d].Absent);
+
+          let pulsePresent = 0;
+          let pulseAbsent = 0;
+          labels.forEach((d) => {
+            pulsePresent += attendanceByDate[d].Present;
+            pulseAbsent += attendanceByDate[d].Absent;
+          });
+
+          setTotalPresent(pulsePresent > 0 || pulseAbsent > 0 ? pulsePresent : pCount);
+          setTotalAbsent(pulsePresent > 0 || pulseAbsent > 0 ? pulseAbsent : aCount);
+          setHasRecords(true);
 
           setChartData({
             labels,
@@ -182,6 +202,7 @@ const AttendanceGraph = () => {
           setChartData(null);
         }
       } catch (err) {
+        console.error("Attendance fetch error:", err);
         setError(err.response?.data?.message || "Unable to load attendance analytics records.");
         setHasRecords(false);
         setTotalPresent(0);
