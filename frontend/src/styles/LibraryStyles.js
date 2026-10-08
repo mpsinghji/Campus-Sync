@@ -2,9 +2,16 @@ import styled from 'styled-components';
 
 export const LibraryContainer = styled.div`
   display: flex;
-  padding-left: 40px;
-  font-family: "Arial", sans-serif;
+  padding-left: 250px;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  background-color: #f8fafc;
+  font-family: "Inter", "Segoe UI", sans-serif;
 
+  @media screen and (max-width: 768px) {
+    padding-left: 0;
+  }
 `;
 
 export const Content = styled.div`

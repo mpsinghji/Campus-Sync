@@ -2,13 +2,23 @@ import styled from "styled-components";
 
 export const AdminDashboardContainer = styled.div`
   display: flex;
-  margin-left: 200px;
+  padding-left: 250px;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f8fafc;
+  box-sizing: border-box;
+  font-family: "Inter", "Segoe UI", sans-serif;
+
+  @media screen and (max-width: 768px) {
+    padding-left: 0;
+  }
 `;
 
 export const Content = styled.div`
   flex: 1;
-  padding: 20px;
-  margin-left: 50px;
+  padding: 28px 36px;
+  width: 100%;
+  box-sizing: border-box;
 `;
 
 export const TopContent = styled.div`
@@ -71,12 +81,30 @@ export const CardContent = styled.p`
 
 export const StudentDashboardContainer = styled.div`
   display: flex;
-  padding-left: 240px;
+  padding-left: 250px;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  background-color: #f8fafc;
+  font-family: "Inter", "Segoe UI", sans-serif;
+
+  @media screen and (max-width: 768px) {
+    padding-left: 0;
+  }
 `;
 
 export const TeacherDashboardContainer = styled.div`
   display: flex;
-  padding-left: 240px;
+  padding-left: 250px;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  background-color: #f8fafc;
+  font-family: "Inter", "Segoe UI", sans-serif;
+
+  @media screen and (max-width: 768px) {
+    padding-left: 0;
+  }
 `;
 
 // New styles for events

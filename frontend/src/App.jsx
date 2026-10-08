@@ -2,7 +2,6 @@ import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Home from "./components/Home.jsx";
 import ChooseUser from "./components/ChooseUser.jsx";
-// import AboutMe from "./components/AboutMe.jsx";
 import ErrorPage from "./components/Error/errorPage.jsx";
 
 import AdminRegister from "./components/AdminRegister.jsx";
@@ -21,6 +20,10 @@ import AdminPerformance from "./pages/Admin/Performance.jsx";
 import AdminSettingProfile from "./pages/Admin/SettingsProfile.jsx";
 import Students from "./pages/Admin/Students.jsx";
 import Teachers from "./pages/Admin/Teachers.jsx";
+import OtpSettings from "./pages/Admin/OtpSettings.jsx";
+import MasterControl from "./pages/Admin/MasterControl.jsx";
+import AccountsFees from "./pages/Admin/AccountsFees.jsx";
+
 
 import StudentDashboard from "./pages/Students/Dashboard.jsx";
 import StudentAssignments from "./pages/Students/Assignment.jsx";
@@ -32,6 +35,7 @@ import Fees from "./pages/Students/Fees.jsx";
 import AnnouncementSection from "./pages/Students/Announcement.jsx";
 import ProfileSection from "./pages/Students/Profile.jsx";
 import StudentEventSection from "./pages/Students/EventCalendar.jsx";
+import StudentDirectory from "./pages/Students/Directory.jsx";
 
 import TeacherDashboard from "../src/pages/Teachers/Dashboard";
 import ClassSection from "../src/pages/Teachers/Classes";
@@ -44,7 +48,6 @@ import AssignmentSection from "../src/pages/Teachers/Assignments";
 import CheckAttendanceSection from "../src/pages/Teachers/Attendance";
 import CheckExamSection from "../src/pages/Teachers/Exams";
 
-import ProtectedRoute from "./routes/ProtectedRoute.jsx";
 import LoginOtpPage from "./components/Otp/LoginOtp.jsx";
 import Payment from "./payment/payment.jsx";
 import PaymentSuccess from "./payment/paymentSuccess.jsx";
@@ -53,6 +56,9 @@ import PaymentGraph from "./components/Analysis/paymentDisplay.jsx";
 import ActivityGraph from "./components/Analysis/Activitycount.jsx";
 import UserAnalysis from "./components/Analysis/userAnalysis.jsx";
 import AuthGuard from './components/AuthGuard';
+import DashboardLayout from './components/Layout/DashboardLayout';
+
+import SuperAdminLogin from "./pages/SuperAdmin/SuperAdminLogin.jsx";
 
 function App() {
   return (
@@ -61,61 +67,71 @@ function App() {
         <Route path="*" element={<ErrorPage />} />
         <Route path="/" element={<Home />} />
         <Route path="/choose-user" element={<ChooseUser />} />
-        {/* <Route path="/about-me" element={<AboutMe />} /> */}
-
-        {/* <Route path="/login/resend/:id" element={<LoginOtpPage />} /> */}
+        <Route path="/superadmin-login" element={<SuperAdminLogin />} />
+        <Route path="/superadmin/login" element={<SuperAdminLogin />} />
         <Route path="/otp/:id" element={<LoginOtpPage />} />
 
-        {/* Add the Admin Register route here */}
-        <Route exact path="/admin-register" element={<AdminRegister />} />
-        <Route exact path="/teacher-register" element={<TeacherRegister />} />
-        <Route exact path="/student-register" element={<StudentRegister />} />
+        {/* Admin Portal with persistent sidebar layout & auth */}
+        <Route element={<AuthGuard role="admin"><DashboardLayout role="admin" /></AuthGuard>}>
+          <Route exact path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route exact path="/admin/user-graph" element={<UserAnalysis />} />
+          <Route exact path="/admin/attendance-graph" element={<AttendanceGraph />} />
+          <Route exact path="/admin/payment-graph" element={<PaymentGraph />} />
+          <Route exact path="/admin/activity-graph" element={<ActivityGraph />} />
+          <Route exact path="/admin/Announcement" element={<AdminAnnouncement />} />
+          <Route exact path="/admin/Assignment" element={<AdminAssignment />} />
+          <Route exact path="/admin/Attendance" element={<AdminAttendance />} />
+          <Route exact path="/admin/Classes" element={<AdminClasses />} />
+          <Route exact path="/admin/EventCalender" element={<AdminEventCalender />} />
+          <Route exact path="/admin/Exam" element={<AdminExam />} />
+          <Route exact path="/admin/Library" element={<AdminLibrary />} />
+          <Route exact path="/admin/Performance" element={<AdminPerformance />} />
+          <Route exact path="/admin/Profile" element={<AdminSettingProfile />} />
+          <Route exact path="/admin/otp-settings" element={<OtpSettings />} />
+          <Route exact path="/master-control" element={<MasterControl />} />
+          <Route exact path="/super-admin" element={<MasterControl />} />
+          <Route exact path="/admin/master-control" element={<MasterControl />} />
+          <Route exact path="/admin/accounts-fees" element={<AccountsFees />} />
+          <Route exact path="/admin/Students" element={<Students />} />
+          <Route exact path="/admin/Teachers" element={<Teachers />} />
+          <Route exact path="/admin-register" element={<AdminRegister />} />
+          <Route exact path="/teacher-register" element={<TeacherRegister />} />
+          <Route exact path="/student-register" element={<StudentRegister />} />
+        </Route>
 
-        {/* All dashboard routes */}
-        <Route exact path="/admin/dashboard" element={<AuthGuard><AdminDashboard /></AuthGuard>} />
-        <Route exact path="/student/dashboard" element={<AuthGuard><StudentDashboard /></AuthGuard>} />
-        <Route exact path="/teacher/dashboard" element={<AuthGuard><TeacherDashboard /></AuthGuard>} />
+        {/* Student Portal with persistent sidebar layout & auth */}
+        <Route element={<AuthGuard role="student"><DashboardLayout role="student" /></AuthGuard>}>
+          <Route exact path="/student/dashboard" element={<StudentDashboard />} />
+          <Route exact path="/student/assignments" element={<StudentAssignments />} />
+          <Route exact path="/student/exams" element={<ExamSection />} />
+          <Route exact path="/student/performance" element={<PerformanceSection />} />
+          <Route exact path="/student/attendance" element={<AttendanceSection />} />
+          <Route exact path="/student/library" element={<LibrarySection />} />
+          <Route exact path="/student/fees" element={<Fees />} />
+          <Route exact path="/student/communication" element={<AnnouncementSection />} />
+          <Route exact path="/student/EventCalendar" element={<StudentEventSection />} />
+          <Route exact path="/student/directory" element={<StudentDirectory />} />
+          <Route exact path="/student/settings" element={<ProfileSection />} />
+        </Route>
 
-        {/* Admin Section */}
-        <Route path="/admin/user-graph" element={<AuthGuard><UserAnalysis /></AuthGuard>} />
-        <Route path="/admin/attendance-graph" element={<AuthGuard><AttendanceGraph /></AuthGuard>} />
-        <Route path="/admin/payment-graph" element={<AuthGuard><PaymentGraph /></AuthGuard>} />
-        <Route path="/admin/activity-graph" element={<AuthGuard><ActivityGraph /></AuthGuard>} />
-        <Route exact path="/admin/Announcement" element={<AuthGuard><AdminAnnouncement /></AuthGuard>} />
-        <Route exact path="/admin/Assignment" element={<AuthGuard><AdminAssignment /></AuthGuard>} />
-        <Route exact path="/admin/Attendance" element={<AuthGuard><AdminAttendance /></AuthGuard>} />
-        <Route exact path="/admin/Classes" element={<AuthGuard><AdminClasses /></AuthGuard>} />
-        <Route exact path="/admin/EventCalender" element={<AuthGuard><AdminEventCalender /></AuthGuard>} />
-        <Route exact path="/admin/Exam" element={<AuthGuard><AdminExam /></AuthGuard>} />
-        <Route exact path="/admin/Library" element={<AuthGuard><AdminLibrary /></AuthGuard>} />
-        <Route exact path="/admin/Performance" element={<AuthGuard><AdminPerformance /></AuthGuard>} />
-        <Route exact path="/admin/Profile" element={<AuthGuard><AdminSettingProfile /></AuthGuard>} />
-        <Route exact path="/admin/Students" element={<AuthGuard><Students /></AuthGuard>} />
-        <Route exact path="/admin/Teachers" element={<AuthGuard><Teachers /></AuthGuard>} />
+        {/* Standalone Student Routes without persistent sidebar */}
+        <Route path="/payment" element={<AuthGuard role="student"><Payment /></AuthGuard>} />
+        <Route path="/payment-success" element={<AuthGuard role="student"><PaymentSuccess /></AuthGuard>} />
 
-        {/* Student Dashboard routes */}
-        <Route exact path="/student/assignments" element={<AuthGuard><StudentAssignments /></AuthGuard>} />
-        <Route exact path="/student/exams" element={<AuthGuard><ExamSection /></AuthGuard>} />
-        <Route exact path="/student/performance" element={<AuthGuard><PerformanceSection /></AuthGuard>} />
-        <Route exact path="/student/attendance" element={<AuthGuard><AttendanceSection /></AuthGuard>} />
-        <Route exact path="/student/library" element={<AuthGuard><LibrarySection /></AuthGuard>} />
-        <Route exact path="/student/fees" element={<AuthGuard><Fees /></AuthGuard>} />
-        <Route exact path="/student/communication" element={<AuthGuard><AnnouncementSection /></AuthGuard>} />
-        <Route exact path="/student/EventCalendar" element={<AuthGuard><StudentEventSection /></AuthGuard>} />
-        <Route exact path="/student/settings" element={<AuthGuard><ProfileSection /></AuthGuard>} />
-        <Route path="/payment" element={<AuthGuard><Payment /></AuthGuard>} />
-        <Route path="/payment-success" element={<AuthGuard><PaymentSuccess /></AuthGuard>} />
-
-        {/* Teachers sections here */}
-        <Route exact path="/teacher/classes" element={<AuthGuard><ClassSection /></AuthGuard>} />
-        <Route exact path="/teacher/students" element={<AuthGuard><StudentSection /></AuthGuard>} />
-        <Route exact path="/teacher/assignments" element={<AuthGuard><AssignmentSection /></AuthGuard>} />
-        <Route exact path="/teacher/exams" element={<AuthGuard><CheckExamSection /></AuthGuard>} />
-        <Route exact path="/teacher/performance" element={<AuthGuard><CheckPerformanceSection /></AuthGuard>} />
-        <Route exact path="/teacher/attendance" element={<AuthGuard><CheckAttendanceSection /></AuthGuard>} />
-        <Route exact path="/teacher/communication" element={<AuthGuard><CheckAnnouncementSection /></AuthGuard>} />
-        <Route exact path="/teacher/events" element={<AuthGuard><EventSection /></AuthGuard>} />
-        <Route exact path="/teacher/settings" element={<AuthGuard><TeacherProfileSection /></AuthGuard>} />
+        {/* Teacher Portal with persistent sidebar layout & auth */}
+        <Route element={<AuthGuard role="teacher"><DashboardLayout role="teacher" /></AuthGuard>}>
+          <Route exact path="/teacher/dashboard" element={<TeacherDashboard />} />
+          <Route exact path="/teacher/classes" element={<ClassSection />} />
+          <Route exact path="/teacher/students" element={<StudentSection />} />
+          <Route exact path="/teacher/assignments" element={<AssignmentSection />} />
+          <Route exact path="/teacher/exams" element={<CheckExamSection />} />
+          <Route exact path="/teacher/performance" element={<CheckPerformanceSection />} />
+          <Route exact path="/teacher/attendance" element={<CheckAttendanceSection />} />
+          <Route exact path="/teacher/communication" element={<CheckAnnouncementSection />} />
+          <Route exact path="/teacher/events" element={<EventSection />} />
+          <Route exact path="/teacher/library" element={<AdminLibrary />} />
+          <Route exact path="/teacher/settings" element={<TeacherProfileSection />} />
+        </Route>
       </Routes>
     </Router>
   );

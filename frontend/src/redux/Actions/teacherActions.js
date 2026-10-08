@@ -8,14 +8,16 @@ axios.defaults.withCredentials = true;
 
 // Teacher Login Action
 export const teacherLogin = (email, password) => async (dispatch) => {
+  const loginUrl = `${URL}/login`;
   try {
+    console.log("Making teacher login request to:", loginUrl);
     dispatch({
       type: "TEACHER_LOGIN_REQUEST",
     });
 
     // Make API call to login
     const { data } = await axios.post(
-      `${URL}/login`,
+      loginUrl,
       { email, password },
       {
         headers: {
@@ -25,20 +27,62 @@ export const teacherLogin = (email, password) => async (dispatch) => {
       }
     );
 
+    console.log("Teacher login response:", data);
+
+    if (data.bypassOtp) {
+      if (data.token) {
+        localStorage.setItem("teacherToken", data.token);
+        Cookies.set("teacherToken", data.token, { expires: 7, path: "/" });
+      }
+      if (data.user) {
+        Cookies.set(
+          "teacherData",
+          JSON.stringify({
+            ...data.user,
+            token: data.token,
+            user: data.user,
+            email: data.user.email,
+          }),
+          { expires: 7, path: "/" }
+        );
+      }
+      dispatch({
+        type: "TEACHER_LOGIN_SUCCESS",
+        payload: {
+          message: data.message,
+          id: data.data,
+          userRole: data.userRole || "teacher",
+          bypassOtp: true,
+        },
+      });
+      dispatch({
+        type: "VERIFY_TEACHER_OTP_SUCCESS",
+        payload: {
+          message: data.message,
+          userRole: data.userRole || "teacher",
+          token: data.token,
+          user: data.user,
+        },
+      });
+      return data;
+    }
+
     dispatch({
       type: "TEACHER_LOGIN_SUCCESS",
       payload: {
         message: data.message,
         id: data.data,
-        userRole: data.userRole,
+        userRole: data.userRole || "teacher",
       },
     });
+    return data;
   } catch (error) {
-    console.error("Login Error:", error);
+    console.error("Teacher Login Error:", error);
     dispatch({
       type: "TEACHER_LOGIN_FAILURE",
       payload: error.response?.data?.message || "Server Error",
     });
+    throw error;
   }
 };
 
@@ -64,34 +108,35 @@ export const verifyTeacherOtp = (id, otp) => async (dispatch) => {
 
     console.log("Teacher OTP verification response:", data);
 
+    const token = data.data?.token || data.token;
+    const user = data.data?.user || data.user || { id: data.data || id, role: "teacher" };
+
     // Check if we have token in response
-    if (!data.token) {
+    if (!token) {
       console.error("No token received in response");
       throw new Error("No token received");
     }
 
     // Clear any existing teacher data
     Cookies.remove('teacherData', { path: '/' });
+    Cookies.remove('teacherToken', { path: '/' });
     
-    // Store user data in cookie
+    // Store user data in cookie and localStorage
+    localStorage.setItem("teacherToken", token);
+    Cookies.set("teacherToken", token, { expires: 7, path: "/" });
     Cookies.set('teacherData', JSON.stringify({
-      user: {
-        id: data.data,
-        userRole: data.userRole
-      },
-      token: data.token
-    }), { path: '/' });
+      ...user,
+      user,
+      token
+    }), { expires: 7, path: '/' });
 
     dispatch({
       type: "VERIFY_TEACHER_OTP_SUCCESS",
       payload: {
         message: data.message,
-        userRole: data.userRole,
-        token: data.token,
-        user: {
-          id: data.data,
-          userRole: data.userRole
-        }
+        userRole: data.userRole || "teacher",
+        token,
+        user
       }
     });
 
@@ -99,8 +144,8 @@ export const verifyTeacherOtp = (id, otp) => async (dispatch) => {
 
   } catch (error) {
     console.error("Teacher OTP Verification Error:", error);
-    // Clear any partial data
     Cookies.remove('teacherData', { path: '/' });
+    Cookies.remove('teacherToken', { path: '/' });
     dispatch({
       type: "VERIFY_TEACHER_OTP_FAILURE",
       payload: error.response?.data?.message || "OTP Verification Failed",

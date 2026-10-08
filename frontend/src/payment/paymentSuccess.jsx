@@ -22,19 +22,28 @@ const PaymentSuccess = () => {
 
   return (
     <div
-      className="h-screen bg-gray-100 flex items-center justify-center"
       style={{
-        fontFamily: "'Inter', sans-serif", 
+        fontFamily: "'Inter', sans-serif",
         color: "#4A5568",
-        margin: "100px 40%",
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#f8fafc",
+        padding: "20px",
       }}
     >
       <style>{keyframesStyle}</style>
       <div
-        className="bg-white p-8 rounded-lg shadow-lg text-center"
         style={{
-          width: "90%",
-          maxWidth: "400px",
+          width: "100%",
+          maxWidth: "460px",
+          background: "#ffffff",
+          padding: "36px 30px",
+          borderRadius: "16px",
+          boxShadow: "0 10px 25px rgba(0,0,0,0.06)",
+          textAlign: "center",
+          border: "1px solid #e2e8f0",
         }}
       >
 
@@ -77,22 +86,21 @@ const PaymentSuccess = () => {
           <button
             onClick={() => navigate("/student/fees")}
             style={{
-              padding: "12px 24px",
-              borderRadius: "8px",
+              padding: "12px 28px",
+              borderRadius: "10px",
               cursor: "pointer",
-              backgroundColor: "#38A169", 
+              backgroundColor: "#10b981",
               color: "#fff",
-              fontSize: "16px",
+              fontSize: "15px",
               fontWeight: "600",
               border: "none",
               marginTop: "20px",
-              transition: "background-color 0.3s ease",
-              marginLeft: "80px"
+              transition: "background-color 0.2s ease",
             }}
-            onMouseOver={(e) => (e.target.style.backgroundColor = "#2F855A")}
-            onMouseOut={(e) => (e.target.style.backgroundColor = "#38A169")}
+            onMouseOver={(e) => (e.target.style.backgroundColor = "#059669")}
+            onMouseOut={(e) => (e.target.style.backgroundColor = "#10b981")}
           >
-            Go Back
+            📄 View Fee Receipt in Student Portal
           </button>
         </div>
       </div>

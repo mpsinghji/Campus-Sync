@@ -11,16 +11,23 @@ import {
 
   resendStudentLoginOtp,
   updateStudentProfile,
-  updateStudent
+  updateStudent,
+  changeStudentPassword,
+  getAllBatches,
+  bulkRegisterStudents,
 } from "../controllers/studentController.js";
 import { validateUserRegistration } from "../middlewares/userValidator.js";
 import { validateOtp } from "../middlewares/otpValidator.js";
+import { isAuthenticated } from "../middlewares/auth.js";
 
 const studentRoute = express.Router();
 
 studentRoute.post("/register", validateUserRegistration, studentRegister);
+studentRoute.post("/bulk-register", bulkRegisterStudents);
 
 studentRoute.post("/login", studentLogin);
+
+studentRoute.get("/batches", getAllBatches);
 
 studentRoute.get("/getall", getAllStudents);
 
@@ -29,7 +36,7 @@ studentRoute.put("/:id", updateStudent);
 
 studentRoute.get("/", async (req, res) => {
   try {
-    const students = await Student.find({}, "rollno email mobileno");
+    const students = await Student.find({}, "rollno email mobileno name batch");
     res.status(200).json(students);
   } catch (error) {
     console.error("Error fetching students:", error);
@@ -39,6 +46,7 @@ studentRoute.get("/", async (req, res) => {
 
 studentRoute.get("/profile", getStudentProfile);
 studentRoute.put("/profile", updateStudentProfile);
+studentRoute.post("/change-password", isAuthenticated, changeStudentPassword);
 
 studentRoute.get("/count", getStudentCount);
 

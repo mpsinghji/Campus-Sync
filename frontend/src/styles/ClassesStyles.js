@@ -2,10 +2,12 @@ import styled from 'styled-components';
 
 export const ClassesContainer = styled.div`
   display: flex;
-  padding-left: 40px;
-  margin-left: 200px;     
-  font-family: "Arial", sans-serif;
-
+  padding-left: 250px;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  background-color: #f8fafc;
 
   @media screen and (max-width: 768px) {
     flex-direction: column;

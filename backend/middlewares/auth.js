@@ -6,9 +6,9 @@ import Student from "../models/studentModel.js";
 import Teacher from "../models/teacherModel.js";
 
 export const verifyToken = (req, res, next) => {
-  const token = req.headers["authorization"]?.split(" ")[1];
+  const token = req.headers["authorization"]?.split(" ")[1]?.trim();
 
-  if (!token) {
+  if (!token || token === "undefined" || token === "null") {
     return Response(res, 401, false, message.noTokenProvided);
   }
 
@@ -24,11 +24,8 @@ export const verifyToken = (req, res, next) => {
 export const isAuthenticated = async (req, res, next) => {
   try {
     // Parsing cookies and headers
-    const { adminToken, teacherToken, studentToken } = req.cookies;
+    const { adminToken, teacherToken, studentToken } = req.cookies || {};
     const authHeader = req.headers["authorization"];
-
-    console.log("Cookies:", req.cookies);
-    console.log("Auth Header:", authHeader);
 
     // Check which token is available
     let token;
@@ -36,23 +33,27 @@ export const isAuthenticated = async (req, res, next) => {
 
     // Check header first
     if (authHeader && authHeader.startsWith("Bearer ")) {
-      token = authHeader.split(" ")[1];
-      // We need to decode the token to know the role if it comes from header
-      const decoded = jwt.decode(token);
-      if (decoded && decoded.role) {
-        role = decoded.role;
+      const candidate = authHeader.split(" ")[1]?.trim();
+      if (candidate && candidate !== "undefined" && candidate !== "null") {
+        token = candidate;
+        try {
+          const decoded = jwt.decode(token);
+          if (decoded && decoded.role) {
+            role = decoded.role;
+          }
+        } catch (e) {}
       }
     }
 
-    // If no token from header, check cookies
+    // If no valid token from header, check cookies
     if (!token) {
-      if (adminToken) {
+      if (adminToken && adminToken !== "undefined" && adminToken !== "null") {
         token = adminToken;
         role = "admin";
-      } else if (teacherToken) {
+      } else if (teacherToken && teacherToken !== "undefined" && teacherToken !== "null") {
         token = teacherToken;
         role = "teacher";
-      } else if (studentToken) {
+      } else if (studentToken && studentToken !== "undefined" && studentToken !== "null") {
         token = studentToken;
         role = "student";
       }
@@ -64,7 +65,16 @@ export const isAuthenticated = async (req, res, next) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtErr) {
+      return Response(res, 401, false, jwtErr.message || message.invalidOrExpiredToken);
+    }
+
+    if (!role && decoded?.role) {
+      role = decoded.role;
+    }
 
     // Find user based on role
     let user;
@@ -74,17 +84,24 @@ export const isAuthenticated = async (req, res, next) => {
       user = await Teacher.findById(decoded.id);
     } else if (role === "student") {
       user = await Student.findById(decoded.id);
+    } else {
+      user = (await Admin.findById(decoded.id)) ||
+             (await Teacher.findById(decoded.id)) ||
+             (await Student.findById(decoded.id));
+      if (user) {
+        role = user.role || (user.isSuperAdmin !== undefined ? "admin" : "");
+      }
     }
 
     // If user not found
     if (!user) {
-      return Response(res, 401, false, `No ${role} found with this token`);
+      return Response(res, 401, false, `No ${role || "user"} found with this token`);
     }
 
     req.user = user;
     req.role = role; // Add role to request to use for role-based authorization
     next();
   } catch (error) {
-    return Response(res, 500, false, error.message);
+    return Response(res, 401, false, error.message);
   }
 };

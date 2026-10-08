@@ -8,7 +8,8 @@ import {
   verifyTeacherLoginOtp,
   resendTeacherLoginOtp,
   updateTeacherProfile,
-  updateTeacher
+  updateTeacher,
+  changeTeacherPassword,
 } from "../controllers/teacherController.js";
 import { validateUserRegistration } from "../middlewares/userValidator.js";
 import { validateOtp } from "../middlewares/otpValidator.js";
@@ -27,6 +28,7 @@ teacherRoute.put("/:id", updateTeacher);
 
 teacherRoute.get("/profile", getTeacherProfile);
 teacherRoute.put("/profile", isAuthenticated, updateTeacherProfile);
+teacherRoute.post("/change-password", isAuthenticated, changeTeacherPassword);
 
 teacherRoute.post("/login/verify/:id", validateOtp, verifyTeacherLoginOtp);
 

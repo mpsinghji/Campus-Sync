@@ -14,12 +14,25 @@ import {
 } from "../styles/paymentStyles";
 import ProjectLogo from "../assets/bg1.png";
 import { BACKEND_URL } from "../constants/url";
+import Cookies from "js-cookie";
+
 const Payment = () => {
   const [responseId, setResponseId] = React.useState("");
   const [responseState, setResponseState] = React.useState("");
   const navigate = useNavigate();
   const location = useLocation();
   const semester = location.state?.semester || "1st Semester";
+
+  const getLoggedInStudentId = () => {
+    try {
+      const raw = Cookies.get("studentData");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return parsed.user?._id || parsed.user?.id || parsed.id;
+      }
+    } catch {}
+    return "507f1f77bcf86cd799439011";
+  };
 
   const loadScript = (src) => {
     return new Promise((resolve) => {
@@ -49,7 +62,7 @@ const Payment = () => {
     let data = JSON.stringify({
       amount: amount * 100,
       currency: "INR",
-      studentId: "507f1f77bcf86cd799439011", // You can get this from user context or Redux store
+      studentId: getLoggedInStudentId(),
       academicYear: new Date().getFullYear().toString(),
       semester: semester
     });

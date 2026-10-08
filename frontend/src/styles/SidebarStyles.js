@@ -4,36 +4,22 @@ import { Link } from 'react-router-dom';
 
 export const SidebarContainer = styled.div`
   position: fixed;
-  top: 0; /* Centers the sidebar vertically */
+  top: 0;
+  bottom: 0;
   left: 0;
   width: 250px;
-  height: 94%;
+  height: 100vh;
+  box-sizing: border-box;
   background-color: #1A252F;
   color: #ECF0F1;
-  padding-top: 50px;
+  padding-top: 20px;
   z-index: 100;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.4);
-  transition: width 0.3s ease-in-out;
-  overflow-y: auto; /* Enable scrolling */
-  scrollbar-width: none; /* Hide scrollbar in Firefox */
-  -ms-overflow-style: none; /* Hide scrollbar in Internet Explorer */
   font-family: "Arial", sans-serif;
-
-
-  ::-webkit-scrollbar {
-    display: none; /* Hide scrollbar in Chrome, Safari, and Edge */
-  }
-
-  &:hover {
-    // width: 260px;
-  }
-
-  @media screen and (max-height: 700px) {
-    padding-top: 50px;
-  }
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 `;
-
-
 
 export const SidebarHeader = styled.div`
   font-size: 20px;
@@ -43,12 +29,32 @@ export const SidebarHeader = styled.div`
   border-bottom: 1px solid #34495E;
   letter-spacing: 2px;
   text-transform: uppercase;
+  flex-shrink: 0;
 `;
 
 export const SidebarNav = styled.ul`
   list-style: none;
   padding: 0;
   margin: 0;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+export const SidebarFooter = styled.div`
+  margin-top: auto;
+  border-top: 1px solid #2C3E50;
+  background: #151E27;
+  padding: 10px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
 `;
 
 export const SidebarNavItem = styled.li`
@@ -67,6 +73,15 @@ export const SidebarNavItem = styled.li`
     color: #1ABC9C;
     border-left: 4px solid #1ABC9C;
   }
+
+  ${({ active }) =>
+    active &&
+    css`
+      background-color: #34495E;
+      padding-left: 30px;
+      color: #1ABC9C;
+      border-left: 4px solid #1ABC9C;
+    `}
 
   &:hover {
     background-color: #34495E;
@@ -126,6 +141,11 @@ export const DropdownMenu = styled.div`
   border-radius: 3px; 
   transition: background 0.3s ease, color 0.3s ease;
   margin-left: 30px;
+
+  &.active {
+    background: #007bff;
+    color: #ffffff;
+  }
 
   &:hover {
     background: #007bff; 

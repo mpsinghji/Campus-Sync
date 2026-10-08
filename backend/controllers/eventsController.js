@@ -1,20 +1,35 @@
 import { Events } from "../models/eventsSchema.js";
 
 export const createEvents = async (req, res, next) => {
-  console.log(req.body);
-  const { name, description, date } = req.body;
+  const { name, description, date, targetAudience, batch, section, location, targetEmails } = req.body;
 
   try {
     if (!name || !description || !date) {
       return res.status(400).json({ error: "Please Fill the Form Completely!" });
     }
 
-    const newEvent = await Events.create({ name, description, date });
+    let parsedEmails = [];
+    if (typeof targetEmails === "string") {
+      parsedEmails = targetEmails.split(/[,;\s]+/).map((e) => e.trim().toLowerCase()).filter(Boolean);
+    } else if (Array.isArray(targetEmails)) {
+      parsedEmails = targetEmails.map((e) => e.trim().toLowerCase()).filter(Boolean);
+    }
+
+    const newEvent = await Events.create({
+      name,
+      description,
+      date,
+      targetAudience: targetAudience || "all",
+      targetEmails: parsedEmails,
+      batch: batch || "",
+      section: section || "",
+      location: location || "Main Campus Auditorium",
+    });
 
     res.status(201).json({
       success: true,
       message: "Event is Created!",
-      event: newEvent, // Returning the created event
+      event: newEvent,
     });
   } catch (err) {
     next(err);
@@ -23,10 +38,40 @@ export const createEvents = async (req, res, next) => {
 
 export const getAllEvents = async (req, res, next) => {
   try {
-    const events = await Events.find();
+    const { role, batch, section, email } = req.query;
+    const cleanEmail = (email || "").toLowerCase().trim();
+
+    let filter = {};
+    if (role === "student") {
+      const orConditions = [
+        { targetAudience: "all" },
+        { targetAudience: "students" },
+      ];
+      if (batch) {
+        orConditions.push({ targetAudience: "batch", batch });
+      }
+      if (batch && section) {
+        orConditions.push({ targetAudience: "section", batch, section });
+      }
+      if (cleanEmail) {
+        orConditions.push({ targetAudience: "bunch_emails", targetEmails: cleanEmail });
+      }
+      filter = { $or: orConditions };
+    } else if (role === "teacher") {
+      const orConditions = [
+        { targetAudience: "all" },
+        { targetAudience: "teachers" },
+      ];
+      if (cleanEmail) {
+        orConditions.push({ targetAudience: "bunch_emails", targetEmails: cleanEmail });
+      }
+      filter = { $or: orConditions };
+    }
+
+    const events = await Events.find(filter).sort({ date: 1 });
     res.status(200).json({
       success: true,
-      events, // Return events in plural
+      events,
     });
   } catch (err) {
     next(err);

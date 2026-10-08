@@ -8,14 +8,16 @@ axios.defaults.withCredentials = true;
 
 // Student Login Action
 export const studentLogin = (email, password) => async (dispatch) => {
+  const loginUrl = `${URL}/login`;
   try {
+    console.log("Making student login request to:", loginUrl);
     dispatch({
       type: "STUDENT_LOGIN_REQUEST",
     });
 
     // Make API call to login
     const { data } = await axios.post(
-      `${URL}/login`,
+      loginUrl,
       { email, password },
       {
         headers: {
@@ -25,20 +27,62 @@ export const studentLogin = (email, password) => async (dispatch) => {
       }
     );
 
+    console.log("Student login response:", data);
+
+    if (data.bypassOtp) {
+      if (data.token) {
+        localStorage.setItem("studentToken", data.token);
+        Cookies.set("studentToken", data.token, { expires: 7, path: "/" });
+      }
+      if (data.user) {
+        Cookies.set(
+          "studentData",
+          JSON.stringify({
+            ...data.user,
+            token: data.token,
+            user: data.user,
+            email: data.user.email,
+          }),
+          { expires: 7, path: "/" }
+        );
+      }
+      dispatch({
+        type: "STUDENT_LOGIN_SUCCESS",
+        payload: {
+          message: data.message,
+          id: data.data,
+          userRole: data.userRole || "student",
+          bypassOtp: true,
+        },
+      });
+      dispatch({
+        type: "VERIFY_STUDENT_OTP_SUCCESS",
+        payload: {
+          message: data.message,
+          userRole: data.userRole || "student",
+          token: data.token,
+          user: data.user,
+        },
+      });
+      return data;
+    }
+
     dispatch({
       type: "STUDENT_LOGIN_SUCCESS",
       payload: {
         message: data.message,
         id: data.data,
-        userRole: data.userRole,
+        userRole: data.userRole || "student",
       },
     });
+    return data;
   } catch (error) {
-    console.error("Login Error:", error);
+    console.error("Student Login Error:", error);
     dispatch({
       type: "STUDENT_LOGIN_FAILURE",
       payload: error.response?.data?.message || "Server Error",
     });
+    throw error;
   }
 };
 
@@ -64,28 +108,34 @@ export const verifyStudentOtp = (id, otp) => async (dispatch) => {
 
     console.log("OTP verification response:", data);
 
-    // Check if we have token in response
-    if (!data.data || !data.data.token) {
+    const token = data.data?.token || data.token;
+    const user = data.data?.user || data.user || { id, role: "student" };
+
+    if (!token) {
       console.error("No token received in response");
       throw new Error("No token received");
     }
 
     // Clear any existing student data
     Cookies.remove('studentData', { path: '/' });
+    Cookies.remove('studentToken', { path: '/' });
     
-    // Store user data in cookie
+    // Store user data in cookie and localStorage
+    localStorage.setItem("studentToken", token);
+    Cookies.set("studentToken", token, { expires: 7, path: "/" });
     Cookies.set('studentData', JSON.stringify({
-      user: data.data.user,
-      token: data.data.token
-    }), { path: '/' });
+      ...user,
+      user,
+      token
+    }), { expires: 7, path: '/' });
 
     dispatch({
       type: "VERIFY_STUDENT_OTP_SUCCESS",
       payload: {
         message: data.message,
         userRole: "student",
-        token: data.data.token,
-        user: data.data.user
+        token,
+        user
       }
     });
 
@@ -95,6 +145,7 @@ export const verifyStudentOtp = (id, otp) => async (dispatch) => {
     console.error("OTP Verification Error:", error);
     // Clear any partial data
     Cookies.remove('studentData', { path: '/' });
+    Cookies.remove('studentToken', { path: '/' });
     dispatch({
       type: "VERIFY_STUDENT_OTP_FAILURE",
       payload: error.response?.data?.message || "OTP Verification Failed",

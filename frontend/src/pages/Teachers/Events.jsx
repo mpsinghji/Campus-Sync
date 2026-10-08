@@ -14,6 +14,7 @@ import {
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { BACKEND_URL } from "../../constants/url";
+import { formatDateDDMMYYYY } from "../../utils/dateUtils";
 const EventSection = () => {
   const [events, setEvents] = useState([]);
   const [newEvent, setNewEvent] = useState({
@@ -101,7 +102,7 @@ const EventSection = () => {
             <Event key={index}>
               <h3>{event.name}</h3>
               <p>{event.description}</p>
-              <p>{new Date(event.date).toLocaleDateString()}</p>
+              <p>{formatDateDDMMYYYY(event.date)}</p>
             </Event>
           ))}
         </Events>

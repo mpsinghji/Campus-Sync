@@ -2,14 +2,18 @@ import styled from 'styled-components';
 
 export const EventCalendarContainer = styled.div`
   display: flex;
-  font-family: "Arial", sans-serif;
-  
-  `;
-  
-  export const Content = styled.div`
+  padding-left: 250px;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  background-color: #f8fafc;
+`;
+
+export const Content = styled.div`
   flex: 1;
-  margin-left:250px;
-  padding: 20px;
+  padding: 30px;
+  box-sizing: border-box;
 `;
 
 export const CalendarContainer = styled.div`

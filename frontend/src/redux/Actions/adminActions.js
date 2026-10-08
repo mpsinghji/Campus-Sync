@@ -23,15 +23,42 @@ export const checkAdminAuth = () => async (dispatch) => {
             throw new Error("No admin data found");
         }
 
-        const parsedData = JSON.parse(adminData);
-        const token = parsedData.token;
+        let parsedData = null;
+        try {
+            parsedData = JSON.parse(adminData);
+        } catch (e) {
+            throw new Error("Invalid admin data found");
+        }
+
+        let token = parsedData?.token || Cookies.get('adminToken') || localStorage.getItem('adminToken');
+        if (token === "undefined" || token === "null") {
+            token = null;
+        }
+
+        const headers = {};
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
 
         const { data } = await axios.get(`${ADMIN_URL}/profile`, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            },
+            headers,
             withCredentials: true
         });
+
+        // Ensure token and user details persist properly
+        const validToken = token || data?.token || parsedData?.token;
+        if (validToken && validToken !== "undefined" && validToken !== "null") {
+            localStorage.setItem("adminToken", validToken);
+            Cookies.set("adminToken", validToken, { expires: 7, path: "/" });
+        }
+
+        const updatedSession = {
+            ...parsedData,
+            ...data,
+            token: validToken,
+            isSuperAdmin: parsedData?.isSuperAdmin === true || data?.isSuperAdmin === true || data?.email === "admin@campus-sync.com"
+        };
+        Cookies.set("adminData", JSON.stringify(updatedSession), { expires: 7, path: "/" });
 
         dispatch({
             type: "CHECK_ADMIN_AUTH_SUCCESS",
@@ -46,8 +73,11 @@ export const checkAdminAuth = () => async (dispatch) => {
 
     } catch (error) {
         console.error("Auth check failed:", error);
-        // Clear invalid data
-        Cookies.remove('adminData', { path: '/' });
+        // Only clear cookies if the backend actually returns 401 Unauthorized
+        if (error?.response?.status === 401) {
+            Cookies.remove('adminData', { path: '/' });
+            localStorage.removeItem('adminToken');
+        }
         dispatch({
             type: "CHECK_ADMIN_AUTH_FAILURE",
             payload: error.message
@@ -80,6 +110,40 @@ export const adminLogin = (email, password) => async (dispatch) => {
 
         console.log("Login response:", data);
 
+        if (data.bypassOtp) {
+            if (data.token) {
+                localStorage.setItem('adminToken', data.token);
+                Cookies.set('adminToken', data.token, { expires: 7, path: '/' });
+            }
+            if (data.user) {
+                Cookies.set('adminData', JSON.stringify({
+                    ...data.user,
+                    token: data.token,
+                    user: data.user,
+                    email: data.user.email,
+                }), { expires: 7, path: '/' });
+            }
+            dispatch({
+                type: "ADMIN_LOGIN_SUCCESS",
+                payload: {
+                    message: data.message,
+                    id: data.data,
+                    userRole: data.userRole || "admin",
+                    bypassOtp: true,
+                }
+            });
+            dispatch({
+                type: "VERIFY_ADMIN_OTP_SUCCESS",
+                payload: {
+                    message: data.message,
+                    user: data.user,
+                    token: data.token,
+                    userRole: "admin",
+                }
+            });
+            return data;
+        }
+
         dispatch({
             type: "ADMIN_LOGIN_SUCCESS",
             payload: {
@@ -88,6 +152,7 @@ export const adminLogin = (email, password) => async (dispatch) => {
                 userRole: data.userRole
             }
         });
+        return data;
 
     } catch (error) {
         console.error("Login Error:", {
@@ -133,18 +198,27 @@ export const verifyAdminOtp = (id, otp) => async (dispatch) => {
 
         // Clear existing cookies
         Cookies.remove('adminToken', { path: '/' });
-        // Set admin data cookie
+        Cookies.remove('adminData', { path: '/' });
+
+        const token = data.data?.token || data.token;
+        const user = data.data?.user || data.user || { id, role: 'admin' };
+
+        if (token) {
+            localStorage.setItem('adminToken', token);
+            Cookies.set('adminToken', token, { expires: 7, path: '/' });
+        }
         Cookies.set('adminData', JSON.stringify({
-            token: data.data.token,
-            user: data.data.user
+            ...user,
+            user,
+            token
         }), { expires: 7, path: '/' });
 
         dispatch({
             type: "VERIFY_ADMIN_OTP_SUCCESS",
             payload: {
                 message: data.message,
-                user: data.data.user,
-                token: data.data.token,
+                user,
+                token,
                 userRole: 'admin'
             }
         });

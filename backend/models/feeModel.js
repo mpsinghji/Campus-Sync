@@ -30,6 +30,14 @@ const feeSchema=new mongoose.Schema({
     PaidAt:{
         type:Date,
         default:Date.now
+    },
+    lateFee:{
+        type:Number,
+        default:0
+    },
+    paymentMode:{
+        type:String,
+        default:"Online Gateway"
     }
 },{timestamps:true});
 

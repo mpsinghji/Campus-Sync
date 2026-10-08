@@ -3,9 +3,13 @@ import styled from "styled-components";
 export const FeesContainer = styled.div`
   display: flex;
   flex-direction: column;
-  padding: 20px;
-  margin-left: 300px;
-  `;
+  padding: 30px;
+  padding-left: 250px;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 100vh;
+  background-color: #f8fafc;
+`;
   export const FeesHeader = styled.h1`
   align-items: left;
 `;

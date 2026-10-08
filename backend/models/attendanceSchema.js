@@ -14,6 +14,26 @@ const attendanceSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-});
+  batch: {
+    type: String,
+    default: "General",
+  },
+  department: {
+    type: String,
+    default: "Computer Science",
+  },
+  subject: {
+    type: String,
+    default: "General Academics",
+  },
+  group: {
+    type: String,
+    default: "G1",
+  },
+  section: {
+    type: String,
+    default: "A",
+  },
+}, { timestamps: true });
 
 export default mongoose.model("Attendance", attendanceSchema);

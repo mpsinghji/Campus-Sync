@@ -17,6 +17,14 @@ const examSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
+  targetEmails: {
+    type: [String],
+    default: [],
+  },
+  description: {
+    type: String,
+    default: "",
+  },
 });
 
 const Exam = mongoose.model('Exam', examSchema);

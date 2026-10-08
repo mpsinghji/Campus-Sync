@@ -21,6 +21,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { adminLogin } from "../redux/Actions/adminActions";
 import { studentLogin } from "../redux/Actions/studentActions";
 import { teacherLogin } from "../redux/Actions/teacherActions";
+import Cookies from "js-cookie";
 import toastOptions from "../constants/toast.js";
 
 export const GlobalStyle = createGlobalStyle`
@@ -100,12 +101,60 @@ const ChooseUser = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (role === "admin") {
-      dispatch(adminLogin(email, password));
-    } else if (role === "student") {
-      dispatch(studentLogin(email, password));
-    } else {
-      dispatch(teacherLogin(email, password));
+    // Clear any stale tokens/cookies from past sessions before authenticating
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("teacherToken");
+    localStorage.removeItem("studentToken");
+    Cookies.remove("adminToken", { path: "/" });
+    Cookies.remove("teacherToken", { path: "/" });
+    Cookies.remove("studentToken", { path: "/" });
+    Cookies.remove("adminData", { path: "/" });
+    Cookies.remove("teacherData", { path: "/" });
+    Cookies.remove("studentData", { path: "/" });
+
+    try {
+      if (email.toLowerCase().trim() === "admin@campus-sync.com") {
+        toast.error("User doesn't exist", toastOptions);
+        return;
+      }
+
+      let res;
+      if (role === "admin") {
+        res = await dispatch(adminLogin(email, password));
+      } else if (role === "student") {
+        res = await dispatch(studentLogin(email, password));
+      } else {
+        res = await dispatch(teacherLogin(email, password));
+      }
+
+      console.log("Login dispatch completed, result:", res);
+
+      if (res && res.bypassOtp) {
+        toast.success(res.message || "Login successful!", toastOptions);
+        if (role === "admin") {
+          const isSuperAdmin = email.toLowerCase().trim() === "admin@campus-sync.com";
+          if (isSuperAdmin) {
+            navigate("/master-control", { replace: true });
+          } else {
+            navigate("/admin/dashboard", { replace: true });
+          }
+        } else if (role === "teacher") {
+          navigate("/teacher/dashboard", { replace: true });
+        } else if (role === "student") {
+          navigate("/student/dashboard", { replace: true });
+        }
+        return;
+      }
+
+      const targetId = res?.data || res?.id;
+      if (res && !res.bypassOtp && targetId) {
+        sessionStorage.setItem("otp_role", role);
+        console.log(`Navigating to OTP verification: /otp/${targetId}?role=${role}`);
+        navigate(`/otp/${targetId}?role=${role}`, { state: { role } });
+        return;
+      }
+    } catch (err) {
+      console.error("Login submission error:", err);
     }
   };
 
@@ -119,20 +168,34 @@ const ChooseUser = () => {
       toast.error(error, toastOptions);
       dispatch({ type: "CLEAR_ERROR" });
     }
-    if (message) {
-      toast.success(message, toastOptions);
-      dispatch({ type: "CLEAR_MESSAGE" });
-      navigate(`/otp/${id}`, { state: { role } });
-    }
-  }, [message, error, navigate, dispatch, role, id]);
+  }, [error, dispatch]);
 
   return (
     <>
       <GlobalStyle />
-      <MarqueeContainer>
+      <MarqueeContainer style={{ position: "relative" }}>
         <MarqueeText>
           To login to the system, please contact the admin at <a href="mailto:manpreet.singhcomet@gmail.com">manpreet.singhcomet@gmail.com</a>
         </MarqueeText>
+        {/* Invisible secret trigger at extreme right of the titlebar */}
+        <div
+          onClick={() => navigate("/superadmin-login")}
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            width: "50px",
+            height: "100%",
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            cursor: "default",
+            zIndex: 1002,
+            opacity: 0,
+            userSelect: "none"
+          }}
+          aria-hidden="true"
+        />
       </MarqueeContainer>
       <ChooseUserContainer>
         <div className="overlay"></div>
