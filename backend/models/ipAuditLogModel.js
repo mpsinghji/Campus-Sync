@@ -12,6 +12,8 @@ const ipAuditLogSchema = new mongoose.Schema(
         "REMOVE_BAN",
         "RATE_LIMIT_RESET",
         "EMERGENCY_BLOCK",
+        "SAFELIST_IP",
+        "REMOVE_SAFELIST_IP",
       ],
       index: true,
     },

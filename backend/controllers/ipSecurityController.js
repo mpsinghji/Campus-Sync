@@ -920,6 +920,15 @@ export const removeSafelistIp = async (req, res) => {
       reason: (reason || "Removed from Safelist").trim(),
     });
 
+    await logSecurityEvent({
+      ip: cleanIp,
+      eventType: "IP_SAFELIST_REMOVED",
+      metadata: {
+        reason: (reason || "Removed from Safelist").trim(),
+        performedBy: req.user?.email || "Superadmin",
+      },
+    });
+
     return Response(res, 200, true, `IP ${cleanIp} removed from Safelist.`);
   } catch (error) {
     console.error("Error in removeSafelistIp:", error);

@@ -37,6 +37,8 @@ const ipSecurityEventSchema = new mongoose.Schema(
         "IP_PERMANENT_BANNED",
         "IP_UNBLOCKED",
         "IP_UNBANNED",
+        "IP_SAFELISTED",
+        "IP_SAFELIST_REMOVED",
         "SUPERADMIN_IP_ACTION",
       ],
     },

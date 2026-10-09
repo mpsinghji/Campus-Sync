@@ -15,6 +15,7 @@ import {
   BsInfoCircle,
   BsCheckCircleFill,
   BsClockHistory,
+  BsGear,
 } from "react-icons/bs";
 
 const CenterContainer = styled.div`
@@ -836,6 +837,15 @@ const IpSecurityCenter = () => {
         >
           <BsClockHistory /> Immutable Audit Log
         </SubTabBtn>
+        <SubTabBtn
+          $active={subTab === "settings"}
+          onClick={() => {
+            setSubTab("settings");
+            setPage(1);
+          }}
+        >
+          <BsGear /> Settings & Emergency Controls
+        </SubTabBtn>
       </SubTabBar>
 
       {/* 3. SUBTAB 1: Live IP Activity */}
@@ -1226,43 +1236,45 @@ const IpSecurityCenter = () => {
         </>
       )}
 
-      {/* 6. Rate Limit & Authentication Lockout Emergency Controls */}
-      <EmergencyCard>
-        <h4>
-          <BsShieldLock /> Rate Limit & Authentication Lockout Emergency Controls
-        </h4>
-        <p>
-          To protect authentication and OTP endpoints against credential stuffing and brute-force attempts, traffic from an IP address is automatically rate-limited (HTTP 429).
-          As Super Administrator, you can clear rate-limit locks for your current network IP or flush all server rate-limit counters below without weakening underlying security rules.
-        </p>
+      {/* 6. SUBTAB 4: Rate Limit & Emergency Settings */}
+      {subTab === "settings" && (
+        <EmergencyCard>
+          <h4>
+            <BsShieldLock /> Rate Limit & Authentication Lockout Emergency Controls
+          </h4>
+          <p>
+            To protect authentication and OTP endpoints against credential stuffing and brute-force attempts, traffic from an IP address is automatically rate-limited (HTTP 429).
+            As Super Administrator, you can clear rate-limit locks for your current network IP or flush all server rate-limit counters below without weakening underlying security rules.
+          </p>
 
-        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
-          <ActionButton
-            type="button"
-            onClick={handleResetCurrentIpRateLimits}
-            disabled={resettingRateLimit}
-            style={{ padding: "10px 18px", fontSize: "13px" }}
-          >
-            {resettingRateLimit ? "Resetting..." : "Reset Current Network IP Rate Limits"}
-          </ActionButton>
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+            <ActionButton
+              type="button"
+              onClick={handleResetCurrentIpRateLimits}
+              disabled={resettingRateLimit}
+              style={{ padding: "10px 18px", fontSize: "13px" }}
+            >
+              {resettingRateLimit ? "Resetting..." : "Reset Current Network IP Rate Limits"}
+            </ActionButton>
 
-          <ActionButton
-            type="button"
-            $variant="danger"
-            onClick={handleFlushAllRateLimitStores}
-            disabled={resettingRateLimit}
-            style={{
-              padding: "10px 18px",
-              fontSize: "13px",
-              background: "#fef2f2",
-              borderColor: "#fecaca",
-              color: "#dc2626",
-            }}
-          >
-            {resettingRateLimit ? "Flushing..." : "Flush All Rate Limit Stores"}
-          </ActionButton>
-        </div>
-      </EmergencyCard>
+            <ActionButton
+              type="button"
+              $variant="danger"
+              onClick={handleFlushAllRateLimitStores}
+              disabled={resettingRateLimit}
+              style={{
+                padding: "10px 18px",
+                fontSize: "13px",
+                background: "#fef2f2",
+                borderColor: "#fecaca",
+                color: "#dc2626",
+              }}
+            >
+              {resettingRateLimit ? "Flushing..." : "Flush All Rate Limit Stores"}
+            </ActionButton>
+          </div>
+        </EmergencyCard>
+      )}
 
       {/* MODAL: IP Details Deep-dive */}
       {detailsModalIp && (
