@@ -2457,66 +2457,6 @@ const MasterControl = () => {
                 </PrimarySaveButton>
               </div>
             </form>
-
-            <div style={{ marginTop: "32px", borderTop: "1px solid #e2e8f0", paddingTop: "24px" }}>
-              <h4 style={{ fontSize: "15px", fontWeight: "700", color: "#0f172a", marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
-                <BsShieldLock /> Rate Limit & Authentication Lockout Emergency Controls
-              </h4>
-              <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "16px", lineHeight: "1.5" }}>
-                To protect authentication and OTP endpoints against credential stuffing and brute-force attempts, traffic from an IP address is automatically rate-limited (HTTP 429).
-                As Super Administrator, you can clear rate-limit locks for your current network IP or flush all server rate-limit counters below without weakening underlying security rules.
-              </p>
-
-              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
-                <ActionBtn
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      setResettingRateLimit(true);
-                      const res = await axios.post(
-                        `${BACKEND_URL}api/v1/admin/master/rate-limit/reset`,
-                        {},
-                        { withCredentials: true }
-                      );
-                      toast.success(res.data?.message || "Rate limit cleared for your current IP.");
-                    } catch (err) {
-                      toast.error(err.response?.data?.message || "Failed to reset rate limit.");
-                    } finally {
-                      setResettingRateLimit(false);
-                    }
-                  }}
-                  disabled={resettingRateLimit}
-                  style={{ padding: "10px 18px", fontSize: "13px", background: "#f8fafc", borderColor: "#cbd5e1" }}
-                >
-                  {resettingRateLimit ? "Resetting..." : "Reset Current Network IP Rate Limits"}
-                </ActionBtn>
-
-                <ActionBtn
-                  type="button"
-                  $danger
-                  onClick={async () => {
-                    if (!window.confirm("Flush all active authentication and OTP rate limit locks across the server?")) return;
-                    try {
-                      setResettingRateLimit(true);
-                      const res = await axios.post(
-                        `${BACKEND_URL}api/v1/admin/master/rate-limit/reset`,
-                        { resetAll: true },
-                        { withCredentials: true }
-                      );
-                      toast.success(res.data?.message || "All server rate limit locks flushed.");
-                    } catch (err) {
-                      toast.error(err.response?.data?.message || "Failed to reset all rate limits.");
-                    } finally {
-                      setResettingRateLimit(false);
-                    }
-                  }}
-                  disabled={resettingRateLimit}
-                  style={{ padding: "10px 18px", fontSize: "13px" }}
-                >
-                  Flush All Rate Limit Stores
-                </ActionBtn>
-              </div>
-            </div>
           </MatrixCard>
           </>
         )}

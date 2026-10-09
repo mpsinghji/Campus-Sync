@@ -16,7 +16,7 @@ const ipAccessRuleSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ["temporary_block", "permanent_block", "ban", "allow"],
+      enum: ["temporary_block", "permanent_block", "ban", "allow", "safelist"],
       default: "temporary_block",
     },
     status: {

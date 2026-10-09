@@ -3,6 +3,9 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
+import { checkIsIpSafelisted } from "./ipSecurityMiddleware.js";
+import { getClientIp } from "../utils/ipUtils.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SIGNAL_FILE = path.join(__dirname, "..", ".rate_limit_reset_signal");
@@ -18,7 +21,11 @@ export const authLimiter = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.headers["x-test-bypass-rate-limit"] === "true",
+  skip: (req) => {
+    if (req.headers["x-test-bypass-rate-limit"] === "true") return true;
+    const ip = getClientIp(req);
+    return checkIsIpSafelisted(ip);
+  },
   handler: (req, res, next, options) => {
     const retryAfter = res.getHeader("Retry-After") || Math.ceil(options.windowMs / 1000);
     return res.status(options.statusCode).json({
@@ -37,7 +44,11 @@ export const otpLimiter = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.headers["x-test-bypass-rate-limit"] === "true",
+  skip: (req) => {
+    if (req.headers["x-test-bypass-rate-limit"] === "true") return true;
+    const ip = getClientIp(req);
+    return checkIsIpSafelisted(ip);
+  },
   handler: (req, res, next, options) => {
     const retryAfter = res.getHeader("Retry-After") || Math.ceil(options.windowMs / 1000);
     return res.status(options.statusCode).json({

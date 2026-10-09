@@ -182,6 +182,31 @@ const ActionButton = styled.button`
   }
 `;
 
+const EmergencyCard = styled.div`
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  p {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0 0 18px 0;
+    line-height: 1.5;
+  }
+`;
+
 const TableCard = styled.div`
   background: #ffffff;
   border-radius: 12px;
@@ -272,9 +297,11 @@ const StatusBadge = styled.span`
   border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
+  text-transform: uppercase;
   background: ${(props) => {
     if (props.$status === "banned") return "#7f1d1d";
     if (props.$status === "blocked") return "#f97316";
+    if (props.$status === "safelisted") return "#059669";
     if (props.$status === "expired") return "#64748b";
     if (props.$status === "removed") return "#94a3b8";
     return "#10b981";
@@ -387,6 +414,15 @@ const IpSecurityCenter = () => {
   const [banNotes, setBanNotes] = useState("");
   const [banConfirmPhrase, setBanConfirmPhrase] = useState("");
   const [savingBan, setSavingBan] = useState(false);
+
+  // Safelist Modal State
+  const [safelistModalOpen, setSafelistModalOpen] = useState(false);
+  const [safelistIpInput, setSafelistIpInput] = useState("");
+  const [safelistReasonInput, setSafelistReasonInput] = useState("");
+  const [savingSafelist, setSavingSafelist] = useState(false);
+
+  // Rate Limit Resetting State
+  const [resettingRateLimit, setResettingRateLimit] = useState(false);
 
   useEffect(() => {
     fetchOverview();
@@ -606,6 +642,118 @@ const IpSecurityCenter = () => {
     }
   };
 
+  const handleSafelist = async (ip) => {
+    const reason = window.prompt(
+      `Enter reason to add IP ${ip} to Safelist (Always Safe / Never Block):`,
+      "Trusted administrative network"
+    );
+    if (reason === null) return;
+    try {
+      const res = await axios.post(
+        `${BACKEND_URL}api/v1/admin/master/ip-security/safelist`,
+        { ip, reason: reason || "Added to Safelist" },
+        { withCredentials: true }
+      );
+      toast.success(res.data?.message || `IP ${ip} is now Safelisted (Always Safe).`);
+      fetchOverview();
+      if (subTab === "activity") fetchActivity();
+      if (subTab === "rules") fetchRules();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to safelist IP.");
+    }
+  };
+
+  const handleRemoveSafelist = async (ip) => {
+    const confirm = window.confirm(
+      `Remove IP ${ip} from Safelist? Automated security protections and rate limits will apply again.`
+    );
+    if (!confirm) return;
+    try {
+      const res = await axios.post(
+        `${BACKEND_URL}api/v1/admin/master/ip-security/remove-safelist`,
+        { ip, reason: "Manually removed from Safelist by Superadmin" },
+        { withCredentials: true }
+      );
+      toast.success(res.data?.message || `IP ${ip} removed from Safelist.`);
+      fetchOverview();
+      if (subTab === "activity") fetchActivity();
+      if (subTab === "rules") fetchRules();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to remove from Safelist.");
+    }
+  };
+
+  const handleOpenAddSafelistModal = () => {
+    setSafelistIpInput("");
+    setSafelistReasonInput("Trusted static IP / office network");
+    setSafelistModalOpen(true);
+  };
+
+  const handleExecuteAddSafelist = async (e) => {
+    e.preventDefault();
+    if (!safelistIpInput.trim()) {
+      toast.error("Please enter a valid IP address.");
+      return;
+    }
+    setSavingSafelist(true);
+    try {
+      const res = await axios.post(
+        `${BACKEND_URL}api/v1/admin/master/ip-security/safelist`,
+        {
+          ip: safelistIpInput.trim(),
+          reason: safelistReasonInput.trim() || "Manually added to Safelist",
+        },
+        { withCredentials: true }
+      );
+      toast.success(res.data?.message || `IP ${safelistIpInput.trim()} added to Safelist.`);
+      setSafelistModalOpen(false);
+      fetchOverview();
+      if (subTab === "activity") fetchActivity();
+      if (subTab === "rules") fetchRules();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to add IP to Safelist.");
+    } finally {
+      setSavingSafelist(false);
+    }
+  };
+
+  const handleResetCurrentIpRateLimits = async () => {
+    try {
+      setResettingRateLimit(true);
+      const res = await axios.post(
+        `${BACKEND_URL}api/v1/admin/master/rate-limit/reset`,
+        {},
+        { withCredentials: true }
+      );
+      toast.success(res.data?.message || "Rate limit cleared for your current IP.");
+      fetchOverview();
+      if (subTab === "activity") fetchActivity();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to reset rate limit.");
+    } finally {
+      setResettingRateLimit(false);
+    }
+  };
+
+  const handleFlushAllRateLimitStores = async () => {
+    if (!window.confirm("Flush all active authentication and OTP rate limit locks across the server?")) return;
+    try {
+      setResettingRateLimit(true);
+      const res = await axios.post(
+        `${BACKEND_URL}api/v1/admin/master/rate-limit/reset`,
+        { resetAll: true },
+        { withCredentials: true }
+      );
+      toast.success(res.data?.message || "All server rate limit locks flushed.");
+      fetchOverview();
+      if (subTab === "activity") fetchActivity();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to reset all rate limits.");
+    } finally {
+      setResettingRateLimit(false);
+    }
+  };
+
   return (
     <CenterContainer>
       {/* 1. Overview Statistics */}
@@ -614,6 +762,11 @@ const IpSecurityCenter = () => {
           <div className="label">Total Unique IPs</div>
           <div className="value">{overview.totalUniqueIps}</div>
           <div className="sub">Recorded interacting IPs</div>
+        </MetricCard>
+        <MetricCard $color="#059669">
+          <div className="label">Safelisted IPs</div>
+          <div className="value">{overview.safelistedIps || 0}</div>
+          <div className="sub">Always allowed / Never blocked</div>
         </MetricCard>
         <MetricCard $color="#10b981">
           <div className="label">Active IPs (24h)</div>
@@ -672,7 +825,7 @@ const IpSecurityCenter = () => {
             setPage(1);
           }}
         >
-          <BsLock /> Active Firewall Blocks & Rules ({overview.blockedIps + overview.bannedIps})
+          <BsLock /> Active Firewall Blocks & Rules ({overview.blockedIps + overview.bannedIps + (overview.safelistedIps || 0)})
         </SubTabBtn>
         <SubTabBtn
           $active={subTab === "audit"}
@@ -712,6 +865,7 @@ const IpSecurityCenter = () => {
               >
                 <option value="all">All Statuses</option>
                 <option value="normal">Normal</option>
+                <option value="safelisted">Safelisted (Always Safe)</option>
                 <option value="blocked">Temporarily Blocked</option>
                 <option value="banned">Permanently Banned</option>
                 <option value="rate_limited">Rate Limited</option>
@@ -731,6 +885,10 @@ const IpSecurityCenter = () => {
                 <option value="low">Low</option>
                 <option value="normal">Normal</option>
               </select>
+
+              <ActionButton $variant="success" onClick={handleOpenAddSafelistModal}>
+                <BsShieldCheck /> Add IP to Safelist
+              </ActionButton>
 
               <ActionButton onClick={fetchActivity}>
                 <BsArrowClockwise /> Refresh
@@ -867,12 +1025,19 @@ const IpSecurityCenter = () => {
                           <ActionButton onClick={() => handleOpenDetails(item.ip)} title="Deep-dive inspect IP">
                             Inspect
                           </ActionButton>
-                          {item.status === "blocked" || item.status === "banned" ? (
+                          {item.status === "safelisted" || item.isSafelisted ? (
+                            <ActionButton onClick={() => handleRemoveSafelist(item.ip)} title="Remove from Safelist">
+                              Remove Safelist
+                            </ActionButton>
+                          ) : item.status === "blocked" || item.status === "banned" ? (
                             <ActionButton $variant="success" onClick={() => handleUnblock(item.ip)}>
                               <BsUnlock /> Unblock
                             </ActionButton>
                           ) : (
                             <>
+                              <ActionButton $variant="success" onClick={() => handleSafelist(item.ip)} title="Mark as Always Safe">
+                                <BsShieldCheck /> Safelist
+                              </ActionButton>
                               <ActionButton $variant="warning" onClick={() => handleOpenBlockModal(item.ip)}>
                                 <BsLock /> Block
                               </ActionButton>
@@ -974,9 +1139,15 @@ const IpSecurityCenter = () => {
                       </td>
                       <td style={{ textAlign: "right" }}>
                         {rule.status === "active" && (
-                          <ActionButton $variant="success" onClick={() => handleUnblock(rule.ip)}>
-                            <BsUnlock /> Remove Rule
-                          </ActionButton>
+                          rule.type === "safelist" ? (
+                            <ActionButton onClick={() => handleRemoveSafelist(rule.ip)}>
+                              Remove Safelist
+                            </ActionButton>
+                          ) : (
+                            <ActionButton $variant="success" onClick={() => handleUnblock(rule.ip)}>
+                              <BsUnlock /> Remove Rule
+                            </ActionButton>
+                          )
                         )}
                       </td>
                     </tr>
@@ -1055,6 +1226,44 @@ const IpSecurityCenter = () => {
         </>
       )}
 
+      {/* 6. Rate Limit & Authentication Lockout Emergency Controls */}
+      <EmergencyCard>
+        <h4>
+          <BsShieldLock /> Rate Limit & Authentication Lockout Emergency Controls
+        </h4>
+        <p>
+          To protect authentication and OTP endpoints against credential stuffing and brute-force attempts, traffic from an IP address is automatically rate-limited (HTTP 429).
+          As Super Administrator, you can clear rate-limit locks for your current network IP or flush all server rate-limit counters below without weakening underlying security rules.
+        </p>
+
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+          <ActionButton
+            type="button"
+            onClick={handleResetCurrentIpRateLimits}
+            disabled={resettingRateLimit}
+            style={{ padding: "10px 18px", fontSize: "13px" }}
+          >
+            {resettingRateLimit ? "Resetting..." : "Reset Current Network IP Rate Limits"}
+          </ActionButton>
+
+          <ActionButton
+            type="button"
+            $variant="danger"
+            onClick={handleFlushAllRateLimitStores}
+            disabled={resettingRateLimit}
+            style={{
+              padding: "10px 18px",
+              fontSize: "13px",
+              background: "#fef2f2",
+              borderColor: "#fecaca",
+              color: "#dc2626",
+            }}
+          >
+            {resettingRateLimit ? "Flushing..." : "Flush All Rate Limit Stores"}
+          </ActionButton>
+        </div>
+      </EmergencyCard>
+
       {/* MODAL: IP Details Deep-dive */}
       {detailsModalIp && (
         <ModalOverlay onClick={() => setDetailsModalIp(null)}>
@@ -1069,12 +1278,12 @@ const IpSecurityCenter = () => {
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {(detailsModalIp === "127.0.0.1" || detailsModalIp === "::1") && (
                   <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", padding: "10px 14px", borderRadius: "8px", color: "#334155", fontSize: "12px" }}>
-                    🖥️ <strong>Localhost / Development Traffic:</strong> This address is local loopback ({detailsModalIp}). In a production deployment behind a reverse proxy (Vercel, Cloudflare, Render), this will resolve to the real external client IP address.
+                    <strong>Localhost / Development Traffic:</strong> This address is local loopback ({detailsModalIp}). In a production deployment behind a reverse proxy (Vercel, Cloudflare, Render), this will resolve to the real external client IP address.
                   </div>
                 )}
                 {ipDetails.isCurrentSuperAdmin && (
                   <div style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", padding: "10px 14px", borderRadius: "8px", color: "#065f46", fontSize: "12px" }}>
-                    ⚠️ <strong>Notice:</strong> This IP corresponds to your current active session connection.
+                    <strong>Notice:</strong> This IP corresponds to your current active session connection.
                   </div>
                 )}
 
@@ -1319,6 +1528,54 @@ const IpSecurityCenter = () => {
                   disabled={savingBan || banConfirmPhrase.trim() !== `BAN ${banModalData.ip.trim()}`}
                 >
                   {savingBan ? "Applying Ban..." : "Execute Permanent Ban"}
+                </ActionButton>
+              </div>
+            </form>
+          </ModalBox>
+        </ModalOverlay>
+      )}
+
+      {/* MODAL: Add to Safelist */}
+      {safelistModalOpen && (
+        <ModalOverlay onClick={() => setSafelistModalOpen(false)}>
+          <ModalBox onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 16px 0", color: "#059669", display: "flex", alignItems: "center", gap: "8px" }}>
+              <BsShieldCheck /> Add IP to Safelist (Always Safe)
+            </h3>
+
+            <p style={{ fontSize: "13px", color: "#64748b", lineHeight: "1.5" }}>
+              Adding an IP address to the Safelist marks it as trusted. Safelisted IPs bypass login and OTP rate limiting, can never be blocked or banned by firewall rules, and are classified as Safe.
+            </p>
+
+            <form onSubmit={handleExecuteAddSafelist}>
+              <FormGroup>
+                <label>IP Address</label>
+                <input
+                  type="text"
+                  value={safelistIpInput}
+                  onChange={(e) => setSafelistIpInput(e.target.value)}
+                  placeholder="e.g. 192.168.1.100 or 49.37.150.12"
+                  required
+                />
+              </FormGroup>
+
+              <FormGroup>
+                <label>Reason / Trusted Network Label</label>
+                <input
+                  type="text"
+                  value={safelistReasonInput}
+                  onChange={(e) => setSafelistReasonInput(e.target.value)}
+                  placeholder="e.g. Campus administration office / Dev network"
+                  required
+                />
+              </FormGroup>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "18px" }}>
+                <ActionButton type="button" onClick={() => setSafelistModalOpen(false)}>
+                  Cancel
+                </ActionButton>
+                <ActionButton type="submit" $variant="success" disabled={savingSafelist}>
+                  {savingSafelist ? "Adding to Safelist..." : "Confirm & Safelist IP"}
                 </ActionButton>
               </div>
             </form>

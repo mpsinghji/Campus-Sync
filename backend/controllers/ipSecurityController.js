@@ -6,6 +6,9 @@ import {
   addIpBlockToCache,
   removeIpBlockFromCache,
   checkIsIpBlocked,
+  addIpSafelistToCache,
+  removeIpSafelistFromCache,
+  checkIsIpSafelisted,
 } from "../middlewares/ipSecurityMiddleware.js";
 import { resetRateLimitForIp } from "../middlewares/rateLimiter.js";
 import { Response } from "../utils/response.js";
@@ -17,7 +20,8 @@ import { logSecurityEvent } from "../middlewares/ipLoggingMiddleware.js";
 /**
  * Evaluates real behavioral risk level from recorded statistics.
  */
-export const calculateIpRisk = (stats, isCurrentlyBlocked = false, isBanned = false) => {
+export const calculateIpRisk = (stats, isCurrentlyBlocked = false, isBanned = false, isSafelisted = false) => {
+  if (isSafelisted) return "Safe";
   if (isBanned) return "Critical";
   if (isCurrentlyBlocked) return "High";
 
@@ -51,6 +55,7 @@ export const getIpSecurityOverview = async (req, res) => {
       activeIpsRecent,
       activeBlockedRules,
       activeBannedRules,
+      activeSafelistRules,
       rateLimitedIpsRecent,
       suspiciousEventsCount,
       eventsTodayCount,
@@ -65,6 +70,10 @@ export const getIpSecurityOverview = async (req, res) => {
       IpAccessRule.countDocuments({
         status: "active",
         type: { $in: ["permanent_block", "ban"] },
+      }),
+      IpAccessRule.countDocuments({
+        status: "active",
+        type: { $in: ["safelist", "allow"] },
       }),
       IpSecurityEvent.distinct("ip", {
         eventType: "RATE_LIMIT_TRIGGERED",
@@ -83,6 +92,7 @@ export const getIpSecurityOverview = async (req, res) => {
       activeIps: activeIpsRecent.length,
       blockedIps: activeBlockedRules,
       bannedIps: activeBannedRules,
+      safelistedIps: activeSafelistRules,
       temporaryBlocks: activeBlockedRules,
       rateLimitedIps: rateLimitedIpsRecent.length,
       suspiciousIps: suspiciousEventsCount.length,
@@ -240,10 +250,14 @@ export const getIpActivity = async (req, res) => {
       let status = "normal";
       let isBlocked = false;
       let isBanned = false;
+      let isSafelisted = false;
 
       if (activeRule) {
         if (activeRule.expiresAt && new Date(activeRule.expiresAt) <= now) {
           status = "expired";
+        } else if (activeRule.type === "safelist" || activeRule.type === "allow") {
+          status = "safelisted";
+          isSafelisted = true;
         } else if (
           activeRule.type === "permanent_block" ||
           activeRule.type === "ban"
@@ -257,7 +271,7 @@ export const getIpActivity = async (req, res) => {
         }
       }
 
-      const risk = calculateIpRisk(item, isBlocked, isBanned);
+      const risk = calculateIpRisk(item, isBlocked, isBanned, isSafelisted);
 
       // Filter strictly to verified genuine registered accounts from DB
       const verifiedAccounts = (item.accounts || [])
@@ -279,6 +293,7 @@ export const getIpActivity = async (req, res) => {
         roles: verifiedRoles,
         status,
         risk,
+        isSafelisted,
         isCurrentSuperAdmin: item._id === clientIp,
         ruleDetails: activeRule || null,
       };
@@ -289,6 +304,7 @@ export const getIpActivity = async (req, res) => {
       enrichedList = enrichedList.filter((item) => {
         if (filterStatus === "blocked") return item.status === "blocked";
         if (filterStatus === "banned") return item.status === "banned";
+        if (filterStatus === "safelisted") return item.status === "safelisted";
         if (filterStatus === "normal") return item.status === "normal";
         if (filterStatus === "rate_limited") return item.rateLimitHits > 0;
         return true;
@@ -422,12 +438,15 @@ export const getIpDetails = async (req, res) => {
 
     stats.failedAuthCount = (stats.loginFailures || 0) + (stats.otpFailures || 0);
 
+    const isSafelisted = Boolean(
+      activeRule && (activeRule.type === "safelist" || activeRule.type === "allow")
+    );
     const isBanned = Boolean(
       activeRule &&
         (activeRule.type === "permanent_block" || activeRule.type === "ban")
     );
-    const isBlocked = Boolean(activeRule);
-    const risk = calculateIpRisk(stats, isBlocked, isBanned);
+    const isBlocked = Boolean(activeRule && !isSafelisted);
+    const risk = calculateIpRisk(stats, isBlocked, isBanned, isSafelisted);
 
     const candidateEmails = (stats.accounts || []).filter(Boolean);
     const [realAdmins, realStudents, realTeachers] = await Promise.all([
@@ -497,8 +516,9 @@ export const getIpDetails = async (req, res) => {
     return Response(res, 200, true, "IP details retrieved successfully", {
       ip: cleanIp,
       isCurrentSuperAdmin: cleanIp === clientIp,
-      currentStatus: isBanned ? "banned" : isBlocked ? "blocked" : "normal",
+      currentStatus: isSafelisted ? "safelisted" : isBanned ? "banned" : isBlocked ? "blocked" : "normal",
       risk,
+      isSafelisted,
       activeRule: activeRule || null,
       rulesHistory: rules,
       stats: {
@@ -526,6 +546,10 @@ export const blockIp = async (req, res) => {
     }
 
     const cleanIp = ip.trim();
+    if (checkIsIpSafelisted(cleanIp)) {
+      return Response(res, 400, false, `IP ${cleanIp} is currently on the Safelist (Always Safe). Remove it from Safelist before blocking.`);
+    }
+
     const duration = parseInt(durationMinutes, 10);
     if (isNaN(duration) || duration <= 0) {
       return Response(res, 400, false, "Duration in minutes must be a positive integer");
@@ -611,6 +635,9 @@ export const banIp = async (req, res) => {
     }
 
     const cleanIp = ip.trim();
+    if (checkIsIpSafelisted(cleanIp)) {
+      return Response(res, 400, false, `IP ${cleanIp} is currently on the Safelist (Always Safe). Remove it from Safelist before banning.`);
+    }
 
     if (!reason || !reason.trim()) {
       return Response(res, 400, false, "A reason for the permanent ban is required");
@@ -801,3 +828,102 @@ export const getIpAuditLogs = async (req, res) => {
     return Response(res, 500, false, "Failed to load audit logs", error.message);
   }
 };
+
+// 10. Safelist IP (Always Safe / Never Block)
+export const safelistIp = async (req, res) => {
+  try {
+    const { ip, reason, notes } = req.body;
+    if (!ip || !isValidIp(ip)) {
+      return Response(res, 400, false, "Valid IP address is required");
+    }
+    const cleanIp = ip.trim();
+    const now = new Date();
+
+    // Deactivate previous active rules for this IP (blocks/bans)
+    await IpAccessRule.updateMany(
+      { ip: cleanIp, status: "active" },
+      { $set: { status: "removed", removedReason: "Overwritten by Safelist rule" } }
+    );
+
+    const newRule = await IpAccessRule.create({
+      ip: cleanIp,
+      type: "safelist",
+      status: "active",
+      reason: (reason || "Manually added to Safelist (Always Safe)").trim(),
+      notes: (notes || "").trim(),
+      createdBy: req.user?.email || "Superadmin",
+      createdAt: now,
+      expiresAt: null, // Always safe / permanent unless removed
+      source: "manual",
+    });
+
+    removeIpBlockFromCache(cleanIp);
+    addIpSafelistToCache(cleanIp);
+    await resetRateLimitForIp(cleanIp);
+
+    await IpAuditLog.create({
+      action: "SAFELIST_IP",
+      targetIp: cleanIp,
+      performedBy: req.user?.email || "Superadmin",
+      performedById: req.user?._id,
+      reason: (reason || "Manually added to Safelist").trim(),
+      metadata: { notes },
+    });
+
+    await logSecurityEvent({
+      ip: cleanIp,
+      eventType: "IP_SAFELISTED",
+      metadata: {
+        reason: (reason || "Manually added to Safelist").trim(),
+        performedBy: req.user?.email || "Superadmin",
+      },
+    });
+
+    return Response(res, 200, true, `IP ${cleanIp} is now marked as Safelisted (Always Safe).`, {
+      rule: newRule,
+    });
+  } catch (error) {
+    console.error("Error in safelistIp:", error);
+    return Response(res, 500, false, "Failed to safelist IP", error.message);
+  }
+};
+
+// 11. Remove IP from Safelist
+export const removeSafelistIp = async (req, res) => {
+  try {
+    const { ip, reason } = req.body;
+    if (!ip) {
+      return Response(res, 400, false, "IP address is required");
+    }
+    const cleanIp = ip.trim();
+    const now = new Date();
+
+    await IpAccessRule.updateMany(
+      { ip: cleanIp, status: "active", type: { $in: ["safelist", "allow"] } },
+      {
+        $set: {
+          status: "removed",
+          removedBy: req.user?.email || "Superadmin",
+          removedAt: now,
+          removalReason: (reason || "Removed from Safelist").trim(),
+        },
+      }
+    );
+
+    removeIpSafelistFromCache(cleanIp);
+
+    await IpAuditLog.create({
+      action: "REMOVE_SAFELIST_IP",
+      targetIp: cleanIp,
+      performedBy: req.user?.email || "Superadmin",
+      performedById: req.user?._id,
+      reason: (reason || "Removed from Safelist").trim(),
+    });
+
+    return Response(res, 200, true, `IP ${cleanIp} removed from Safelist.`);
+  } catch (error) {
+    console.error("Error in removeSafelistIp:", error);
+    return Response(res, 500, false, "Failed to remove IP from Safelist", error.message);
+  }
+};
+

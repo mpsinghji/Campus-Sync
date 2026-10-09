@@ -3,6 +3,7 @@ import { getClientIp, isIpInCidr } from "../utils/ipUtils.js";
 
 // In-memory cache for O(1) request evaluation without DB latency
 const activeIpBlocksCache = new Map(); // ip -> { type, expiresAt, reason }
+const activeIpSafelistCache = new Set(); // Set of safelisted/trusted IP strings
 let activeCidrRulesCache = []; // [{ cidr, type, expiresAt }]
 
 /**
@@ -15,6 +16,7 @@ export const reloadIpBlockCache = async () => {
     const rules = await IpAccessRule.find({ status: "active" }).lean();
 
     activeIpBlocksCache.clear();
+    activeIpSafelistCache.clear();
     activeCidrRulesCache = [];
 
     const expiredRuleIds = [];
@@ -22,6 +24,13 @@ export const reloadIpBlockCache = async () => {
     for (const rule of rules) {
       if (rule.expiresAt && new Date(rule.expiresAt) <= now) {
         expiredRuleIds.push(rule._id);
+        continue;
+      }
+
+      if (rule.type === "safelist" || rule.type === "allow") {
+        if (rule.ip) {
+          activeIpSafelistCache.add(rule.ip);
+        }
         continue;
       }
 
@@ -53,10 +62,24 @@ export const reloadIpBlockCache = async () => {
 };
 
 /**
+ * Check if an IP is currently safelisted (always safe / never blocked).
+ */
+export const checkIsIpSafelisted = (ip) => {
+  if (!ip) return false;
+  return activeIpSafelistCache.has(ip);
+};
+
+/**
  * Direct check if an IP is currently blocked (in-memory fast path).
  */
 export const checkIsIpBlocked = (ip) => {
   if (!ip) return false;
+
+  // Safelisted IPs are guaranteed to never be blocked
+  if (activeIpSafelistCache.has(ip)) {
+    return false;
+  }
+
   const now = new Date();
 
   // 1. Direct IP check
@@ -92,6 +115,7 @@ export const checkIsIpBlocked = (ip) => {
  */
 export const addIpBlockToCache = (ip, type, expiresAt, reason = "") => {
   if (ip) {
+    activeIpSafelistCache.delete(ip);
     activeIpBlocksCache.set(ip, { type, expiresAt, reason });
   }
 };
@@ -102,6 +126,25 @@ export const addIpBlockToCache = (ip, type, expiresAt, reason = "") => {
 export const removeIpBlockFromCache = (ip) => {
   if (ip) {
     activeIpBlocksCache.delete(ip);
+  }
+};
+
+/**
+ * Add an IP to the in-memory Safelist cache directly.
+ */
+export const addIpSafelistToCache = (ip) => {
+  if (ip) {
+    activeIpBlocksCache.delete(ip);
+    activeIpSafelistCache.add(ip);
+  }
+};
+
+/**
+ * Remove an IP from the in-memory Safelist cache directly.
+ */
+export const removeIpSafelistFromCache = (ip) => {
+  if (ip) {
+    activeIpSafelistCache.delete(ip);
   }
 };
 

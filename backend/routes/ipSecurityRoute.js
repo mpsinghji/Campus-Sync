@@ -8,6 +8,8 @@ import {
   banIp,
   unblockIp,
   resetIpRateLimit,
+  safelistIp,
+  removeSafelistIp,
   getIpAuditLogs,
 } from "../controllers/ipSecurityController.js";
 import { isAuthenticated, requireSuperAdmin } from "../middlewares/auth.js";
@@ -34,6 +36,8 @@ router.post("/block", blockIp);
 router.post("/ban", banIp);
 router.post("/unblock", unblockIp);
 router.post("/reset-rate-limit", resetIpRateLimit);
+router.post("/safelist", safelistIp);
+router.post("/remove-safelist", removeSafelistIp);
 
 // Audit logs
 router.get("/audit-logs", getIpAuditLogs);
