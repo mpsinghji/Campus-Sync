@@ -58,8 +58,12 @@ app.use((req, res, next) => {
 app.use(cookieParser());
 app.use(
   express.json({
+    limit: "10mb",
     verify: (req, res, buf) => {
-      req.rawBody = buf;
+      // Memory optimization: only retain rawBody buffer for payment webhook signature verification
+      if (req.originalUrl && req.originalUrl.includes("webhook")) {
+        req.rawBody = buf;
+      }
     },
   })
 );

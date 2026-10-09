@@ -4,8 +4,22 @@ import IpAccessRule from "../models/ipAccessRuleModel.js";
 import { getClientIp, getIpVersion, isLocalIp } from "../utils/ipUtils.js";
 import { addIpBlockToCache } from "./ipSecurityMiddleware.js";
 
-// In-memory tracker for rapid detection of abusive bursts (short rolling window)
+// In-memory tracker for rapid detection of abusive bursts (bounded to prevent leaks)
+const MAX_TRACKER_ENTRIES = 1000;
 const failureTracker = new Map(); // ip -> { failedAuthCount, rateLimitCount, lastFailureTime }
+
+// Clean up stale failure trackers periodically to prevent memory leaks
+const cleanupInterval = setInterval(() => {
+  const now = Date.now();
+  for (const [ip, tracker] of failureTracker.entries()) {
+    if (now - tracker.lastFailureTime > 10 * 60 * 1000) {
+      failureTracker.delete(ip);
+    }
+  }
+}, 5 * 60 * 1000);
+if (cleanupInterval && typeof cleanupInterval.unref === "function") {
+  cleanupInterval.unref();
+}
 
 /**
  * Helper to log explicit security events directly from controllers.
@@ -66,6 +80,11 @@ const checkAutomaticDefense = async (ip, eventType) => {
   let tracker = failureTracker.get(ip);
 
   if (!tracker || now - tracker.lastFailureTime > 10 * 60 * 1000) {
+    // Evict oldest if reaching capacity
+    if (failureTracker.size >= MAX_TRACKER_ENTRIES && !failureTracker.has(ip)) {
+      const oldestKey = failureTracker.keys().next().value;
+      if (oldestKey) failureTracker.delete(oldestKey);
+    }
     tracker = { failedAuthCount: 0, rateLimitCount: 0, lastFailureTime: now };
   }
 
@@ -125,38 +144,43 @@ const checkAutomaticDefense = async (ip, eventType) => {
  * Express middleware for asynchronous request & security event logging.
  */
 export const ipLoggingMiddleware = (req, res, next) => {
+  const rawPath = req.path || req.originalUrl || "";
+
+  // Skip static asset files early before attaching any listener or creating closures
+  if (
+    rawPath.startsWith("/assets/") ||
+    rawPath.endsWith(".css") ||
+    rawPath.endsWith(".js") ||
+    rawPath.endsWith(".png") ||
+    rawPath.endsWith(".jpg") ||
+    rawPath.endsWith(".svg") ||
+    rawPath.endsWith(".ico") ||
+    rawPath.endsWith(".map")
+  ) {
+    return next();
+  }
+
   const requestId = crypto.randomUUID();
   req.requestId = requestId;
 
+  // Extract minimal primitive values to avoid retaining the entire req object in memory closures
+  const clientIp = getClientIp(req);
+  const path = req.originalUrl || req.url || rawPath;
+  const method = req.method;
+  const userAgent = (req.headers["user-agent"] || "").slice(0, 300);
+  const origin = req.headers["origin"] || "";
+
   res.on("finish", () => {
-    // Run asynchronously after response is sent to avoid adding latency
+    const statusCode = res.statusCode;
+    // Capture user fields at finish time
+    const isAuthenticated = Boolean(req.user);
+    const accountId = req.user?._id?.toString() || null;
+    const accountRole = req.role || req.user?.role || null;
+    const accountEmail = req.user?.email || null;
+
+    // Run asynchronously after response is sent
     setImmediate(async () => {
       try {
-        const clientIp = getClientIp(req);
-        const path = req.originalUrl || req.url || "";
-        const method = req.method;
-        const statusCode = res.statusCode;
-        const userAgent = req.headers["user-agent"] || "";
-
-        // Identify authenticated user identity if available on req
-        const isAuthenticated = Boolean(req.user);
-        const accountId = req.user?._id?.toString() || null;
-        const accountRole = req.role || req.user?.role || null;
-        const accountEmail = req.user?.email || null;
-
-        // Skip static asset files & health checks from polluting security logs
-        if (
-          path.startsWith("/assets/") ||
-          path.endsWith(".css") ||
-          path.endsWith(".js") ||
-          path.endsWith(".png") ||
-          path.endsWith(".jpg") ||
-          path.endsWith(".svg") ||
-          path.endsWith(".ico")
-        ) {
-          return;
-        }
-
         // Determine specific event type
         let eventType = "REQUEST";
         const lowerPath = path.toLowerCase();
@@ -187,7 +211,7 @@ export const ipLoggingMiddleware = (req, res, next) => {
           }
         }
 
-        // Write event to database (strictly sanitizing bodies/passwords/OTPs)
+        // Write event to database
         await logSecurityEvent({
           ip: clientIp,
           eventType,
@@ -201,7 +225,7 @@ export const ipLoggingMiddleware = (req, res, next) => {
           userAgent,
           requestId,
           metadata: {
-            origin: req.headers["origin"] || "",
+            origin,
           },
         });
 

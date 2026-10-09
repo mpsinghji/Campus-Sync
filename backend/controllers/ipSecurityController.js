@@ -43,25 +43,43 @@ export const calculateIpRisk = (stats, isCurrentlyBlocked = false, isBanned = fa
   return "Normal";
 };
 
-// 1. Overview Dashboard Statistics
+// 1. Overview Dashboard Statistics (100% computed inside MongoDB without loading distinct IP arrays into Node.js heap)
 export const getIpSecurityOverview = async (req, res) => {
   try {
     const now = new Date();
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
 
-    const [
-      totalUniqueIps,
-      activeIpsRecent,
-      activeBlockedRules,
-      activeBannedRules,
-      activeSafelistRules,
-      rateLimitedIpsRecent,
-      suspiciousEventsCount,
-      eventsTodayCount,
-    ] = await Promise.all([
-      IpSecurityEvent.distinct("ip"),
-      IpSecurityEvent.distinct("ip", { timestamp: { $gte: twentyFourHoursAgo } }),
+    const [overviewAgg, activeBlockedRules, activeBannedRules, activeSafelistRules] = await Promise.all([
+      IpSecurityEvent.aggregate([
+        {
+          $facet: {
+            totalUniqueIps: [
+              { $group: { _id: "$ip" } },
+              { $count: "count" },
+            ],
+            activeIpsRecent: [
+              { $match: { timestamp: { $gte: twentyFourHoursAgo } } },
+              { $group: { _id: "$ip" } },
+              { $count: "count" },
+            ],
+            rateLimitedIpsRecent: [
+              { $match: { eventType: "RATE_LIMIT_TRIGGERED", timestamp: { $gte: twentyFourHoursAgo } } },
+              { $group: { _id: "$ip" } },
+              { $count: "count" },
+            ],
+            suspiciousEventsCount: [
+              { $match: { eventType: { $in: ["SUSPICIOUS_REQUEST", "RATE_LIMIT_TRIGGERED", "ACCESS_DENIED"] } } },
+              { $group: { _id: "$ip" } },
+              { $count: "count" },
+            ],
+            eventsTodayCount: [
+              { $match: { timestamp: { $gte: todayStart } } },
+              { $count: "count" },
+            ],
+          },
+        },
+      ]),
       IpAccessRule.countDocuments({
         status: "active",
         type: "temporary_block",
@@ -75,28 +93,27 @@ export const getIpSecurityOverview = async (req, res) => {
         status: "active",
         type: { $in: ["safelist", "allow"] },
       }),
-      IpSecurityEvent.distinct("ip", {
-        eventType: "RATE_LIMIT_TRIGGERED",
-        timestamp: { $gte: twentyFourHoursAgo },
-      }),
-      IpSecurityEvent.distinct("ip", {
-        eventType: { $in: ["SUSPICIOUS_REQUEST", "RATE_LIMIT_TRIGGERED", "ACCESS_DENIED"] },
-      }),
-      IpSecurityEvent.countDocuments({ timestamp: { $gte: todayStart } }),
     ]);
+
+    const facet = overviewAgg?.[0] || {};
+    const totalUniqueIps = facet.totalUniqueIps?.[0]?.count || 0;
+    const activeIps = facet.activeIpsRecent?.[0]?.count || 0;
+    const rateLimitedIps = facet.rateLimitedIpsRecent?.[0]?.count || 0;
+    const suspiciousIps = facet.suspiciousEventsCount?.[0]?.count || 0;
+    const securityEventsToday = facet.eventsTodayCount?.[0]?.count || 0;
 
     const clientIp = getClientIp(req);
 
     return Response(res, 200, true, "IP Security Overview retrieved", {
-      totalUniqueIps: totalUniqueIps.length,
-      activeIps: activeIpsRecent.length,
+      totalUniqueIps,
+      activeIps,
       blockedIps: activeBlockedRules,
       bannedIps: activeBannedRules,
       safelistedIps: activeSafelistRules,
       temporaryBlocks: activeBlockedRules,
-      rateLimitedIps: rateLimitedIpsRecent.length,
-      suspiciousIps: suspiciousEventsCount.length,
-      securityEventsToday: eventsTodayCount,
+      rateLimitedIps,
+      suspiciousIps,
+      securityEventsToday,
       currentSuperAdminIp: clientIp,
     });
   } catch (error) {
@@ -105,7 +122,7 @@ export const getIpSecurityOverview = async (req, res) => {
   }
 };
 
-// 2. Live & Recent IP Activity with Pagination and Filters
+// 2. Live & Recent IP Activity with Server-Side Pagination, Filtering & Minimal Memory Footprint
 export const getIpActivity = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -116,29 +133,63 @@ export const getIpActivity = async (req, res) => {
     const filterStatus = req.query.status || "all";
     const filterRisk = req.query.risk || "all";
 
-    // 1. Group events by IP address
+    const now = new Date();
+    // 1. Fetch only active rules with minimal projection
+    const activeRules = await IpAccessRule.find({
+      status: "active",
+      $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }],
+    })
+      .select("ip type expiresAt reason notes")
+      .lean();
+
+    const activeRulesMap = new Map();
+    const safelistIps = [];
+    const bannedIps = [];
+    const blockedIps = [];
+
+    for (const r of activeRules) {
+      if (!r.ip) continue;
+      activeRulesMap.set(r.ip, r);
+      if (r.type === "safelist" || r.type === "allow") {
+        safelistIps.push(r.ip);
+      } else if (r.type === "permanent_block" || r.type === "ban") {
+        bannedIps.push(r.ip);
+      } else {
+        blockedIps.push(r.ip);
+      }
+    }
+
+    // 2. Match stage (IP address or account email search)
     const matchStage = {};
     if (searchQuery) {
-      // Find matching genuine users by name or email across real database collections
       const [matchedAdmins, matchedStudents, matchedTeachers] = await Promise.all([
         Admin.find({
           $or: [
             { name: { $regex: searchQuery, $options: "i" } },
             { email: { $regex: searchQuery, $options: "i" } },
           ],
-        }).select("email").lean(),
+        })
+          .select("email")
+          .limit(50)
+          .lean(),
         Student.find({
           $or: [
             { name: { $regex: searchQuery, $options: "i" } },
             { email: { $regex: searchQuery, $options: "i" } },
           ],
-        }).select("email").lean(),
+        })
+          .select("email")
+          .limit(50)
+          .lean(),
         Teacher.find({
           $or: [
             { name: { $regex: searchQuery, $options: "i" } },
             { email: { $regex: searchQuery, $options: "i" } },
           ],
-        }).select("email").lean(),
+        })
+          .select("email")
+          .limit(50)
+          .lean(),
       ]);
 
       const matchedEmails = [
@@ -154,7 +205,8 @@ export const getIpActivity = async (req, res) => {
       ];
     }
 
-    const aggregation = [
+    // 3. Full aggregation pipeline executed inside MongoDB
+    const pipeline = [
       { $match: matchStage },
       {
         $group: {
@@ -186,99 +238,155 @@ export const getIpActivity = async (req, res) => {
           roles: { $addToSet: "$accountRole" },
         },
       },
-      { $sort: { lastSeen: -1 } },
+      {
+        $addFields: {
+          status: {
+            $switch: {
+              branches: [
+                { case: { $in: ["$_id", safelistIps] }, then: "safelisted" },
+                { case: { $in: ["$_id", bannedIps] }, then: "banned" },
+                { case: { $in: ["$_id", blockedIps] }, then: "blocked" },
+                { case: { $gt: ["$rateLimitHits", 0] }, then: "rate_limited" },
+              ],
+              default: "normal",
+            },
+          },
+          risk: {
+            $switch: {
+              branches: [
+                { case: { $in: ["$_id", safelistIps] }, then: "Safe" },
+                { case: { $in: ["$_id", bannedIps] }, then: "Critical" },
+                { case: { $in: ["$_id", blockedIps] }, then: "High" },
+                {
+                  case: {
+                    $or: [
+                      { $gte: ["$rateLimitHits", 5] },
+                      {
+                        $and: [
+                          { $gte: ["$rateLimitHits", 3] },
+                          { $gte: ["$failedAuthCount", 10] },
+                        ],
+                      },
+                    ],
+                  },
+                  then: "Critical",
+                },
+                {
+                  case: {
+                    $or: [
+                      { $gte: ["$rateLimitHits", 2] },
+                      { $gte: ["$failedAuthCount", 10] },
+                    ],
+                  },
+                  then: "High",
+                },
+                {
+                  case: {
+                    $or: [
+                      { $gte: ["$rateLimitHits", 1] },
+                      { $gte: ["$failedAuthCount", 5] },
+                    ],
+                  },
+                  then: "Medium",
+                },
+                { case: { $gte: ["$failedAuthCount", 1] }, then: "Low" },
+              ],
+              default: "Normal",
+            },
+          },
+        },
+      },
     ];
 
-    const groupedResults = await IpSecurityEvent.aggregate(aggregation);
-
-    // 2. Fetch all active IP rules to enrich status
-    const activeRules = await IpAccessRule.find({ status: "active" }).lean();
-    const activeRulesMap = new Map();
-    for (const r of activeRules) {
-      activeRulesMap.set(r.ip, r);
+    // Status filter in MongoDB
+    if (filterStatus !== "all") {
+      pipeline.push({ $match: { status: filterStatus } });
     }
 
-    // 3. Verify ALL candidate accounts against real database collections (Admin, Student, Teacher)
-    // Non-negotiable requirement: ONLY genuine, existing registered accounts may appear in IP activity
-    const candidateEmails = [
+    // Risk filter in MongoDB
+    if (filterRisk !== "all") {
+      pipeline.push({
+        $match: {
+          risk: { $regex: new RegExp(`^${filterRisk}$`, "i") },
+        },
+      });
+    }
+
+    // Database-side pagination: returns ONLY current page data and total count
+    pipeline.push({
+      $facet: {
+        metadata: [{ $count: "total" }],
+        data: [
+          { $sort: { lastSeen: -1 } },
+          { $skip: skip },
+          { $limit: limit },
+        ],
+      },
+    });
+
+    const [aggResult] = await IpSecurityEvent.aggregate(pipeline);
+    const totalCount = aggResult?.metadata?.[0]?.total || 0;
+    const paginatedItems = aggResult?.data || [];
+
+    // 4. Look up genuine accounts ONLY for the 10 paginated records on this page
+    const pageCandidateEmails = [
       ...new Set(
-        groupedResults.flatMap((item) => item.accounts || []).filter(Boolean)
+        paginatedItems.flatMap((item) => item.accounts || []).filter(Boolean)
       ),
     ];
 
-    const [realAdmins, realStudents, realTeachers] = await Promise.all([
-      Admin.find({ email: { $in: candidateEmails } }).select("email name role isSuperAdmin").lean(),
-      Student.find({ email: { $in: candidateEmails } }).select("email name role").lean(),
-      Teacher.find({ email: { $in: candidateEmails } }).select("email name role").lean(),
-    ]);
-
     const realAccountsMap = new Map();
-    for (const a of realAdmins) {
-      if (a?.email) {
-        realAccountsMap.set(a.email.toLowerCase(), {
-          email: a.email,
-          name: a.name || "Administrator",
-          role: a.isSuperAdmin ? "Superadmin" : (a.role || "Admin"),
-        });
-      }
-    }
-    for (const s of realStudents) {
-      if (s?.email) {
-        realAccountsMap.set(s.email.toLowerCase(), {
-          email: s.email,
-          name: s.name || "Student",
-          role: "Student",
-        });
-      }
-    }
-    for (const t of realTeachers) {
-      if (t?.email) {
-        realAccountsMap.set(t.email.toLowerCase(), {
-          email: t.email,
-          name: t.name || "Teacher",
-          role: "Teacher",
-        });
-      }
-    }
+    if (pageCandidateEmails.length > 0) {
+      const [realAdmins, realStudents, realTeachers] = await Promise.all([
+        Admin.find({ email: { $in: pageCandidateEmails } })
+          .select("email name role isSuperAdmin")
+          .lean(),
+        Student.find({ email: { $in: pageCandidateEmails } })
+          .select("email name role")
+          .lean(),
+        Teacher.find({ email: { $in: pageCandidateEmails } })
+          .select("email name role")
+          .lean(),
+      ]);
 
-    const now = new Date();
-    const clientIp = getClientIp(req);
-
-    // 4. Enrich items with active rule, risk level & current status
-    let enrichedList = groupedResults.map((item) => {
-      const activeRule = activeRulesMap.get(item._id);
-      let status = "normal";
-      let isBlocked = false;
-      let isBanned = false;
-      let isSafelisted = false;
-
-      if (activeRule) {
-        if (activeRule.expiresAt && new Date(activeRule.expiresAt) <= now) {
-          status = "expired";
-        } else if (activeRule.type === "safelist" || activeRule.type === "allow") {
-          status = "safelisted";
-          isSafelisted = true;
-        } else if (
-          activeRule.type === "permanent_block" ||
-          activeRule.type === "ban"
-        ) {
-          status = "banned";
-          isBanned = true;
-          isBlocked = true;
-        } else {
-          status = "blocked";
-          isBlocked = true;
+      for (const a of realAdmins) {
+        if (a?.email) {
+          realAccountsMap.set(a.email.toLowerCase(), {
+            email: a.email,
+            name: a.name || "Administrator",
+            role: a.isSuperAdmin ? "Superadmin" : (a.role || "Admin"),
+          });
         }
       }
+      for (const s of realStudents) {
+        if (s?.email) {
+          realAccountsMap.set(s.email.toLowerCase(), {
+            email: s.email,
+            name: s.name || "Student",
+            role: "Student",
+          });
+        }
+      }
+      for (const t of realTeachers) {
+        if (t?.email) {
+          realAccountsMap.set(t.email.toLowerCase(), {
+            email: t.email,
+            name: t.name || "Teacher",
+            role: "Teacher",
+          });
+        }
+      }
+    }
 
-      const risk = calculateIpRisk(item, isBlocked, isBanned, isSafelisted);
+    const clientIp = getClientIp(req);
 
-      // Filter strictly to verified genuine registered accounts from DB
+    // 5. Final lightweight enrichment
+    const enrichedList = paginatedItems.map((item) => {
+      const activeRule = activeRulesMap.get(item._id);
       const verifiedAccounts = (item.accounts || [])
         .filter(Boolean)
         .map((email) => realAccountsMap.get(String(email).toLowerCase()))
         .filter(Boolean);
-
       const verifiedRoles = [...new Set(verifiedAccounts.map((a) => a.role))];
 
       return {
@@ -291,37 +399,16 @@ export const getIpActivity = async (req, res) => {
         rateLimitHits: item.rateLimitHits,
         accounts: verifiedAccounts,
         roles: verifiedRoles,
-        status,
-        risk,
-        isSafelisted,
+        status: item.status,
+        risk: item.risk,
+        isSafelisted: item.status === "safelisted",
         isCurrentSuperAdmin: item._id === clientIp,
         ruleDetails: activeRule || null,
       };
     });
 
-    // 4. Apply status and risk filtering in memory
-    if (filterStatus !== "all") {
-      enrichedList = enrichedList.filter((item) => {
-        if (filterStatus === "blocked") return item.status === "blocked";
-        if (filterStatus === "banned") return item.status === "banned";
-        if (filterStatus === "safelisted") return item.status === "safelisted";
-        if (filterStatus === "normal") return item.status === "normal";
-        if (filterStatus === "rate_limited") return item.rateLimitHits > 0;
-        return true;
-      });
-    }
-
-    if (filterRisk !== "all") {
-      enrichedList = enrichedList.filter(
-        (item) => item.risk.toLowerCase() === filterRisk.toLowerCase()
-      );
-    }
-
-    const totalCount = enrichedList.length;
-    const paginatedList = enrichedList.slice(skip, skip + limit);
-
     return Response(res, 200, true, "IP activity retrieved", {
-      activity: paginatedList,
+      activity: enrichedList,
       pagination: {
         page,
         limit,
@@ -351,6 +438,7 @@ export const getIpRules = async (req, res) => {
 
     const totalRules = await IpAccessRule.countDocuments(filterQuery);
     const rules = await IpAccessRule.find(filterQuery)
+      .select("ip cidr type status reason notes source createdBy createdAt expiresAt removedBy removedAt removalReason")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -490,8 +578,9 @@ export const getIpDetails = async (req, res) => {
 
     const verifiedRoles = [...new Set(verifiedAccounts.map((a) => a.role))];
 
-    // Fetch recent events (last 50)
+    // Fetch recent events (last 50) with minimal projected fields
     const recentEventsRaw = await IpSecurityEvent.find({ ip: cleanIp })
+      .select("timestamp eventType method path statusCode isAuthenticated accountEmail accountRole")
       .sort({ timestamp: -1 })
       .limit(50)
       .lean();
@@ -508,9 +597,11 @@ export const getIpDetails = async (req, res) => {
       };
     });
 
-    // Fetch audit actions performed on this IP
+    // Fetch audit actions performed on this IP with minimal projected fields
     const auditLogs = await IpAuditLog.find({ targetIp: cleanIp })
+      .select("action targetIp performedBy reason duration expiresAt result timestamp metadata")
       .sort({ timestamp: -1 })
+      .limit(50)
       .lean();
 
     return Response(res, 200, true, "IP details retrieved successfully", {
@@ -809,6 +900,7 @@ export const getIpAuditLogs = async (req, res) => {
 
     const totalLogs = await IpAuditLog.countDocuments();
     const logs = await IpAuditLog.find()
+      .select("action targetIp performedBy reason duration expiresAt result timestamp metadata")
       .sort({ timestamp: -1 })
       .skip(skip)
       .limit(limit)
@@ -933,6 +1025,23 @@ export const removeSafelistIp = async (req, res) => {
   } catch (error) {
     console.error("Error in removeSafelistIp:", error);
     return Response(res, 500, false, "Failed to remove IP from Safelist", error.message);
+  }
+};
+
+// 12. Safe Superadmin Memory Diagnostics (Requirement 12)
+export const getMemoryDiagnostics = async (req, res) => {
+  try {
+    const mem = process.memoryUsage();
+    return Response(res, 200, true, "Process memory diagnostics", {
+      rssMB: Number((mem.rss / 1024 / 1024).toFixed(2)),
+      heapTotalMB: Number((mem.heapTotal / 1024 / 1024).toFixed(2)),
+      heapUsedMB: Number((mem.heapUsed / 1024 / 1024).toFixed(2)),
+      externalMB: Number((mem.external / 1024 / 1024).toFixed(2)),
+      arrayBuffersMB: Number((mem.arrayBuffers / 1024 / 1024).toFixed(2)),
+      uptimeSeconds: Math.floor(process.uptime()),
+    });
+  } catch (error) {
+    return Response(res, 500, false, "Failed to retrieve memory diagnostics", error.message);
   }
 };
 

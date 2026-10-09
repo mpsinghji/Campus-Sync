@@ -118,7 +118,7 @@ try {
     watcher.unref();
   }
 
-  // Unref'd polling fallback (500ms) that does not block process termination
+  // Unref'd polling fallback (10s) that does not block process termination or churn event loop
   let lastMtime = 0;
   const pollInterval = setInterval(async () => {
     try {
@@ -129,7 +129,7 @@ try {
         await handleSignal();
       }
     } catch (e) {}
-  }, 500);
+  }, 10000);
   if (pollInterval && typeof pollInterval.unref === "function") {
     pollInterval.unref();
   }

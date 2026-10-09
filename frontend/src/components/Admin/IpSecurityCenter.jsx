@@ -426,37 +426,44 @@ const IpSecurityCenter = () => {
   const [resettingRateLimit, setResettingRateLimit] = useState(false);
 
   useEffect(() => {
-    fetchOverview();
+    const controller = new AbortController();
+    fetchOverview(controller.signal);
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
     if (subTab === "activity") {
-      fetchActivity();
+      fetchActivity(controller.signal);
     } else if (subTab === "rules") {
-      fetchRules();
+      fetchRules(controller.signal);
     } else if (subTab === "audit") {
-      fetchAuditLogs();
+      fetchAuditLogs(controller.signal);
     }
+    return () => {
+      controller.abort();
+    };
   }, [subTab, page, filterStatus, filterRisk, rulesStatus]);
 
-  const fetchOverview = async () => {
+  const fetchOverview = async (signal) => {
     try {
       setLoadingOverview(true);
       const res = await axios.get(
         `${BACKEND_URL}api/v1/admin/master/ip-security/overview`,
-        { withCredentials: true }
+        { withCredentials: true, signal }
       );
       if (res.data?.data) {
         setOverview(res.data.data);
       }
     } catch (err) {
+      if (axios.isCancel(err)) return;
       console.error("Failed to load IP security overview:", err);
     } finally {
       setLoadingOverview(false);
     }
   };
 
-  const fetchActivity = async () => {
+  const fetchActivity = async (signal) => {
     try {
       setLoadingActivity(true);
       const res = await axios.get(
@@ -464,20 +471,22 @@ const IpSecurityCenter = () => {
         {
           params: { page, limit: 10, search, status: filterStatus, risk: filterRisk },
           withCredentials: true,
+          signal,
         }
       );
       if (res.data?.data) {
-        setActivity((res.data.data.activity || []).slice(0, 10));
+        setActivity(res.data.data.activity || []);
         setTotalPages(res.data.data.pagination?.totalPages || 1);
       }
     } catch (err) {
+      if (axios.isCancel(err)) return;
       toast.error("Failed to fetch IP activity.");
     } finally {
       setLoadingActivity(false);
     }
   };
 
-  const fetchRules = async () => {
+  const fetchRules = async (signal) => {
     try {
       setLoadingRules(true);
       const res = await axios.get(
@@ -485,29 +494,32 @@ const IpSecurityCenter = () => {
         {
           params: { status: rulesStatus },
           withCredentials: true,
+          signal,
         }
       );
       if (res.data?.data) {
         setRules(res.data.data.rules || []);
       }
     } catch (err) {
+      if (axios.isCancel(err)) return;
       toast.error("Failed to load IP rules.");
     } finally {
       setLoadingRules(false);
     }
   };
 
-  const fetchAuditLogs = async () => {
+  const fetchAuditLogs = async (signal) => {
     try {
       setLoadingAudit(true);
       const res = await axios.get(
         `${BACKEND_URL}api/v1/admin/master/ip-security/audit-logs`,
-        { withCredentials: true }
+        { withCredentials: true, signal }
       );
       if (res.data?.data) {
         setAuditLogs(res.data.data.logs || []);
       }
     } catch (err) {
+      if (axios.isCancel(err)) return;
       toast.error("Failed to load IP audit logs.");
     } finally {
       setLoadingAudit(false);

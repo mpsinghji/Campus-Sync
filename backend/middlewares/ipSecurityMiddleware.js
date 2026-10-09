@@ -12,8 +12,10 @@ let activeCidrRulesCache = []; // [{ cidr, type, expiresAt }]
 export const reloadIpBlockCache = async () => {
   try {
     const now = new Date();
-    // Query active rules from DB
-    const rules = await IpAccessRule.find({ status: "active" }).lean();
+    // Query active rules from DB with minimal projected fields
+    const rules = await IpAccessRule.find({ status: "active" })
+      .select("ip cidr type status expiresAt reason")
+      .lean();
 
     activeIpBlocksCache.clear();
     activeIpSafelistCache.clear();

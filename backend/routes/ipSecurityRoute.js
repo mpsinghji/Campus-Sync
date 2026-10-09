@@ -11,6 +11,7 @@ import {
   safelistIp,
   removeSafelistIp,
   getIpAuditLogs,
+  getMemoryDiagnostics,
 } from "../controllers/ipSecurityController.js";
 import { isAuthenticated, requireSuperAdmin } from "../middlewares/auth.js";
 
@@ -41,5 +42,8 @@ router.post("/remove-safelist", removeSafelistIp);
 
 // Audit logs
 router.get("/audit-logs", getIpAuditLogs);
+
+// Superadmin Safe Memory Diagnostics
+router.get("/memory-diagnostics", getMemoryDiagnostics);
 
 export default router;
