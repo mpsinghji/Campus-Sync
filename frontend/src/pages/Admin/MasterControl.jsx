@@ -734,24 +734,234 @@ const MasterControl = () => {
 
   // Role Sidebar Matrix State
   const defaultMatrix = {
-    Administrator: { dashboard: true, users: true, academics: true, services: true, master: false, settings: true },
-    Teacher: { dashboard: true, users: false, academics: true, services: false, master: false, settings: true },
-    Librarian: { dashboard: true, users: false, academics: false, services: true, master: false, settings: true },
-    ExamController: { dashboard: true, users: false, academics: true, services: false, master: false, settings: true },
-    EventCoordinator: { dashboard: true, users: false, academics: false, services: true, master: false, settings: true },
-    StudentRegistrar: { dashboard: true, users: true, academics: false, services: false, master: false, settings: true },
-    Student: { dashboard: true, users: false, academics: true, services: true, master: false, settings: true },
+    Administrator: {
+      dashboard: true,
+      users: true,
+      users_studentsDir: true,
+      users_facultyDir: true,
+      users_registerStudent: true,
+      users_registerFaculty: true,
+      users_registerAdmin: true,
+      academics: true,
+      academics_attendance: true,
+      academics_exams: true,
+      academics_assignments: true,
+      academics_classes: true,
+      services: true,
+      services_accountsFees: true,
+      services_library: true,
+      services_events: true,
+      services_announcements: true,
+      settings: true,
+    },
+    AccountsOfficer: {
+      dashboard: true,
+      users: true,
+      users_studentsDir: true,
+      users_facultyDir: true,
+      users_registerStudent: false, // Accounts department explicitly cannot register any of the 3 roles
+      users_registerFaculty: false,
+      users_registerAdmin: false,
+      academics: false, // Accounts department explicitly does not watch attendance, assignments, exams, classes
+      academics_attendance: false,
+      academics_exams: false,
+      academics_assignments: false,
+      academics_classes: false,
+      services: true,
+      services_accountsFees: true,
+      services_library: false,
+      services_events: false,
+      services_announcements: true,
+      settings: true,
+    },
+    StudentRegistrar: {
+      dashboard: true,
+      users: true,
+      users_studentsDir: true,
+      users_facultyDir: true,
+      users_registerStudent: true,
+      users_registerFaculty: false,
+      users_registerAdmin: false,
+      academics: false,
+      academics_attendance: false,
+      academics_exams: false,
+      academics_assignments: false,
+      academics_classes: false,
+      services: true,
+      services_accountsFees: false,
+      services_library: false,
+      services_events: false,
+      services_announcements: true,
+      settings: true,
+    },
+    ExamController: {
+      dashboard: true,
+      users: false,
+      users_studentsDir: false,
+      users_facultyDir: false,
+      users_registerStudent: false,
+      users_registerFaculty: false,
+      users_registerAdmin: false,
+      academics: true,
+      academics_attendance: true,
+      academics_exams: true,
+      academics_assignments: false,
+      academics_classes: false,
+      services: true,
+      services_accountsFees: false,
+      services_library: false,
+      services_events: false,
+      services_announcements: true,
+      settings: true,
+    },
+    Teacher: {
+      dashboard: true,
+      users: true,
+      users_studentsDir: true,
+      users_facultyDir: false,
+      users_registerStudent: false,
+      users_registerFaculty: false,
+      users_registerAdmin: false,
+      academics: true,
+      academics_attendance: true,
+      academics_exams: true,
+      academics_assignments: true,
+      academics_classes: true,
+      services: true,
+      services_accountsFees: false,
+      services_library: false,
+      services_events: false,
+      services_announcements: true,
+      settings: true,
+    },
+    Librarian: {
+      dashboard: true,
+      users: false,
+      users_studentsDir: false,
+      users_facultyDir: false,
+      users_registerStudent: false,
+      users_registerFaculty: false,
+      users_registerAdmin: false,
+      academics: false,
+      academics_attendance: false,
+      academics_exams: false,
+      academics_assignments: false,
+      academics_classes: false,
+      services: true,
+      services_accountsFees: false,
+      services_library: true,
+      services_events: false,
+      services_announcements: true,
+      settings: true,
+    },
+    EventCoordinator: {
+      dashboard: true,
+      users: false,
+      users_studentsDir: false,
+      users_facultyDir: false,
+      users_registerStudent: false,
+      users_registerFaculty: false,
+      users_registerAdmin: false,
+      academics: false,
+      academics_attendance: false,
+      academics_exams: false,
+      academics_assignments: false,
+      academics_classes: false,
+      services: true,
+      services_accountsFees: false,
+      services_library: false,
+      services_events: true,
+      services_announcements: true,
+      settings: true,
+    },
+    Student: {
+      dashboard: true,
+      users: false,
+      users_studentsDir: false,
+      users_facultyDir: false,
+      users_registerStudent: false,
+      users_registerFaculty: false,
+      users_registerAdmin: false,
+      academics: true,
+      academics_attendance: true,
+      academics_exams: true,
+      academics_assignments: true,
+      academics_classes: true,
+      services: true,
+      services_accountsFees: true,
+      services_library: true,
+      services_events: true,
+      services_announcements: true,
+      settings: true,
+    },
   };
+
   const [roleMatrix, setRoleMatrix] = useState(defaultMatrix);
   const [savingMatrix, setSavingMatrix] = useState(false);
+  const [activeMatrixRole, setActiveMatrixRole] = useState("AccountsOfficer");
+  const [matrixViewMode, setMatrixViewMode] = useState("roleDetail"); // "roleDetail" | "masterTable"
+
+  // Batch Year options (2020 through 2030)
+  const BATCH_YEARS = [
+    "2020", "2021", "2022", "2023", "2024",
+    "2025", "2026", "2027", "2028", "2029", "2030",
+  ];
+
+  const CAMPUS_DEPARTMENTS = [
+    "Computer Science & Engineering",
+    "Information Technology",
+    "Electronics & Communication Engineering",
+    "Mechanical Engineering",
+    "Civil Engineering",
+    "Electrical & Electronics Engineering",
+    "Computer Applications",
+    "Management Studies",
+    "Commerce & Finance",
+    "Biotechnology & Life Sciences",
+    "Sciences & Mathematics",
+    "Humanities & Social Sciences",
+  ];
+
+  const STANDARD_COURSES = [
+    "B.Tech Computer Science",
+    "B.Tech Artificial Intelligence & ML",
+    "B.Tech Information Technology",
+    "B.Tech Electronics & Communication",
+    "B.Tech Mechanical Engineering",
+    "B.Tech Civil Engineering",
+    "M.Tech Computer Science",
+    "M.Tech VLSI & Embedded Systems",
+    "BCA Cloud Computing & Fullstack",
+    "MCA Advanced Software Systems",
+    "BBA Business Analytics",
+    "MBA Finance & Marketing",
+    "B.Sc Computer Science",
+    "B.Sc Biotechnology",
+    "M.Sc Data Science & Analytics",
+    "B.Com Honours & Financial Markets",
+    "M.Com Accounting & Finance",
+  ];
 
   // Fee Rates Configuration State
   const [feeRates, setFeeRates] = useState({});
   const [lateFeeInput, setLateFeeInput] = useState(10);
   const [savingFeeRates, setSavingFeeRates] = useState(false);
-  const [newDeptKey, setNewDeptKey] = useState("");
-  const [newDeptRate, setNewDeptRate] = useState(45000);
-  const [newDeptYears, setNewDeptYears] = useState(4);
+
+  // New Degree & Batch Fee Structure Form State
+  const [feeFormDept, setFeeFormDept] = useState("Computer Science & Engineering");
+  const [feeFormCourse, setFeeFormCourse] = useState("B.Tech Computer Science");
+  const [feeFormBatch, setFeeFormBatch] = useState("2024");
+  const [feeFormYears, setFeeFormYears] = useState(4);
+  const [feeFormSemesters, setFeeFormSemesters] = useState(8);
+  const [feeFormRate, setFeeFormRate] = useState(45000);
+  const [feeFormIsSplit, setFeeFormIsSplit] = useState(false);
+  const [feeFormSemesterRates, setFeeFormSemesterRates] = useState({
+    1: 45000, 2: 45000, 3: 45000, 4: 45000,
+    5: 45000, 6: 45000, 7: 45000, 8: 45000,
+  });
+  const [feeFormStartMonth, setFeeFormStartMonth] = useState("July (Autumn Batch)");
+  const [expandedSplitRows, setExpandedSplitRows] = useState({});
+
   const jumpTo = (tab, category = null) => {
     const params = new URLSearchParams();
     params.set("tab", tab);
@@ -761,7 +971,6 @@ const MasterControl = () => {
     }
     setSearchParams(params);
   };
-
 
   useEffect(() => {
     fetchMasterUsers();
@@ -795,6 +1004,132 @@ const MasterControl = () => {
     } finally {
       setSavingFeeRates(false);
     }
+  };
+
+  // Duration in years changed -> update semesters and semester fee dictionary
+  const handleDurationYearsChange = (years) => {
+    const y = Number(years);
+    const sems = y * 2;
+    setFeeFormYears(y);
+    setFeeFormSemesters(sems);
+    setFeeFormSemesterRates((prev) => {
+      const updated = {};
+      for (let s = 1; s <= sems; s++) {
+        updated[s] = prev[s] ?? feeFormRate;
+      }
+      return updated;
+    });
+  };
+
+  // Base rate changed -> sync non-split semester rates
+  const handleBaseRateChange = (rate) => {
+    const r = Number(rate);
+    setFeeFormRate(r);
+    if (!feeFormIsSplit) {
+      setFeeFormSemesterRates((prev) => {
+        const updated = {};
+        for (let s = 1; s <= feeFormSemesters; s++) {
+          updated[s] = r;
+        }
+        return updated;
+      });
+    }
+  };
+
+  // Live calculated total degree fee
+  const calculatedTotalFee = useMemo(() => {
+    if (feeFormIsSplit) {
+      let sum = 0;
+      for (let s = 1; s <= feeFormSemesters; s++) {
+        sum += Number(feeFormSemesterRates[s] ?? feeFormRate) || 0;
+      }
+      return sum;
+    }
+    return Number(feeFormRate) * Number(feeFormSemesters);
+  }, [feeFormIsSplit, feeFormSemesters, feeFormSemesterRates, feeFormRate]);
+
+  // Normalize fee item from backend or legacy flat numbers
+  const normalizeFeeItem = (key, raw) => {
+    if (typeof raw !== "object" || raw === null) {
+      const rate = Number(raw) || 45000;
+      return {
+        key,
+        department: key,
+        course: key,
+        batch: "2024",
+        durationYears: 4,
+        totalSemesters: 8,
+        ratePerSemester: rate,
+        isSplitPerSemester: false,
+        semesterFeeRates: { 1: rate, 2: rate, 3: rate, 4: rate, 5: rate, 6: rate, 7: rate, 8: rate },
+        totalDegreeFee: rate * 8,
+        startMonth: "July (Autumn Batch)",
+      };
+    }
+
+    const durationYears = Number(raw.durationYears) || 4;
+    const totalSemesters = Number(raw.totalSemesters) || durationYears * 2;
+    const ratePerSemester = Number(raw.ratePerSemester) || 45000;
+    const isSplit = Boolean(raw.isSplitPerSemester);
+
+    let semesterRates = raw.semesterFeeRates;
+    if (!semesterRates || typeof semesterRates !== "object") {
+      semesterRates = {};
+      for (let s = 1; s <= totalSemesters; s++) {
+        semesterRates[s] = ratePerSemester;
+      }
+    }
+
+    let totalDegreeFee = 0;
+    if (isSplit) {
+      for (let s = 1; s <= totalSemesters; s++) {
+        totalDegreeFee += Number(semesterRates[s] ?? ratePerSemester) || 0;
+      }
+    } else {
+      totalDegreeFee = ratePerSemester * totalSemesters;
+    }
+
+    return {
+      key,
+      department: raw.department || key,
+      course: raw.course || key,
+      batch: raw.batch || "2024",
+      durationYears,
+      totalSemesters,
+      ratePerSemester,
+      isSplitPerSemester: isSplit,
+      semesterFeeRates: semesterRates,
+      totalDegreeFee,
+      startMonth: raw.startMonth || "July (Autumn Batch)",
+    };
+  };
+
+  const handleAddFeeStructure = () => {
+    if (!feeFormDept.trim() || !feeFormCourse.trim()) {
+      toast.error("Please specify both department and course name.");
+      return;
+    }
+
+    const key = `${feeFormCourse} [Batch ${feeFormBatch}]`;
+    const newStructure = {
+      department: feeFormDept,
+      course: feeFormCourse,
+      batch: feeFormBatch,
+      durationYears: Number(feeFormYears),
+      totalSemesters: Number(feeFormSemesters),
+      ratePerSemester: Number(feeFormRate),
+      isSplitPerSemester: Boolean(feeFormIsSplit),
+      semesterFeeRates: { ...feeFormSemesterRates },
+      totalDegreeFee: calculatedTotalFee,
+      startMonth: feeFormStartMonth,
+    };
+
+    setFeeRates((prev) => ({
+      ...prev,
+      [key]: newStructure,
+    }));
+
+    toast.success(`Fee structure added for ${feeFormCourse} (${feeFormBatch})! Click Save to apply.`);
   };
 
   const handleToggleRestrictUser = async (user) => {
@@ -1028,6 +1363,30 @@ const MasterControl = () => {
         [moduleKey]: !prev[roleKey]?.[moduleKey],
       },
     }));
+  };
+
+  const handleQuickRoleSet = (roleKey, mode) => {
+    if (mode === "resetDefault") {
+      setRoleMatrix((prev) => ({
+        ...prev,
+        [roleKey]: { ...(defaultMatrix[roleKey] || {}) },
+      }));
+      toast.info(`Reset ${roleKey} permissions to recommended defaults.`);
+      return;
+    }
+
+    const targetVal = mode === "enableAll";
+    setRoleMatrix((prev) => {
+      const current = { ...(prev[roleKey] || defaultMatrix[roleKey] || {}) };
+      Object.keys(current).forEach((k) => {
+        current[k] = targetVal;
+      });
+      return {
+        ...prev,
+        [roleKey]: current,
+      };
+    });
+    toast.success(`${mode === "enableAll" ? "Enabled all" : "Revoked all optional"} permissions for ${roleKey}.`);
   };
 
   const handleSaveMatrix = async () => {
@@ -1502,87 +1861,695 @@ const MasterControl = () => {
         {activeTab === "matrix" && (
           <>
             <MatrixCard>
-            <MatrixHeader>
-              <div>
-                <h3>Role Sidebar Access & Visibility Matrix</h3>
-                <p>
-                  Configure precisely which sections and links appear on each role's sidebar. Changes reflect in real-time.
-                </p>
-              </div>
-              <PrimarySaveButton onClick={handleSaveMatrix} disabled={savingMatrix}>
-                <BsCheckCircleFill />
-                {savingMatrix ? "Saving Matrix..." : "Save Sidebar Permissions"}
-              </PrimarySaveButton>
-            </MatrixHeader>
+              <MatrixHeader>
+                <div>
+                  <h3 style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <BsGrid3X3GapFill style={{ color: "#10b981" }} />
+                    Granular Role Sidebar Access & RBAC Matrix
+                  </h3>
+                  <p>
+                    Configure precisely which parent menus and granular sub-field links appear on each role's sidebar. Changes synchronize in real-time across active logins.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => setMatrixViewMode(matrixViewMode === "roleDetail" ? "masterTable" : "roleDetail")}
+                    style={{
+                      background: matrixViewMode === "masterTable" ? "#3b82f6" : "#f1f5f9",
+                      color: matrixViewMode === "masterTable" ? "#ffffff" : "#334155",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "8px",
+                      padding: "10px 16px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <BsSliders /> {matrixViewMode === "roleDetail" ? "View Master Comparison Grid" : "Switch to Role Inspector"}
+                  </button>
+                  <PrimarySaveButton onClick={handleSaveMatrix} disabled={savingMatrix}>
+                    <BsCheckCircleFill />
+                    {savingMatrix ? "Saving Matrix..." : "Save Sidebar Permissions"}
+                  </PrimarySaveButton>
+                </div>
+              </MatrixHeader>
 
-            <TableCard>
-              <MatrixTable>
-                <thead>
-                  <tr>
-                    <th>Role Hierarchy</th>
-                    <th>Dashboard</th>
-                    <th>Users & Directory</th>
-                    <th>Academics (Attendance/Exams)</th>
-                    <th>Campus Services (Library/Fees)</th>
-                    <th>Settings & Profile</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { key: "Administrator", name: "Administrator" },
-                    { key: "Teacher", name: "Teaching Faculty" },
-                    { key: "Librarian", name: "Librarian" },
-                    { key: "ExamController", name: "Exam Controller" },
-                    { key: "EventCoordinator", name: "Event Coordinator" },
-                    { key: "StudentRegistrar", name: "Student Registrar" },
-                    { key: "Student", name: "Student" },
-                  ].map((roleItem) => {
-                    const perms = roleMatrix[roleItem.key] || {};
-                    return (
-                      <tr key={roleItem.key}>
-                        <td>{roleItem.name}</td>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={Boolean(perms.dashboard)}
-                            onChange={() => handleToggleMatrixCheckbox(roleItem.key, "dashboard")}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={Boolean(perms.users)}
-                            onChange={() => handleToggleMatrixCheckbox(roleItem.key, "users")}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={Boolean(perms.academics)}
-                            onChange={() => handleToggleMatrixCheckbox(roleItem.key, "academics")}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={Boolean(perms.services)}
-                            onChange={() => handleToggleMatrixCheckbox(roleItem.key, "services")}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={Boolean(perms.settings)}
-                            onChange={() => handleToggleMatrixCheckbox(roleItem.key, "settings")}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </MatrixTable>
-            </TableCard>
-          </MatrixCard>
+              {/* Role Selection Navigation Pills */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  flexWrap: "wrap",
+                  padding: "12px",
+                  background: "#f8fafc",
+                  borderRadius: "10px",
+                  border: "1px solid #e2e8f0",
+                  marginBottom: "20px",
+                }}
+              >
+                {[
+                  { key: "AccountsOfficer", name: "Accounts & Finance", icon: "💰", badge: "Finance Desk" },
+                  { key: "Administrator", name: "Administrator / Principal", icon: "👔", badge: "Executive" },
+                  { key: "StudentRegistrar", name: "Student Registrar", icon: "🎓", badge: "Admissions" },
+                  { key: "ExamController", name: "Exam Controller", icon: "📝", badge: "Examinations" },
+                  { key: "Teacher", name: "Teaching Faculty", icon: "👨‍🏫", badge: "Academics" },
+                  { key: "Librarian", name: "Head Librarian", icon: "📚", badge: "Library" },
+                  { key: "EventCoordinator", name: "Event Coordinator", icon: "🎉", badge: "Events" },
+                  { key: "Student", name: "Student Portal", icon: "🎒", badge: "Self-Service" },
+                ].map((r) => {
+                  const isActive = activeMatrixRole === r.key && matrixViewMode === "roleDetail";
+                  return (
+                    <button
+                      key={r.key}
+                      type="button"
+                      onClick={() => {
+                        setActiveMatrixRole(r.key);
+                        setMatrixViewMode("roleDetail");
+                      }}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        border: isActive ? "2px solid #10b981" : "1px solid #cbd5e1",
+                        background: isActive ? "#ecfdf5" : "#ffffff",
+                        color: isActive ? "#065f46" : "#334155",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        boxShadow: isActive ? "0 2px 4px rgba(16, 185, 129, 0.15)" : "none",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <span>{r.icon}</span>
+                      <span>{r.name}</span>
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          fontWeight: 700,
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                          background: isActive ? "#a7f3d0" : "#f1f5f9",
+                          color: isActive ? "#047857" : "#64748b",
+                        }}
+                      >
+                        {r.badge}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* VIEW 1: Granular Role Detail Inspector & Subfield Toggles */}
+              {matrixViewMode === "roleDetail" && (
+                (() => {
+                  const roleKey = activeMatrixRole;
+                  const perms = roleMatrix[roleKey] || {};
+                  const isAccountsRole = roleKey === "AccountsOfficer";
+
+                  const roleMeta = {
+                    AccountsOfficer: {
+                      title: "Accounts & Finance Officer (Finance Department)",
+                      desc: "Manages student tuition, fee collections, invoice generation, fines, and payment ledger. Excluded from student/staff registration, attendance tracking, assignments, exams, and class schedules.",
+                      color: "#059669",
+                      icon: "💰",
+                    },
+                    Administrator: {
+                      title: "Campus Administrator & Principal",
+                      desc: "Complete operational governance over students, faculty, academics, campus services, and system configuration.",
+                      color: "#2563eb",
+                      icon: "👔",
+                    },
+                    StudentRegistrar: {
+                      title: "Student Registrar & Admissions Desk",
+                      desc: "Responsible for student onboarding, admissions registration, and maintaining institutional user directories.",
+                      color: "#7c3aed",
+                      icon: "🎓",
+                    },
+                    ExamController: {
+                      title: "Controller of Examinations Cell",
+                      desc: "Manages examination schedules, semester assessments, grade evaluation, and academic results publishing.",
+                      color: "#ea580c",
+                      icon: "📝",
+                    },
+                    Teacher: {
+                      title: "Teaching Faculty & Course Instructors",
+                      desc: "Conducts lectures, marks attendance, issues assignments, and records internal marks.",
+                      color: "#0284c7",
+                      icon: "👨‍🏫",
+                    },
+                    Librarian: {
+                      title: "Head Librarian & Media Archives",
+                      desc: "Maintains book circulation, media catalogs, overdue returns, and library operations.",
+                      color: "#d97706",
+                      icon: "📚",
+                    },
+                    EventCoordinator: {
+                      title: "Campus Activities & Event Coordinator",
+                      desc: "Coordinates campus festivities, seminars, student life calendars, and public notices.",
+                      color: "#db2777",
+                      icon: "🎉",
+                    },
+                    Student: {
+                      title: "Enrolled Student Self-Service Portal",
+                      desc: "Access to courses, assignments, attendance records, exam results, dues, and announcements.",
+                      color: "#4f46e5",
+                      icon: "🎒",
+                    },
+                  }[roleKey] || { title: roleKey, desc: "", color: "#334155", icon: "👤" };
+
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                      {/* Active Role Header & Quick Action Buttons */}
+                      <div
+                        style={{
+                          background: "#f8fafc",
+                          border: `1.5px solid ${roleMeta.color}30`,
+                          borderRadius: "12px",
+                          padding: "16px 20px",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          flexWrap: "wrap",
+                          gap: "12px",
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontSize: "22px" }}>{roleMeta.icon}</span>
+                            <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#0f172a" }}>
+                              {roleMeta.title}
+                            </h4>
+                          </div>
+                          <p style={{ margin: "4px 0 0", fontSize: "12.5px", color: "#64748b", maxWidth: "780px" }}>
+                            {roleMeta.desc}
+                          </p>
+                        </div>
+                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickRoleSet(roleKey, "enableAll")}
+                            style={{
+                              background: "#ffffff",
+                              border: "1px solid #cbd5e1",
+                              borderRadius: "6px",
+                              padding: "6px 12px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              color: "#0f172a",
+                            }}
+                          >
+                            ✅ Enable All
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickRoleSet(roleKey, "revokeAll")}
+                            style={{
+                              background: "#ffffff",
+                              border: "1px solid #cbd5e1",
+                              borderRadius: "6px",
+                              padding: "6px 12px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              color: "#b91c1c",
+                            }}
+                          >
+                            🚫 Revoke All Optional
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickRoleSet(roleKey, "resetDefault")}
+                            style={{
+                              background: "#ffffff",
+                              border: "1px solid #cbd5e1",
+                              borderRadius: "6px",
+                              padding: "6px 12px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              color: "#2563eb",
+                            }}
+                          >
+                            🔄 Reset Recommended
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Notice banner for Accounts Officer */}
+                      {isAccountsRole && (
+                        <div
+                          style={{
+                            background: "#eff6ff",
+                            border: "1px solid #bfdbfe",
+                            borderRadius: "10px",
+                            padding: "12px 16px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            fontSize: "13px",
+                            color: "#1e40af",
+                            fontWeight: 600,
+                          }}
+                        >
+                          <BsShieldCheck style={{ fontSize: "18px", color: "#2563eb", flexShrink: 0 }} />
+                          <span>
+                            <strong>Accounts Department Isolation Active:</strong> Registration of Student, Faculty, and Admin accounts is removed. Attendance, Exams, Assignments, and Class Schedules are also removed from Accounts view.
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Granular Module Cards Grid */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "16px" }}>
+                        {/* 1. Dashboard Module */}
+                        <div
+                          style={{
+                            background: "#ffffff",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "10px",
+                            padding: "16px 18px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span style={{ fontSize: "16px" }}>📊</span>
+                              <strong style={{ fontSize: "14px", color: "#0f172a" }}>Dashboard & Overview</strong>
+                            </div>
+                            <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "12px", fontWeight: 700 }}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(perms.dashboard)}
+                                onChange={() => handleToggleMatrixCheckbox(roleKey, "dashboard")}
+                              />
+                              {perms.dashboard ? "Visible" : "Hidden"}
+                            </label>
+                          </div>
+                          <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
+                            Access to the primary role landing dashboard with KPI metrics, real-time summaries, and system activity.
+                          </p>
+                        </div>
+
+                        {/* 2. Users & Admissions Module */}
+                        <div
+                          style={{
+                            background: "#ffffff",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "10px",
+                            padding: "16px 18px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span style={{ fontSize: "16px" }}>👥</span>
+                              <strong style={{ fontSize: "14px", color: "#0f172a" }}>Users & Admissions (Parent Group)</strong>
+                            </div>
+                            <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "12px", fontWeight: 700 }}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(perms.users)}
+                                onChange={() => handleToggleMatrixCheckbox(roleKey, "users")}
+                              />
+                              {perms.users ? "Group Visible" : "Group Hidden"}
+                            </label>
+                          </div>
+                          <p style={{ margin: "0 0 12px", fontSize: "12px", color: "#64748b" }}>
+                            Granular control over directory access vs. registration permissions:
+                          </p>
+
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px", background: "#f8fafc", padding: "10px 12px", borderRadius: "8px" }}>
+                            {[
+                              { field: "users_studentsDir", label: "Students Directory", desc: "View & search student profiles and enrollment records" },
+                              { field: "users_facultyDir", label: "Faculty Directory", desc: "View instructor directory and departmental assignments" },
+                              { field: "users_registerStudent", label: "Register Student", desc: "Create and register new student accounts", restricted: isAccountsRole },
+                              { field: "users_registerFaculty", label: "Register Faculty", desc: "Create and register faculty / teacher accounts", restricted: isAccountsRole },
+                              { field: "users_registerAdmin", label: "Register Admin", desc: "Create and register administrative accounts", restricted: isAccountsRole },
+                            ].map((sub) => (
+                              <label
+                                key={sub.field}
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  padding: "6px 8px",
+                                  borderRadius: "6px",
+                                  background: sub.restricted && !perms[sub.field] ? "#fff1f2" : "#ffffff",
+                                  border: "1px solid #e2e8f0",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <div>
+                                  <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#1e293b", display: "block" }}>
+                                    {sub.label}
+                                    {sub.restricted && (
+                                      <span style={{ marginLeft: "6px", fontSize: "10px", background: "#fee2e2", color: "#991b1b", padding: "1px 5px", borderRadius: "4px" }}>
+                                        Restricted for Accounts
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span style={{ fontSize: "11px", color: "#64748b" }}>{sub.desc}</span>
+                                </div>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(perms[sub.field])}
+                                  onChange={() => handleToggleMatrixCheckbox(roleKey, sub.field)}
+                                  style={{ marginLeft: "12px" }}
+                                />
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 3. Academics Module */}
+                        <div
+                          style={{
+                            background: "#ffffff",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "10px",
+                            padding: "16px 18px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span style={{ fontSize: "16px" }}>📖</span>
+                              <strong style={{ fontSize: "14px", color: "#0f172a" }}>Academics (Parent Group)</strong>
+                            </div>
+                            <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "12px", fontWeight: 700 }}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(perms.academics)}
+                                onChange={() => handleToggleMatrixCheckbox(roleKey, "academics")}
+                              />
+                              {perms.academics ? "Group Visible" : "Group Hidden"}
+                            </label>
+                          </div>
+                          <p style={{ margin: "0 0 12px", fontSize: "12px", color: "#64748b" }}>
+                            Classroom teaching, exams, attendance, and assignment workflows:
+                          </p>
+
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px", background: "#f8fafc", padding: "10px 12px", borderRadius: "8px" }}>
+                            {[
+                              { field: "academics_attendance", label: "Attendance Tracking", desc: "Daily attendance marking, pulse sessions & reports", restricted: isAccountsRole },
+                              { field: "academics_exams", label: "Exams & Results", desc: "Exam schedules, evaluation marks, and semester results", restricted: isAccountsRole },
+                              { field: "academics_assignments", label: "Assignments", desc: "Homework assignments, deadlines, and submissions", restricted: isAccountsRole },
+                              { field: "academics_classes", label: "Class Schedules", desc: "Timetables, period allocations, and room bookings", restricted: isAccountsRole },
+                            ].map((sub) => (
+                              <label
+                                key={sub.field}
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  padding: "6px 8px",
+                                  borderRadius: "6px",
+                                  background: sub.restricted && !perms[sub.field] ? "#fff1f2" : "#ffffff",
+                                  border: "1px solid #e2e8f0",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <div>
+                                  <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#1e293b", display: "block" }}>
+                                    {sub.label}
+                                    {sub.restricted && (
+                                      <span style={{ marginLeft: "6px", fontSize: "10px", background: "#fee2e2", color: "#991b1b", padding: "1px 5px", borderRadius: "4px" }}>
+                                        Restricted for Accounts
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span style={{ fontSize: "11px", color: "#64748b" }}>{sub.desc}</span>
+                                </div>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(perms[sub.field])}
+                                  onChange={() => handleToggleMatrixCheckbox(roleKey, sub.field)}
+                                  style={{ marginLeft: "12px" }}
+                                />
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 4. Campus Operations Module */}
+                        <div
+                          style={{
+                            background: "#ffffff",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "10px",
+                            padding: "16px 18px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span style={{ fontSize: "16px" }}>🏛️</span>
+                              <strong style={{ fontSize: "14px", color: "#0f172a" }}>Campus Operations (Parent Group)</strong>
+                            </div>
+                            <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "12px", fontWeight: 700 }}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(perms.services)}
+                                onChange={() => handleToggleMatrixCheckbox(roleKey, "services")}
+                              />
+                              {perms.services ? "Group Visible" : "Group Hidden"}
+                            </label>
+                          </div>
+                          <p style={{ margin: "0 0 12px", fontSize: "12px", color: "#64748b" }}>
+                            Accounts & Fees, Library Management, Events, and Announcements:
+                          </p>
+
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px", background: "#f8fafc", padding: "10px 12px", borderRadius: "8px" }}>
+                            {[
+                              { field: "services_accountsFees", label: "Accounts & Fees", desc: "Student fee invoicing, dues, tuition, and ledger", primary: isAccountsRole },
+                              { field: "services_library", label: "Library Management", desc: "Books catalogue, issue/returns, and media" },
+                              { field: "services_events", label: "Events & Calendar", desc: "Campus activities, fest schedules, and calendar" },
+                              { field: "services_announcements", label: "Announcements", desc: "Campus broadcast announcements & circulars" },
+                            ].map((sub) => (
+                              <label
+                                key={sub.field}
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  padding: "6px 8px",
+                                  borderRadius: "6px",
+                                  background: sub.primary ? "#ecfdf5" : "#ffffff",
+                                  border: "1px solid #e2e8f0",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <div>
+                                  <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#1e293b", display: "block" }}>
+                                    {sub.label}
+                                    {sub.primary && (
+                                      <span style={{ marginLeft: "6px", fontSize: "10px", background: "#d1fae5", color: "#065f46", padding: "1px 5px", borderRadius: "4px" }}>
+                                        Primary Work Area
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span style={{ fontSize: "11px", color: "#64748b" }}>{sub.desc}</span>
+                                </div>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(perms[sub.field])}
+                                  onChange={() => handleToggleMatrixCheckbox(roleKey, sub.field)}
+                                  style={{ marginLeft: "12px" }}
+                                />
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 5. Settings & Profile Module */}
+                        <div
+                          style={{
+                            background: "#ffffff",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "10px",
+                            padding: "16px 18px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span style={{ fontSize: "16px" }}>⚙️</span>
+                              <strong style={{ fontSize: "14px", color: "#0f172a" }}>Settings & Profile</strong>
+                            </div>
+                            <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "12px", fontWeight: 700 }}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(perms.settings)}
+                                onChange={() => handleToggleMatrixCheckbox(roleKey, "settings")}
+                              />
+                              {perms.settings ? "Visible" : "Hidden"}
+                            </label>
+                          </div>
+                          <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
+                            Access to user profile credentials, password updates, and personal preferences.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
+
+              {/* VIEW 2: Universal Master Comparison Grid */}
+              {matrixViewMode === "masterTable" && (
+                <TableCard>
+                  <div style={{ overflowX: "auto" }}>
+                    <MatrixTable>
+                      <thead>
+                        <tr>
+                          <th>Role Hierarchy</th>
+                          <th>Dashboard</th>
+                          <th>Users Group</th>
+                          <th>Student Dir</th>
+                          <th>Register Roles</th>
+                          <th>Academics Group</th>
+                          <th>Attendance & Exams</th>
+                          <th>Accounts & Fees</th>
+                          <th>Library</th>
+                          <th>Events & Notices</th>
+                          <th>Settings</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { key: "Administrator", name: "Administrator / Principal" },
+                          { key: "AccountsOfficer", name: "Accounts & Finance Officer" },
+                          { key: "StudentRegistrar", name: "Student Registrar / Admissions" },
+                          { key: "ExamController", name: "Examination Controller" },
+                          { key: "Teacher", name: "Teaching Faculty" },
+                          { key: "Librarian", name: "Head Librarian" },
+                          { key: "EventCoordinator", name: "Event Coordinator" },
+                          { key: "Student", name: "Student Portal" },
+                        ].map((roleItem) => {
+                          const perms = roleMatrix[roleItem.key] || {};
+                          return (
+                            <tr key={roleItem.key}>
+                              <td>
+                                <div style={{ fontWeight: 800, color: "#0f172a" }}>{roleItem.name}</div>
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(perms.dashboard)}
+                                  onChange={() => handleToggleMatrixCheckbox(roleItem.key, "dashboard")}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(perms.users)}
+                                  onChange={() => handleToggleMatrixCheckbox(roleItem.key, "users")}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(perms.users_studentsDir)}
+                                  onChange={() => handleToggleMatrixCheckbox(roleItem.key, "users_studentsDir")}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(perms.users_registerStudent || perms.users_registerFaculty || perms.users_registerAdmin)}
+                                  onChange={() => {
+                                    const next = !(perms.users_registerStudent || perms.users_registerFaculty || perms.users_registerAdmin);
+                                    setRoleMatrix((prev) => ({
+                                      ...prev,
+                                      [roleItem.key]: {
+                                        ...(prev[roleItem.key] || {}),
+                                        users_registerStudent: next,
+                                        users_registerFaculty: next,
+                                        users_registerAdmin: next,
+                                      },
+                                    }));
+                                  }}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(perms.academics)}
+                                  onChange={() => handleToggleMatrixCheckbox(roleItem.key, "academics")}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(perms.academics_attendance && perms.academics_exams)}
+                                  onChange={() => {
+                                    const next = !(perms.academics_attendance && perms.academics_exams);
+                                    setRoleMatrix((prev) => ({
+                                      ...prev,
+                                      [roleItem.key]: {
+                                        ...(prev[roleItem.key] || {}),
+                                        academics_attendance: next,
+                                        academics_exams: next,
+                                        academics_assignments: next,
+                                        academics_classes: next,
+                                      },
+                                    }));
+                                  }}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(perms.services_accountsFees)}
+                                  onChange={() => handleToggleMatrixCheckbox(roleItem.key, "services_accountsFees")}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(perms.services_library)}
+                                  onChange={() => handleToggleMatrixCheckbox(roleItem.key, "services_library")}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(perms.services_events && perms.services_announcements)}
+                                  onChange={() => {
+                                    const next = !(perms.services_events && perms.services_announcements);
+                                    setRoleMatrix((prev) => ({
+                                      ...prev,
+                                      [roleItem.key]: {
+                                        ...(prev[roleItem.key] || {}),
+                                        services_events: next,
+                                        services_announcements: next,
+                                      },
+                                    }));
+                                  }}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(perms.settings)}
+                                  onChange={() => handleToggleMatrixCheckbox(roleItem.key, "settings")}
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </MatrixTable>
+                  </div>
+                </TableCard>
+              )}
+            </MatrixCard>
           </>
         )}
 
@@ -1741,238 +2708,650 @@ const MasterControl = () => {
         {activeTab === "feeRates" && (
           <>
             <MatrixCard>
-            <MatrixHeader>
-              <div>
-                <h3>Degree & Batch Fee Rates & Structure Configuration</h3>
-                <p>
-                  Configure official fee rates per semester, degree duration (years), and start month for departments and batches.
-                </p>
-              </div>
-              <PrimarySaveButton onClick={handleSaveFeeRates} disabled={savingFeeRates}>
-                <BsCheckCircleFill /> {savingFeeRates ? "Saving Rates..." : "Save Fee Structures"}
-              </PrimarySaveButton>
-            </MatrixHeader>
-
-            <TableCard style={{ marginTop: "16px", marginBottom: "24px" }}>
-              <Table>
-                <thead>
-                  <tr>
-                    <th>Department / Degree Program</th>
-                    <th>Fee Rate / Semester (INR)</th>
-                    <th>Duration (Years)</th>
-                    <th>Total Semesters</th>
-                    <th>Total Degree Fee (INR)</th>
-                    <th>Start Month</th>
-                    <th style={{ textAlign: "right" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.keys(feeRates).map((dept) => {
-                    const item = feeRates[dept] || {};
-                    const rate = typeof item === "object" ? Number(item.ratePerSemester) || 45000 : Number(item) || 45000;
-                    const years = typeof item === "object" ? Number(item.durationYears) || 4 : 4;
-                    const month = typeof item === "object" ? item.startMonth || "July" : "July";
-                    const totalTerms = years * 2;
-                    const totalProgram = rate * totalTerms;
-
-                    return (
-                      <tr key={dept}>
-                        <td>
-                          <div style={{ fontWeight: 800, color: "#0f172a" }}>{dept}</div>
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min={1000}
-                            step={1000}
-                            value={rate}
-                            onChange={(e) => {
-                              const val = Number(e.target.value);
-                              setFeeRates((prev) => ({
-                                ...prev,
-                                [dept]: {
-                                  ...(typeof prev[dept] === "object" ? prev[dept] : {}),
-                                  ratePerSemester: val,
-                                  durationYears: years,
-                                  startMonth: month,
-                                },
-                              }));
-                            }}
-                            style={{
-                              padding: "6px 10px",
-                              border: "1px solid #cbd5e1",
-                              borderRadius: "6px",
-                              width: "120px",
-                              fontWeight: 700,
-                            }}
-                          />
-                        </td>
-                        <td>
-                          <select
-                            value={years}
-                            onChange={(e) => {
-                              const val = Number(e.target.value);
-                              setFeeRates((prev) => ({
-                                ...prev,
-                                [dept]: {
-                                  ...(typeof prev[dept] === "object" ? prev[dept] : {}),
-                                  ratePerSemester: rate,
-                                  durationYears: val,
-                                  startMonth: month,
-                                },
-                              }));
-                            }}
-                            style={{
-                              padding: "6px 10px",
-                              border: "1px solid #cbd5e1",
-                              borderRadius: "6px",
-                              fontWeight: 600,
-                            }}
-                          >
-                            <option value={2}>2 Years (4 Terms)</option>
-                            <option value={3}>3 Years (6 Terms)</option>
-                            <option value={4}>4 Years (8 Terms)</option>
-                            <option value={5}>5 Years (10 Terms)</option>
-                          </select>
-                        </td>
-                        <td>
-                          <span style={{ fontWeight: 700, color: "#2563eb" }}>{totalTerms} Semesters</span>
-                        </td>
-                        <td>
-                          <span style={{ fontWeight: 800, color: "#0f172a" }}>₹{totalProgram.toLocaleString()}</span>
-                        </td>
-                        <td>
-                          <select
-                            value={month}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setFeeRates((prev) => ({
-                                ...prev,
-                                [dept]: {
-                                  ...(typeof prev[dept] === "object" ? prev[dept] : {}),
-                                  ratePerSemester: rate,
-                                  durationYears: years,
-                                  startMonth: val,
-                                },
-                              }));
-                            }}
-                            style={{
-                              padding: "6px 10px",
-                              border: "1px solid #cbd5e1",
-                              borderRadius: "6px",
-                            }}
-                          >
-                            <option value="July">July (Autumn Batch)</option>
-                            <option value="January">January (Spring Batch)</option>
-                          </select>
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          <ActionBtn
-                            $danger
-                            onClick={() => {
-                              const next = { ...feeRates };
-                              delete next[dept];
-                              setFeeRates(next);
-                            }}
-                          >
-                            <BsTrash /> Remove
-                          </ActionBtn>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
-            </TableCard>
-
-            {/* Add New Program Rate Box */}
-            <div
-              style={{
-                background: "#f8fafc",
-                border: "1px solid #e2e8f0",
-                borderRadius: "12px",
-                padding: "20px",
-                marginTop: "16px",
-              }}
-            >
-              <h4 style={{ margin: "0 0 12px", fontSize: "15px", fontWeight: 700, color: "#0f172a" }}>
-                Add New Program / Batch Fee Structure
-              </h4>
-              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "flex-end" }}>
-                <div style={{ flex: 1, minWidth: "180px" }}>
-                  <label style={{ fontSize: "12px", fontWeight: 700, color: "#475569", display: "block", marginBottom: "4px" }}>
-                    Program / Batch Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Artificial Intelligence or Batch 2026-30"
-                    value={newDeptKey}
-                    onChange={(e) => setNewDeptKey(e.target.value)}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "8px" }}
-                  />
+              <MatrixHeader>
+                <div>
+                  <h3 style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <BsCashCoin style={{ color: "#10b981" }} />
+                    Degree & Batch Fee Rates & Structure Configuration
+                  </h3>
+                  <p>
+                    Configure official tuition rates per semester, degree duration (years), batch year cohorts, and custom semester-by-semester fee distributions.
+                  </p>
                 </div>
-                <div style={{ width: "160px" }}>
-                  <label style={{ fontSize: "12px", fontWeight: 700, color: "#475569", display: "block", marginBottom: "4px" }}>
-                    Rate / Semester (INR)
-                  </label>
-                  <input
-                    type="number"
-                    min={1000}
-                    step={1000}
-                    value={newDeptRate}
-                    onChange={(e) => setNewDeptRate(Number(e.target.value))}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "8px" }}
-                  />
-                </div>
-                <div style={{ width: "140px" }}>
-                  <label style={{ fontSize: "12px", fontWeight: 700, color: "#475569", display: "block", marginBottom: "4px" }}>
-                    Duration (Years)
-                  </label>
-                  <select
-                    value={newDeptYears}
-                    onChange={(e) => setNewDeptYears(Number(e.target.value))}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "8px" }}
+                <PrimarySaveButton onClick={handleSaveFeeRates} disabled={savingFeeRates}>
+                  <BsCheckCircleFill /> {savingFeeRates ? "Saving Rates..." : "Save Fee Structures"}
+                </PrimarySaveButton>
+              </MatrixHeader>
+
+              {/* Add New Program / Batch Fee Structure Box */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  border: "1.5px solid #10b98140",
+                  borderRadius: "14px",
+                  padding: "24px",
+                  marginTop: "8px",
+                  marginBottom: "24px",
+                  boxShadow: "0 2px 10px rgba(16, 185, 129, 0.04)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+                  <div>
+                    <h4 style={{ margin: "0 0 4px", fontSize: "16px", fontWeight: 800, color: "#0f172a" }}>
+                      Configure New Degree Program & Batch Fee Structure
+                    </h4>
+                    <p style={{ margin: 0, fontSize: "12.5px", color: "#64748b" }}>
+                      Select department, degree course, batch year cohort, and choose whether fees are uniform or split differently per semester.
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      background: "#ecfdf5",
+                      border: "1px solid #a7f3d0",
+                      borderRadius: "8px",
+                      padding: "8px 16px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                    }}
                   >
-                    <option value={2}>2 Years</option>
-                    <option value={3}>3 Years</option>
-                    <option value={4}>4 Years</option>
-                    <option value={5}>5 Years</option>
-                  </select>
+                    <span style={{ fontSize: "12px", color: "#065f46", fontWeight: 700 }}>Calculated Total Degree Fee:</span>
+                    <span style={{ fontSize: "18px", color: "#047857", fontWeight: 900 }}>
+                      ₹{calculatedTotalFee.toLocaleString()}
+                    </span>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!newDeptKey.trim()) {
-                      toast.error("Please enter a program name or batch label.");
-                      return;
-                    }
-                    setFeeRates((prev) => ({
-                      ...prev,
-                      [newDeptKey.trim()]: {
-                        ratePerSemester: Number(newDeptRate) || 45000,
-                        durationYears: Number(newDeptYears) || 4,
-                        startMonth: "July",
-                      },
-                    }));
-                    toast.success(`Added ${newDeptKey.trim()} to structures.`);
-                    setNewDeptKey("");
-                    setNewDeptRate(45000);
-                  }}
+
+                {/* Primary Parameters Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "14px" }}>
+                  {/* 1. Department */}
+                  <div>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "5px" }}>
+                      Department
+                    </label>
+                    <input
+                      type="text"
+                      list="dept-options-list"
+                      placeholder="e.g. Computer Science & Engineering"
+                      value={feeFormDept}
+                      onChange={(e) => setFeeFormDept(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "9px 12px",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                      }}
+                    />
+                    <datalist id="dept-options-list">
+                      {CAMPUS_DEPARTMENTS.map((dept) => (
+                        <option key={dept} value={dept} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  {/* 2. Course / Degree Program */}
+                  <div>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "5px" }}>
+                      Course / Degree Program
+                    </label>
+                    <input
+                      type="text"
+                      list="course-options-list"
+                      placeholder="e.g. B.Tech Computer Science"
+                      value={feeFormCourse}
+                      onChange={(e) => setFeeFormCourse(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "9px 12px",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                      }}
+                    />
+                    <datalist id="course-options-list">
+                      {STANDARD_COURSES.map((crs) => (
+                        <option key={crs} value={crs} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  {/* 3. Batch (Year list selection) */}
+                  <div>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "5px" }}>
+                      Batch Cohort (Admission Year)
+                    </label>
+                    <select
+                      value={feeFormBatch}
+                      onChange={(e) => setFeeFormBatch(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "9px 12px",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        background: "#ffffff",
+                      }}
+                    >
+                      {BATCH_YEARS.map((yr) => (
+                        <option key={yr} value={yr}>
+                          Batch {yr} (Admitted in {yr})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 4. Duration (Years) */}
+                  <div>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "5px" }}>
+                      Duration (Years)
+                    </label>
+                    <select
+                      value={feeFormYears}
+                      onChange={(e) => handleDurationYearsChange(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "9px 12px",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        background: "#ffffff",
+                      }}
+                    >
+                      <option value={1}>1 Year (2 Terms)</option>
+                      <option value={2}>2 Years (4 Terms)</option>
+                      <option value={3}>3 Years (6 Terms)</option>
+                      <option value={4}>4 Years (8 Terms)</option>
+                      <option value={5}>5 Years (10 Terms)</option>
+                    </select>
+                  </div>
+
+                  {/* 5. Total Semesters */}
+                  <div>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "5px" }}>
+                      Total Semesters
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={12}
+                      value={feeFormSemesters}
+                      onChange={(e) => {
+                        const sems = Math.max(1, Number(e.target.value) || 1);
+                        setFeeFormSemesters(sems);
+                        setFeeFormSemesterRates((prev) => {
+                          const updated = {};
+                          for (let s = 1; s <= sems; s++) {
+                            updated[s] = prev[s] ?? feeFormRate;
+                          }
+                          return updated;
+                        });
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "9px 12px",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        color: "#2563eb",
+                      }}
+                    />
+                  </div>
+
+                  {/* 6. Base Rate / Semester (INR) */}
+                  <div>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "5px" }}>
+                      {feeFormIsSplit ? "Default Base Rate (INR)" : "Fee Rate / Semester (INR)"}
+                    </label>
+                    <input
+                      type="number"
+                      min={1000}
+                      step={1000}
+                      value={feeFormRate}
+                      onChange={(e) => handleBaseRateChange(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "9px 12px",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 800,
+                        color: "#0f172a",
+                      }}
+                    />
+                  </div>
+
+                  {/* 7. Start Month */}
+                  <div>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "5px" }}>
+                      Academic Start Month
+                    </label>
+                    <select
+                      value={feeFormStartMonth}
+                      onChange={(e) => setFeeFormStartMonth(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "9px 12px",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        background: "#ffffff",
+                      }}
+                    >
+                      <option value="July (Autumn Batch)">July (Autumn Batch)</option>
+                      <option value="January (Spring Batch)">January (Spring Batch)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Split Semester Fee Differently Toggle & Custom Breakdown */}
+                <div
                   style={{
-                    background: "#0f172a",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: "8px",
-                    padding: "9px 18px",
-                    fontWeight: 700,
-                    cursor: "pointer",
+                    marginTop: "18px",
+                    padding: "16px",
+                    background: feeFormIsSplit ? "#f0fdf4" : "#f8fafc",
+                    border: feeFormIsSplit ? "1.5px solid #86efac" : "1px dashed #cbd5e1",
+                    borderRadius: "10px",
                   }}
                 >
-                  Add Structure
-                </button>
+                  <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={feeFormIsSplit}
+                      onChange={(e) => {
+                        const split = e.target.checked;
+                        setFeeFormIsSplit(split);
+                        if (split) {
+                          setFeeFormSemesterRates((prev) => {
+                            const updated = {};
+                            for (let s = 1; s <= feeFormSemesters; s++) {
+                              updated[s] = prev[s] ?? feeFormRate;
+                            }
+                            return updated;
+                          });
+                        }
+                      }}
+                      style={{ width: "18px", height: "18px", accentColor: "#10b981" }}
+                    />
+                    <div>
+                      <span style={{ fontSize: "13.5px", fontWeight: 800, color: "#0f172a", display: "block" }}>
+                        Split semester fee differently? (Every semester has distinct fee rate)
+                      </span>
+                      <span style={{ fontSize: "12px", color: "#64748b" }}>
+                        Check this box if different semesters have varying fee rates (e.g. 1st year admission charges, lab fees in odd semesters).
+                      </span>
+                    </div>
+                  </label>
+
+                  {/* Dynamic Semester Fee Rates Grid */}
+                  {feeFormIsSplit && (
+                    <div style={{ marginTop: "14px" }}>
+                      <div style={{ fontSize: "12px", fontWeight: 700, color: "#065f46", marginBottom: "8px" }}>
+                        Custom Semester Fee Rates Breakdown (Sem 1 to Sem {feeFormSemesters}):
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+                          gap: "10px",
+                        }}
+                      >
+                        {Array.from({ length: feeFormSemesters }, (_, i) => i + 1).map((s) => (
+                          <div key={s} style={{ background: "#ffffff", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
+                            <label style={{ fontSize: "11px", fontWeight: 700, color: "#475569", display: "block", marginBottom: "4px" }}>
+                              Semester {s} (INR)
+                            </label>
+                            <input
+                              type="number"
+                              min={1000}
+                              step={500}
+                              value={feeFormSemesterRates[s] ?? feeFormRate}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                setFeeFormSemesterRates((prev) => ({
+                                  ...prev,
+                                  [s]: val,
+                                }));
+                              }}
+                              style={{
+                                width: "100%",
+                                padding: "6px 8px",
+                                border: "1px solid #94a3b8",
+                                borderRadius: "6px",
+                                fontSize: "13px",
+                                fontWeight: 800,
+                                color: "#0f172a",
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ marginTop: "18px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                  <button
+                    type="button"
+                    onClick={handleAddFeeStructure}
+                    style={{
+                      background: "#0f172a",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "10px 22px",
+                      fontWeight: 700,
+                      fontSize: "13px",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    + Add Degree & Batch Fee Structure
+                  </button>
+                </div>
               </div>
-            </div>
-          </MatrixCard>
+
+              {/* Table of Configured Fee Structures */}
+              <div style={{ marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#0f172a" }}>
+                  Configured Degree Programs & Batch Fee Rates ({Object.keys(feeRates).length} Total)
+                </h4>
+                <div style={{ fontSize: "12px", color: "#64748b" }}>
+                  Click <strong>Save Fee Structures</strong> at top right to commit updates to the database.
+                </div>
+              </div>
+
+              <TableCard style={{ marginTop: "8px", marginBottom: "24px" }}>
+                <Table>
+                  <thead>
+                    <tr>
+                      <th>Department</th>
+                      <th>Course & Batch Cohort</th>
+                      <th>Duration / Semesters</th>
+                      <th>Base Rate / Sem</th>
+                      <th>Total Degree Fee (INR)</th>
+                      <th>Semester Split Breakdown</th>
+                      <th>Start Month</th>
+                      <th style={{ textAlign: "right" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.keys(feeRates).length === 0 ? (
+                      <tr>
+                        <td colSpan={8} style={{ textAlign: "center", padding: "30px", color: "#94a3b8" }}>
+                          No fee structures configured yet. Use the form above to add your first degree fee rate.
+                        </td>
+                      </tr>
+                    ) : (
+                      Object.keys(feeRates).map((deptKey) => {
+                        const item = normalizeFeeItem(deptKey, feeRates[deptKey]);
+                        const isExpanded = Boolean(expandedSplitRows[deptKey]);
+
+                        return (
+                          <React.Fragment key={deptKey}>
+                            <tr>
+                              <td>
+                                <div style={{ fontWeight: 800, color: "#0f172a" }}>{item.department}</div>
+                              </td>
+                              <td>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                  <span style={{ fontWeight: 700, color: "#1e293b" }}>{item.course}</span>
+                                  <span
+                                    style={{
+                                      fontSize: "11px",
+                                      fontWeight: 800,
+                                      background: "#e0e7ff",
+                                      color: "#3730a3",
+                                      padding: "2px 8px",
+                                      borderRadius: "6px",
+                                    }}
+                                  >
+                                    Batch {item.batch}
+                                  </span>
+                                </div>
+                              </td>
+                              <td>
+                                <span style={{ fontWeight: 700, color: "#2563eb" }}>
+                                  {item.durationYears} Yrs ({item.totalSemesters} Sems)
+                                </span>
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  min={1000}
+                                  step={1000}
+                                  value={item.ratePerSemester}
+                                  onChange={(e) => {
+                                    const val = Number(e.target.value);
+                                    setFeeRates((prev) => {
+                                      const existing = normalizeFeeItem(deptKey, prev[deptKey]);
+                                      const nextSplitRates = { ...existing.semesterFeeRates };
+                                      if (!existing.isSplitPerSemester) {
+                                        for (let s = 1; s <= existing.totalSemesters; s++) {
+                                          nextSplitRates[s] = val;
+                                        }
+                                      }
+                                      let nextTotal = 0;
+                                      if (existing.isSplitPerSemester) {
+                                        for (let s = 1; s <= existing.totalSemesters; s++) {
+                                          nextTotal += Number(nextSplitRates[s] || val);
+                                        }
+                                      } else {
+                                        nextTotal = val * existing.totalSemesters;
+                                      }
+                                      return {
+                                        ...prev,
+                                        [deptKey]: {
+                                          ...existing,
+                                          ratePerSemester: val,
+                                          semesterFeeRates: nextSplitRates,
+                                          totalDegreeFee: nextTotal,
+                                        },
+                                      };
+                                    });
+                                  }}
+                                  style={{
+                                    padding: "6px 10px",
+                                    border: "1px solid #cbd5e1",
+                                    borderRadius: "6px",
+                                    width: "110px",
+                                    fontWeight: 700,
+                                  }}
+                                />
+                              </td>
+                              <td>
+                                <span style={{ fontWeight: 900, color: "#047857", fontSize: "14px" }}>
+                                  ₹{item.totalDegreeFee.toLocaleString()}
+                                </span>
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedSplitRows((prev) => ({
+                                      ...prev,
+                                      [deptKey]: !prev[deptKey],
+                                    }))
+                                  }
+                                  style={{
+                                    padding: "5px 10px",
+                                    borderRadius: "6px",
+                                    border: item.isSplitPerSemester ? "1px solid #86efac" : "1px solid #cbd5e1",
+                                    background: item.isSplitPerSemester ? "#f0fdf4" : "#f8fafc",
+                                    color: item.isSplitPerSemester ? "#166534" : "#475569",
+                                    fontSize: "12px",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                  }}
+                                >
+                                  {item.isSplitPerSemester ? "Custom Split" : "Uniform Split"} (
+                                  {isExpanded ? "Hide" : "Edit Sems"})
+                                </button>
+                              </td>
+                              <td>
+                                <select
+                                  value={item.startMonth}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setFeeRates((prev) => ({
+                                      ...prev,
+                                      [deptKey]: {
+                                        ...normalizeFeeItem(deptKey, prev[deptKey]),
+                                        startMonth: val,
+                                      },
+                                    }));
+                                  }}
+                                  style={{
+                                    padding: "6px 10px",
+                                    border: "1px solid #cbd5e1",
+                                    borderRadius: "6px",
+                                    fontSize: "12px",
+                                  }}
+                                >
+                                  <option value="July (Autumn Batch)">July (Autumn Batch)</option>
+                                  <option value="January (Spring Batch)">January (Spring Batch)</option>
+                                  <option value="July">July</option>
+                                  <option value="January">January</option>
+                                </select>
+                              </td>
+                              <td style={{ textAlign: "right" }}>
+                                <ActionBtn
+                                  $danger
+                                  onClick={() => {
+                                    const next = { ...feeRates };
+                                    delete next[deptKey];
+                                    setFeeRates(next);
+                                  }}
+                                >
+                                  <BsTrash /> Remove
+                                </ActionBtn>
+                              </td>
+                            </tr>
+
+                            {/* Expandable Semester-by-Semester Fee Breakdown Drawer */}
+                            {isExpanded && (
+                              <tr style={{ background: "#f8fafc" }}>
+                                <td colSpan={8} style={{ padding: "16px 20px" }}>
+                                  <div
+                                    style={{
+                                      background: "#ffffff",
+                                      border: "1px solid #cbd5e1",
+                                      borderRadius: "10px",
+                                      padding: "16px",
+                                    }}
+                                  >
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                                      <div style={{ fontSize: "13px", fontWeight: 800, color: "#0f172a" }}>
+                                        Semester Fee Distribution for {item.course} [Batch {item.batch}]:
+                                      </div>
+                                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={item.isSplitPerSemester}
+                                          onChange={(e) => {
+                                            const splitVal = e.target.checked;
+                                            setFeeRates((prev) => {
+                                              const existing = normalizeFeeItem(deptKey, prev[deptKey]);
+                                              let nextTotal = 0;
+                                              if (splitVal) {
+                                                for (let s = 1; s <= existing.totalSemesters; s++) {
+                                                  nextTotal += Number(existing.semesterFeeRates[s] || existing.ratePerSemester);
+                                                }
+                                              } else {
+                                                nextTotal = existing.ratePerSemester * existing.totalSemesters;
+                                              }
+                                              return {
+                                                ...prev,
+                                                [deptKey]: {
+                                                  ...existing,
+                                                  isSplitPerSemester: splitVal,
+                                                  totalDegreeFee: nextTotal,
+                                                },
+                                              };
+                                            });
+                                          }}
+                                        />
+                                        Enable Distinct Semester Rates
+                                      </label>
+                                    </div>
+
+                                    <div
+                                      style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+                                        gap: "10px",
+                                      }}
+                                    >
+                                      {Array.from({ length: item.totalSemesters }, (_, i) => i + 1).map((s) => (
+                                        <div key={s} style={{ background: "#f8fafc", padding: "8px", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                                          <label style={{ fontSize: "11px", fontWeight: 700, color: "#475569", display: "block", marginBottom: "4px" }}>
+                                            Semester {s}
+                                          </label>
+                                          <input
+                                            type="number"
+                                            min={1000}
+                                            step={500}
+                                            value={item.semesterFeeRates[s] ?? item.ratePerSemester}
+                                            onChange={(e) => {
+                                              const newRate = Number(e.target.value);
+                                              setFeeRates((prev) => {
+                                                const existing = normalizeFeeItem(deptKey, prev[deptKey]);
+                                                const updatedRates = {
+                                                  ...existing.semesterFeeRates,
+                                                  [s]: newRate,
+                                                };
+                                                let sum = 0;
+                                                for (let k = 1; k <= existing.totalSemesters; k++) {
+                                                  sum += Number(updatedRates[k] ?? existing.ratePerSemester);
+                                                }
+                                                return {
+                                                  ...prev,
+                                                  [deptKey]: {
+                                                    ...existing,
+                                                    isSplitPerSemester: true,
+                                                    semesterFeeRates: updatedRates,
+                                                    totalDegreeFee: sum,
+                                                  },
+                                                };
+                                              });
+                                            }}
+                                            style={{
+                                              width: "100%",
+                                              padding: "5px 8px",
+                                              border: "1px solid #94a3b8",
+                                              borderRadius: "6px",
+                                              fontSize: "12.5px",
+                                              fontWeight: 800,
+                                              color: "#0f172a",
+                                            }}
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </Table>
+              </TableCard>
+            </MatrixCard>
           </>
         )}
 

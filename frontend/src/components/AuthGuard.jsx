@@ -98,6 +98,32 @@ const AuthGuard = ({ role: propRole, children }) => {
             return;
           }
 
+          // Accounts Department Isolation:
+          // Strictly prevent Accounts Department from registering any role or accessing academics
+          const isAccountsOfficer =
+            !isSuperAdmin &&
+            (
+              (parsedAdmin?.department && /finance|account/i.test(parsedAdmin.department)) ||
+              (parsedAdmin?.designation && /finance|account/i.test(parsedAdmin.designation))
+            );
+
+          if (isAccountsOfficer) {
+            const forbiddenAccountsRoutes = [
+              "/student-register",
+              "/teacher-register",
+              "/admin-register",
+              "/admin/attendance",
+              "/admin/exam",
+              "/admin/assignment",
+              "/admin/classes",
+            ];
+            const lowerPath = path.toLowerCase();
+            if (forbiddenAccountsRoutes.some((route) => lowerPath.startsWith(route.toLowerCase()))) {
+              navigate("/admin/accounts-fees", { replace: true });
+              return;
+            }
+          }
+
           if (verifiedRoles.admin) {
             setIsLoading(false);
             return;

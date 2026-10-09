@@ -314,8 +314,58 @@ const UnifiedSidebar = ({ role: propRole }) => {
     return false;
   }, [location.pathname]);
 
+  // Identify specific role key for Matrix RBAC lookup
+  const resolvedRoleKey = useMemo(() => {
+    if (currentRole === "admin") {
+      try {
+        const raw = Cookies.get("adminData");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const dept = (parsed.department || "").toLowerCase();
+          const desig = (parsed.designation || "").toLowerCase();
+          if (dept.includes("account") || dept.includes("finance") || desig.includes("account") || desig.includes("finance")) {
+            return "AccountsOfficer";
+          }
+          if (dept.includes("registrar") || desig.includes("registrar") || desig.includes("admission")) {
+            return "StudentRegistrar";
+          }
+          if (dept.includes("exam") || desig.includes("exam")) {
+            return "ExamController";
+          }
+        }
+      } catch {}
+      return "Administrator";
+    }
+
+    if (currentRole === "teacher") {
+      try {
+        const raw = Cookies.get("teacherData");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const resp = (parsed.responsibility || parsed.user?.responsibility || "").toLowerCase();
+          if (resp.includes("account") || resp.includes("finance")) return "AccountsOfficer";
+          if (resp.includes("librarian")) return "Librarian";
+          if (resp.includes("exam")) return "ExamController";
+          if (resp.includes("event")) return "EventCoordinator";
+          if (resp.includes("registrar")) return "StudentRegistrar";
+        }
+      } catch {}
+      return "Teacher";
+    }
+
+    if (currentRole === "student") {
+      return "Student";
+    }
+
+    return "Administrator";
+  }, [currentRole, location.pathname]);
+
   const itemsToRender = useMemo(() => {
-    let list = [...config.items];
+    // Deep clone items and dropdown children so modifications don't mutate ROLE_CONFIGS
+    let list = config.items.map((item) => ({
+      ...item,
+      children: item.children ? [...item.children] : undefined,
+    }));
 
     // Master Control item for Super Admin
     if (currentRole === "admin" && isSuperAdmin) {
@@ -339,73 +389,158 @@ const UnifiedSidebar = ({ role: propRole }) => {
       }
     }
 
-    // Apply strict staff responsibility isolation for teacher portal
-    if (currentRole === "teacher") {
-      try {
-        const raw = Cookies.get("teacherData");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          const resp = (parsed.responsibility || parsed.user?.responsibility || "").toLowerCase();
-          if (resp.includes("librarian")) {
-            list = list.filter((i) => ["dashboard", "library", "announcement", "settings"].includes(i.id));
-          } else if (resp.includes("exam")) {
-            list = list.filter((i) => ["dashboard", "exams", "announcement", "settings"].includes(i.id));
-          } else if (resp.includes("event")) {
-            list = list.filter((i) => ["dashboard", "events", "announcement", "settings"].includes(i.id));
-          } else if (resp.includes("registrar")) {
-            list = list.filter((i) => ["dashboard", "students", "announcement", "settings"].includes(i.id));
-          } else {
-            // Regular teaching faculty - NEVER show library management
-            list = list.filter((i) => i.id !== "library");
-          }
-        }
-      } catch (e) { }
-    }
+    const isAccountsUser = resolvedRoleKey === "AccountsOfficer";
 
     // Dynamic filtering according to Super Admin Matrix Permissions
-    if (matrixPermissions) {
-      if (currentRole === "admin" && !isSuperAdmin) {
-        const p = matrixPermissions.Administrator;
-        if (p) {
-          list = list.filter((i) => {
-            if (i.id === "dashboard") return p.dashboard !== false;
-            if (i.id === "users-group") return p.users !== false;
-            if (i.id === "academics-group") return p.academics !== false;
-            if (i.id === "campus-group") return p.services !== false;
-            if (i.id === "settings") return p.settings !== false;
-            return true;
-          });
-        }
-      } else if (currentRole === "student") {
-        const p = matrixPermissions.Student;
-        if (p) {
-          list = list.filter((i) => {
-            if (i.id === "dashboard") return p.dashboard !== false;
-            if (i.id === "directory") return p.users === true;
-            if (["assignments", "exams", "attendance"].includes(i.id)) return p.academics !== false;
-            if (["library", "fees", "announcement", "events"].includes(i.id)) return p.services !== false;
-            if (i.id === "settings") return p.settings !== false;
-            return true;
-          });
-        }
-      }
-    }
+    const p = matrixPermissions ? matrixPermissions[resolvedRoleKey] : null;
 
-    if (currentRole === "student") {
+    if (currentRole === "admin" && !isSuperAdmin) {
+      list = list
+        .map((item) => {
+          if (item.id === "dashboard") {
+            if (p && p.dashboard === false) return null;
+            return item;
+          }
+
+          if (item.id === "users-group") {
+            if (p && p.users === false) return null;
+            let children = item.children || [];
+
+            // Accounts Department isolation: Remove registration of all three roles
+            if (isAccountsUser) {
+              children = children.filter(
+                (c) => !["/student-register", "/teacher-register", "/admin-register"].includes(c.path)
+              );
+            } else if (p) {
+              children = children.filter((c) => {
+                if (c.path === "/admin/Students") return p.users_studentsDir !== false;
+                if (c.path === "/admin/Teachers") return p.users_facultyDir !== false;
+                if (c.path === "/student-register") return p.users_registerStudent !== false;
+                if (c.path === "/teacher-register") return p.users_registerFaculty !== false;
+                if (c.path === "/admin-register") return p.users_registerAdmin !== false;
+                return true;
+              });
+            }
+
+            if (children.length === 0) return null;
+            return { ...item, children };
+          }
+
+          if (item.id === "academics-group") {
+            // Accounts Department isolation: No attendance, exams, assignments, or class schedules
+            if (isAccountsUser) return null;
+            if (p && p.academics === false) return null;
+
+            let children = item.children || [];
+            if (p) {
+              children = children.filter((c) => {
+                if (c.path === "/admin/Attendance") return p.academics_attendance !== false;
+                if (c.path === "/admin/Exam") return p.academics_exams !== false;
+                if (c.path === "/admin/Assignment") return p.academics_assignments !== false;
+                if (c.path === "/admin/Classes") return p.academics_classes !== false;
+                return true;
+              });
+            }
+
+            if (children.length === 0) return null;
+            return { ...item, children };
+          }
+
+          if (item.id === "campus-group") {
+            if (p && p.services === false) return null;
+            let children = item.children || [];
+
+            if (isAccountsUser) {
+              // Accounts primarily manages Accounts & Fees and Announcements
+              children = children.filter((c) => {
+                if (c.path === "/admin/Library") return p?.services_library === true;
+                if (c.path === "/admin/EventCalender") return p?.services_events === true;
+                if (c.path === "/admin/accounts-fees") return p ? p.services_accountsFees !== false : true;
+                if (c.path === "/admin/Announcement") return p ? p.services_announcements !== false : true;
+                return true;
+              });
+            } else if (p) {
+              children = children.filter((c) => {
+                if (c.path === "/admin/Library") return p.services_library !== false;
+                if (c.path === "/admin/accounts-fees") return p.services_accountsFees !== false;
+                if (c.path === "/admin/EventCalender") return p.services_events !== false;
+                if (c.path === "/admin/Announcement") return p.services_announcements !== false;
+                return true;
+              });
+            }
+
+            if (children.length === 0) return null;
+            return { ...item, children };
+          }
+
+          if (item.id === "settings") {
+            if (p && p.settings === false) return null;
+            return item;
+          }
+
+          return item;
+        })
+        .filter(Boolean);
+    } else if (currentRole === "teacher") {
+      // Teacher portal responsibility & granular permissions
+      list = list.filter((item) => {
+        if (p) {
+          if (item.id === "dashboard") return p.dashboard !== false;
+          if (item.id === "students") return p.users !== false && p.users_studentsDir !== false;
+          if (item.id === "assignments") return p.academics !== false && p.academics_assignments !== false;
+          if (item.id === "exams") return p.academics !== false && p.academics_exams !== false;
+          if (item.id === "attendance") return p.academics !== false && p.academics_attendance !== false;
+          if (item.id === "announcement") return p.services !== false && p.services_announcements !== false;
+          if (item.id === "events") return p.services !== false && p.services_events !== false;
+          if (item.id === "library") return p.services !== false && p.services_library !== false;
+          if (item.id === "settings") return p.settings !== false;
+        }
+
+        // Fallback responsibility isolation if matrix not set
+        if (resolvedRoleKey === "Librarian") {
+          return ["dashboard", "library", "announcement", "settings"].includes(item.id);
+        } else if (resolvedRoleKey === "ExamController") {
+          return ["dashboard", "exams", "announcement", "settings"].includes(item.id);
+        } else if (resolvedRoleKey === "EventCoordinator") {
+          return ["dashboard", "events", "announcement", "settings"].includes(item.id);
+        } else if (resolvedRoleKey === "StudentRegistrar") {
+          return ["dashboard", "students", "announcement", "settings"].includes(item.id);
+        } else if (resolvedRoleKey === "AccountsOfficer") {
+          return ["dashboard", "announcement", "settings"].includes(item.id);
+        }
+        return item.id !== "library";
+      });
+    } else if (currentRole === "student") {
+      if (p) {
+        list = list.filter((item) => {
+          if (item.id === "dashboard") return p.dashboard !== false;
+          if (item.id === "directory") return p.users !== false && p.users_studentsDir !== false;
+          if (item.id === "assignments") return p.academics !== false && p.academics_assignments !== false;
+          if (item.id === "exams") return p.academics !== false && p.academics_exams !== false;
+          if (item.id === "attendance") return p.academics !== false && p.academics_attendance !== false;
+          if (item.id === "library") return p.services !== false && p.services_library !== false;
+          if (item.id === "fees") return p.services !== false && p.services_accountsFees !== false;
+          if (item.id === "announcement") return p.services !== false && p.services_announcements !== false;
+          if (item.id === "events") return p.services !== false && p.services_events !== false;
+          if (item.id === "settings") return p.settings !== false;
+          return true;
+        });
+      }
+
       try {
         const raw = Cookies.get("studentData");
         if (raw) {
           const parsed = JSON.parse(raw);
           const blocked = parsed.blockedModules || parsed.user?.blockedModules || [];
           if (Array.isArray(blocked) && blocked.length > 0) {
-            return list.filter((i) => !blocked.includes(i.id));
+            list = list.filter((i) => !blocked.includes(i.id));
           }
         }
-      } catch (e) { }
+      } catch (e) {}
     }
 
     return list;
-  }, [config.items, currentRole, isSuperAdmin, matrixPermissions]);
+  }, [config.items, currentRole, isSuperAdmin, matrixPermissions, resolvedRoleKey]);
 
   const isPathActive = (path) => {
     if (!path) return false;

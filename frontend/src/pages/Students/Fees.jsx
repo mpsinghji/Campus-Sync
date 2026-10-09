@@ -795,15 +795,31 @@ const StudentFees = () => {
     const startYear = match ? parseInt(match[0], 10) : 2024;
 
     // 2. Department fee rate & duration in years
-    const deptInfo = feeRatesConfig?.[student.department] || feeRatesConfig?.["General"] || {
-      ratePerSemester: 45000,
-      durationYears: 4,
-      startMonth: "July",
-    };
+    let deptInfo = feeRatesConfig?.[student.department] || feeRatesConfig?.["General"];
+    if (!deptInfo && feeRatesConfig) {
+      const keys = Object.keys(feeRatesConfig);
+      const matchedKey = keys.find((k) => {
+        const item = feeRatesConfig[k];
+        if (typeof item === "object") {
+          if (student.department && item.department?.toLowerCase() === student.department?.toLowerCase()) return true;
+          if (student.course && item.course?.toLowerCase() === student.course?.toLowerCase()) return true;
+        }
+        return false;
+      });
+      if (matchedKey) deptInfo = feeRatesConfig[matchedKey];
+    }
+
+    if (!deptInfo) {
+      deptInfo = {
+        ratePerSemester: 45000,
+        durationYears: 4,
+        startMonth: "July",
+      };
+    }
 
     const rate = Number(deptInfo.ratePerSemester) || 45000;
     const durationYears = Number(deptInfo.durationYears) || 4;
-    const totalSemesters = durationYears * 2; // 2 semesters/terms per academic year
+    const totalSemesters = Number(deptInfo.totalSemesters) || durationYears * 2; // 2 semesters/terms per academic year
 
     // 3. Generate sequential terms: July-Dec and Jan-June
     const terms = [];
@@ -828,6 +844,12 @@ const StudentFees = () => {
         ? new Date(cycleYear, 7, 15) // August 15
         : new Date(cycleYear + 1, 1, 15); // February 15 of next year!
 
+      // If semester fee is split differently, use this semester's specific fee rate
+      const termAmount =
+        deptInfo.isSplitPerSemester && deptInfo.semesterFeeRates?.[i]
+          ? Number(deptInfo.semesterFeeRates[i]) || rate
+          : rate;
+
       terms.push({
         termNumber: i,
         title: `Semester ${i}`,
@@ -835,14 +857,14 @@ const StudentFees = () => {
         period: periodTitle,
         academicYear,
         dueDate,
-        amount: rate,
+        amount: termAmount,
         startTimestamp,
         dueTimestamp,
       });
     }
 
     return { startYear, rate, durationYears, totalSemesters, terms };
-  }, [student.batch, student.department, feeRatesConfig]);
+  }, [student.batch, student.department, student.course, feeRatesConfig]);
 
   // Map each term with payment record and sequential lock status
   const analyzedTerms = useMemo(() => {

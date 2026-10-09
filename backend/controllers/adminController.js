@@ -674,13 +674,166 @@ export const deleteUserMaster = async (req, res) => {
 };
 
 export const DEFAULT_ROLE_PERMISSIONS = {
-  Administrator: { dashboard: true, users: true, academics: true, services: true, settings: true },
-  Teacher: { dashboard: true, users: false, academics: true, services: false, settings: true },
-  Librarian: { dashboard: true, users: false, academics: false, services: true, settings: true },
-  ExamController: { dashboard: true, users: false, academics: true, services: false, settings: true },
-  EventCoordinator: { dashboard: true, users: false, academics: false, services: true, settings: true },
-  StudentRegistrar: { dashboard: true, users: true, academics: false, services: false, settings: true },
-  Student: { dashboard: true, users: false, academics: true, services: true, settings: true },
+  Administrator: {
+    dashboard: true,
+    users: true,
+    users_studentsDir: true,
+    users_facultyDir: true,
+    users_registerStudent: true,
+    users_registerFaculty: true,
+    users_registerAdmin: true,
+    academics: true,
+    academics_attendance: true,
+    academics_exams: true,
+    academics_assignments: true,
+    academics_classes: true,
+    services: true,
+    services_accountsFees: true,
+    services_library: true,
+    services_events: true,
+    services_announcements: true,
+    settings: true,
+  },
+  AccountsOfficer: {
+    dashboard: true,
+    users: true,
+    users_studentsDir: true,
+    users_facultyDir: true,
+    users_registerStudent: false, // Accounts has no role in registration
+    users_registerFaculty: false,
+    users_registerAdmin: false,
+    academics: false, // Accounts has no role in watching attendance, assignments, exams, classes
+    academics_attendance: false,
+    academics_exams: false,
+    academics_assignments: false,
+    academics_classes: false,
+    services: true,
+    services_accountsFees: true,
+    services_library: false,
+    services_events: false,
+    services_announcements: true,
+    settings: true,
+  },
+  StudentRegistrar: {
+    dashboard: true,
+    users: true,
+    users_studentsDir: true,
+    users_facultyDir: true,
+    users_registerStudent: true,
+    users_registerFaculty: false,
+    users_registerAdmin: false,
+    academics: false,
+    academics_attendance: false,
+    academics_exams: false,
+    academics_assignments: false,
+    academics_classes: false,
+    services: true,
+    services_accountsFees: false,
+    services_library: false,
+    services_events: false,
+    services_announcements: true,
+    settings: true,
+  },
+  ExamController: {
+    dashboard: true,
+    users: false,
+    users_studentsDir: false,
+    users_facultyDir: false,
+    users_registerStudent: false,
+    users_registerFaculty: false,
+    users_registerAdmin: false,
+    academics: true,
+    academics_attendance: true,
+    academics_exams: true,
+    academics_assignments: false,
+    academics_classes: false,
+    services: true,
+    services_accountsFees: false,
+    services_library: false,
+    services_events: false,
+    services_announcements: true,
+    settings: true,
+  },
+  Teacher: {
+    dashboard: true,
+    users: true,
+    users_studentsDir: true,
+    users_facultyDir: false,
+    users_registerStudent: false,
+    users_registerFaculty: false,
+    users_registerAdmin: false,
+    academics: true,
+    academics_attendance: true,
+    academics_exams: true,
+    academics_assignments: true,
+    academics_classes: true,
+    services: true,
+    services_accountsFees: false,
+    services_library: false,
+    services_events: false,
+    services_announcements: true,
+    settings: true,
+  },
+  Librarian: {
+    dashboard: true,
+    users: false,
+    users_studentsDir: false,
+    users_facultyDir: false,
+    users_registerStudent: false,
+    users_registerFaculty: false,
+    users_registerAdmin: false,
+    academics: false,
+    academics_attendance: false,
+    academics_exams: false,
+    academics_assignments: false,
+    academics_classes: false,
+    services: true,
+    services_accountsFees: false,
+    services_library: true,
+    services_events: false,
+    services_announcements: true,
+    settings: true,
+  },
+  EventCoordinator: {
+    dashboard: true,
+    users: false,
+    users_studentsDir: false,
+    users_facultyDir: false,
+    users_registerStudent: false,
+    users_registerFaculty: false,
+    users_registerAdmin: false,
+    academics: false,
+    academics_attendance: false,
+    academics_exams: false,
+    academics_assignments: false,
+    academics_classes: false,
+    services: true,
+    services_accountsFees: false,
+    services_library: false,
+    services_events: true,
+    services_announcements: true,
+    settings: true,
+  },
+  Student: {
+    dashboard: true,
+    users: false,
+    users_studentsDir: false,
+    users_facultyDir: false,
+    users_registerStudent: false,
+    users_registerFaculty: false,
+    users_registerAdmin: false,
+    academics: true,
+    academics_attendance: true,
+    academics_exams: true,
+    academics_assignments: true,
+    academics_classes: true,
+    services: true,
+    services_accountsFees: true,
+    services_library: true,
+    services_events: true,
+    services_announcements: true,
+    settings: true,
+  },
 };
 
 // Master Admin: Get role permissions matrix
@@ -695,32 +848,27 @@ export const getRolePermissionsMaster = async (req, res) => {
     }
 
     let current = settings.rolePermissions || {};
-    // Ensure properly structured object with boolean flags for each role
-    const isInvalid =
-      !current.Administrator ||
-      typeof current.Administrator.dashboard !== "boolean" ||
-      Array.isArray(current.Librarian) ||
-      !current.Teacher;
+    let modified = false;
 
-    if (isInvalid) {
-      current = { ...DEFAULT_ROLE_PERMISSIONS };
+    // Ensure all roles and their granular sub-field permissions exist
+    Object.keys(DEFAULT_ROLE_PERMISSIONS).forEach((roleKey) => {
+      if (!current[roleKey] || typeof current[roleKey] !== "object") {
+        current[roleKey] = { ...DEFAULT_ROLE_PERMISSIONS[roleKey] };
+        modified = true;
+      } else {
+        Object.keys(DEFAULT_ROLE_PERMISSIONS[roleKey]).forEach((field) => {
+          if (current[roleKey][field] === undefined) {
+            current[roleKey][field] = DEFAULT_ROLE_PERMISSIONS[roleKey][field];
+            modified = true;
+          }
+        });
+      }
+    });
+
+    if (modified) {
       settings.rolePermissions = current;
       settings.markModified("rolePermissions");
       await settings.save();
-    } else {
-      // Merge any missing keys
-      let modified = false;
-      Object.keys(DEFAULT_ROLE_PERMISSIONS).forEach((rk) => {
-        if (!current[rk] || typeof current[rk].dashboard !== "boolean") {
-          current[rk] = { ...DEFAULT_ROLE_PERMISSIONS[rk] };
-          modified = true;
-        }
-      });
-      if (modified) {
-        settings.rolePermissions = current;
-        settings.markModified("rolePermissions");
-        await settings.save();
-      }
     }
 
     return res.status(200).json({
